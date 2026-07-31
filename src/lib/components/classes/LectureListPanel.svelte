@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronLeft, ChevronRight, Check, Sun } from '@lucide/svelte';
+	import { ChevronLeft, ChevronRight, Check, Sun, MapPin } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import formatTimeRange from '$lib/formatTimeRange';
 	import type { Lecture, ClassItem } from '$lib/dashboard/types';
@@ -36,6 +36,7 @@
 		currentClass?: ClassItem;
 		selectedLectureId?: string;
 		completedIds: Set<string>;
+		checkedInIds: Set<string>;
 		loading: boolean;
 		error: string | null;
 		onSelectLecture: (lec: Lecture) => void;
@@ -46,6 +47,7 @@
 		currentClass,
 		selectedLectureId,
 		completedIds,
+		checkedInIds,
 		loading,
 		error,
 		onSelectLecture,
@@ -117,6 +119,9 @@
 										<p class="text-[13.5px] font-medium text-white flex-1">
 											{lec.title || 'Untitled'}
 										</p>
+										{#if checkedInIds.has(lec.id)}
+											<MapPin size={13} class="shrink-0 text-white/80" />
+										{/if}
 										{#if completedIds.has(lec.id)}
 											<Check size={14} class="shrink-0 text-emerald-200" />
 										{/if}
@@ -172,6 +177,9 @@
 										<p class="text-sm font-medium text-ink-900 flex-1">
 											{lec.title || 'Untitled'}
 										</p>
+										{#if checkedInIds.has(lec.id)}
+											<MapPin size={13} class="shrink-0 text-iris-500" />
+										{/if}
 										{#if completedIds.has(lec.id)}
 											<Check size={14} class="shrink-0 text-teal-500" />
 										{/if}

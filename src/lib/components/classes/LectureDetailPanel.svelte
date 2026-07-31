@@ -26,6 +26,7 @@
 		displayQuiz: string | null;
 		currentClass?: ClassItem;
 		completedIds: Set<string>;
+		checkedInTime: Date | undefined;
 		completingLec: boolean;
 		allRequiredPassed: boolean;
 		materialsLoading: boolean;
@@ -46,6 +47,7 @@
 		displayQuiz,
 		currentClass,
 		completedIds,
+		checkedInTime,
 		completingLec,
 		allRequiredPassed,
 		materialsLoading,
@@ -95,6 +97,13 @@
 						selectedLecture.endTime,
 					)}
 				</p>
+				{#if checkedInTime}
+					<span
+						class="inline-flex items-center gap-1 rounded-full bg-iris-500/10 px-2 py-0.5 text-xs font-medium text-iris-600"
+					>
+						Checked in · {moment(checkedInTime).format('hh:mm A')}
+					</span>
+				{/if}
 				{#if completedIds.has(selectedLecture.id)}
 					<span
 						class="inline-flex items-center gap-1 rounded-full bg-teal-500/10 px-2 py-0.5 text-xs font-medium text-teal-600"

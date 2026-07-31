@@ -33,11 +33,12 @@ export type Selection =
 	| { level: "material"; classId: string; lectureId: string; materialId: string }
 	| null;
 
-export interface CompletedLecture {
+export interface Activity {
 	id: string;
 	classId: string;
 	lectureId: string;
-	completedAt: { toDate: () => Date };
+	checkedInAt: { toDate: () => Date } | null;
+	completedAt: { toDate: () => Date } | null;
 }
 
 export interface Student {

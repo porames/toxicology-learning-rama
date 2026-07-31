@@ -12,11 +12,13 @@
 	} from 'firebase/firestore';
 	import { goto } from '$app/navigation';
 	import { authState } from '$lib/auth.svelte';
-	import type { ClassItem, Lecture, Selection, CompletedLecture } from '$lib/dashboard/types';
+	import moment from 'moment';
+	import type { ClassItem, Lecture, Selection, Activity } from '$lib/dashboard/types';
 	import LectureListPanel from '$lib/components/classes/LectureListPanel.svelte';
 	import LectureDetailPanel from '$lib/components/classes/LectureDetailPanel.svelte';
 	import DashboardLayout from '$lib/components/DashboardLayout.svelte';
 	import Breadcrumbs from '$lib/components/Breadcrumbs.svelte';
+	import { Button, Modal } from '$lib/components/ui';
 	import ClassesList from './ClassesList.svelte';
 
 	let { classId }: { classId?: string } = $props();
@@ -30,8 +32,21 @@
 	let lecturesError = $state<string | null>(null);
 	let materialsLoading = $state(false);
 	let materialsError = $state<string | null>(null);
-	let completedLecs = $state<CompletedLecture[]>([]);
+	let activities = $state<Activity[]>([]);
 	let completingLec = $state(false);
+	let showCheckInModal = $state(false);
+	let pendingCheckInLecture = $state<Lecture | null>(null);
+	let checkingIn = $state(false);
+	let checkInError = $state<string | null>(null);
+	let now = $state(new Date());
+
+	$effect(() => {
+		if (!showCheckInModal) return;
+		const timer = setInterval(() => {
+			now = new Date();
+		}, 1000);
+		return () => clearInterval(timer);
+	});
 	let videoUrls = $state<Record<string, string>>({});
 	let displayQuiz = $state<string | null>(null);
 	let quizAttempts = $state<Record<string, { passed: boolean; completedAt: Date | null }>>({});
@@ -58,13 +73,15 @@
 			}));
 			classes = classesData;
 
-			const completedLecSnap = await getDocs(
-				collection(db, 'users', authState.profile.docId, 'completedLectures'),
+			const activitiesSnap = await getDocs(
+				collection(db, 'users', authState.profile.docId, 'activities'),
 			);
-			completedLecs = completedLecSnap.docs.map((doc) => ({
+			activities = activitiesSnap.docs.map((doc) => ({
 				id: doc.id,
 				...doc.data(),
-			})) as CompletedLecture[];
+				checkedInAt: doc.data().checkedInAt ?? null,
+				completedAt: doc.data().completedAt ?? null,
+			})) as Activity[];
 		} catch (err) {
 			console.error(err);
 			classesError = "Couldn't load classes. Try refreshing the page.";
@@ -101,7 +118,7 @@
 		}
 	}
 
-	async function handleLecSelection(lec: Lecture) {
+	async function openLecture(lec: Lecture) {
 		if (!classId) return;
 		selection = { level: 'lecture', classId, lectureId: lec.id };
 
@@ -140,11 +157,84 @@
 		}
 	}
 
+	function handleLecSelection(lec: Lecture) {
+		if (checkedInIds.has(lec.id)) {
+			openLecture(lec);
+			return;
+		}
+		pendingCheckInLecture = lec;
+		showCheckInModal = true;
+	}
+
+	async function confirmCheckIn() {
+		const lec = pendingCheckInLecture;
+		if (!lec || !classId || !authState.profile || checkingIn) return;
+		if (!canCheckIn) return;
+		if (checkedInIds.has(lec.id)) {
+			showCheckInModal = false;
+			pendingCheckInLecture = null;
+			openLecture(lec);
+			return;
+		}
+		checkingIn = true;
+		checkInError = null;
+		try {
+			await setDoc(doc(db, 'users', authState.profile.docId, 'activities', lec.id), {
+				classId,
+				lectureId: lec.id,
+				checkedInAt: serverTimestamp(),
+			});
+			activities = [
+				...activities,
+				{
+					id: lec.id,
+					classId,
+					lectureId: lec.id,
+					checkedInAt: serverTimestamp() as any,
+					completedAt: null,
+				},
+			];
+		} catch (err) {
+			console.error(err);
+			checkInError = "Couldn't check in. Please try again.";
+			checkingIn = false;
+			return;
+		}
+		checkingIn = false;
+		showCheckInModal = false;
+		pendingCheckInLecture = null;
+		openLecture(lec);
+	}
+
+	function cancelCheckIn() {
+		if (checkingIn) return;
+		showCheckInModal = false;
+		pendingCheckInLecture = null;
+		checkInError = null;
+	}
+
 	const currentClass = $derived(classes.find((c) => c.id === classId));
 	const selectedLecture = $derived(
 		lectures.find((l) => selection?.level === 'lecture' && l.id === selection.lectureId),
 	);
-	const completedIds = $derived(new Set(completedLecs.map((c) => c.lectureId)));
+	const completedIds = $derived(
+		new Set(activities.filter((a) => a.completedAt != null).map((a) => a.lectureId)),
+	);
+	const checkedInIds = $derived(
+		new Set(activities.filter((a) => a.checkedInAt != null).map((a) => a.lectureId)),
+	);
+	const checkedInTimes = $derived(
+		activities.reduce<Record<string, Date>>((map, a) => {
+			if (a.checkedInAt) map[a.lectureId] = a.checkedInAt.toDate();
+			return map;
+		}, {}),
+	);
+	const canCheckIn = $derived.by(() => {
+		if (!pendingCheckInLecture) return false;
+		const start = new Date(pendingCheckInLecture.startTime).getTime();
+		const t = now.getTime();
+		return t >= start - 15 * 60 * 1000 && t <= start + 15 * 60 * 1000;
+	});
 	const requiredQuizValues = $derived(
 		selectedLecture?.materials
 			.filter((m) => m.type === 'quiz' && m.requiredPostTest)
@@ -247,27 +337,36 @@
 
 		completingLec = true;
 		try {
-			const uid = authState.user.uid;
-			const q = query(collection(db, 'users'), where('authId', '==', uid));
-			const snapshot = await getDocs(q);
-			if (snapshot.empty) throw new Error('User document not found');
-
-			const userDoc = snapshot.docs[0];
-			await setDoc(doc(db, 'users', userDoc.id, 'completedLectures', selection.lectureId), {
-				classId: classId,
-				lectureId: selection.lectureId,
-				completedAt: serverTimestamp(),
-			});
-
-			completedLecs = [
-				...completedLecs,
+			const profile = authState.profile;
+			if (!profile || selection?.level !== 'lecture') return;
+			const lectureId = selection.lectureId;
+			await setDoc(
+				doc(db, 'users', profile.docId, 'activities', lectureId),
 				{
-					id: selection.lectureId,
-					classId: classId ?? '',
-					lectureId: selection.lectureId,
-					completedAt: serverTimestamp() as any,
+					classId: classId,
+					lectureId,
+					completedAt: serverTimestamp(),
 				},
-			];
+				{ merge: true },
+			);
+
+			activities = activities.map((a) =>
+				a.lectureId === lectureId
+					? { ...a, completedAt: serverTimestamp() as any }
+					: a,
+			);
+			if (!activities.some((a) => a.lectureId === lectureId)) {
+				activities = [
+					...activities,
+					{
+						id: lectureId,
+						classId: classId ?? '',
+						lectureId,
+						checkedInAt: null,
+						completedAt: serverTimestamp() as any,
+					},
+				];
+			}
 		} catch (err) {
 			console.log(err);
 		} finally {
@@ -338,6 +437,7 @@
 					{currentClass}
 					selectedLectureId={selectedLecture?.id}
 					{completedIds}
+					{checkedInIds}
 					loading={lecturesLoading}
 					error={lecturesError}
 					onSelectLecture={handleLecSelection}
@@ -347,6 +447,7 @@
 					{displayQuiz}
 					{currentClass}
 					{completedIds}
+					checkedInTime={selectedLecture ? checkedInTimes[selectedLecture.id] : undefined}
 					{completingLec}
 					{allRequiredPassed}
 					{materialsLoading}
@@ -371,3 +472,48 @@
 		{/if}
 	{/if}
 </DashboardLayout>
+
+{#if showCheckInModal && pendingCheckInLecture}
+	<Modal open onclose={cancelCheckIn} title="Check in to this lecture?">
+		<div class="space-y-3">
+			<p class="text-[14px] font-medium text-ink-900">
+				{pendingCheckInLecture.title || 'Untitled lecture'}
+			</p>
+			<p class="text-[13px] text-ink-500">
+				Now: <span class="font-medium text-ink-700">{moment(now).format('hh:mm:ss A')}</span>
+			</p>
+			<p class="rounded-lg bg-iris-50 px-3 py-2 text-[14px] font-semibold text-iris-700">
+				Starts at {moment(pendingCheckInLecture.startTime).format('ddd, MMM D · hh:mm A')}
+			</p>
+			<div class="rounded-lg bg-ink-900/[0.03] px-3 py-2.5 text-[12.5px] text-ink-500">
+				You can check in from <span class="font-medium text-ink-700">15 minutes before</span> the
+				lecture starts until <span class="font-medium text-ink-700">15 minutes after</span>.
+			</div>
+			{#if checkInError}
+				<p class="rounded-lg bg-red-50 px-3 py-2 text-[12.5px] text-red-600">
+					{checkInError}
+				</p>
+			{:else if !canCheckIn}
+				<p class="rounded-lg bg-amber-50 px-3 py-2.5 text-[12.5px] text-amber-700">
+					You're outside the check-in window for this lecture. If this is a mistake, please
+					contact your admin.
+				</p>
+			{/if}
+		</div>
+		{#snippet footer()}
+			<Button variant="ghost" onclick={cancelCheckIn} disabled={checkingIn}>
+				Cancel
+			</Button>
+			<Button onclick={confirmCheckIn} disabled={checkingIn || !canCheckIn}>
+				{#if checkingIn}
+					<div
+						class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
+					></div>
+					Checking in…
+				{:else}
+					Check in
+				{/if}
+			</Button>
+		{/snippet}
+	</Modal>
+{/if}

@@ -50,7 +50,7 @@
 	}
 </script>
 
-<div class="{className}">
+<div class={className}>
 	<div
 		role="button"
 		tabindex={disabled ? -1 : 0}

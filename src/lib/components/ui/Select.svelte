@@ -36,7 +36,7 @@
 	const hasError = $derived(error.length > 0);
 </script>
 
-<div class="{className}">
+<div class={className}>
 	{#if label}
 		<label for={selectId} class="mb-1.5 block text-[13px] font-medium text-ink-700">
 			{label}
@@ -59,7 +59,9 @@
 				<option value={option.value}>{option.label}</option>
 			{/each}
 		</select>
-		<ChevronDown class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+		<ChevronDown
+			class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
+		/>
 	</div>
 	{#if hasError}
 		<p class="mt-1 text-[12.5px] text-red-600">{error}</p>

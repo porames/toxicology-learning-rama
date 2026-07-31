@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Menu } from '@lucide/svelte';
+	import { fade } from 'svelte/transition';
 	import NavigationList from '$lib/components/NavigationList.svelte';
 	import UserInfoCard from '$lib/components/UserInfoCard.svelte';
 	import { authState } from '$lib/auth.svelte';
@@ -30,16 +31,10 @@
 		class="flex h-14 shrink-0 items-center justify-between border-b border-ink-900/8 bg-white px-5"
 	>
 		<div class="flex items-center gap-1 sm:gap-2.5 min-w-0">
-			<button
-				type="button"
-				onclick={() => (showMenu = !showMenu)}
-				class="md:hidden shrink-0"
-			>
+			<button type="button" onclick={() => (showMenu = !showMenu)} class="md:hidden shrink-0">
 				<Menu class="h-5 w-5" />
 			</button>
-			<div
-				class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-iris-600"
-			>
+			<div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-iris-600">
 				<svg viewBox="0 0 24 24" class="h-4 w-4" fill="none">
 					<path d="M12 2 L21 7 L21 17 L12 22 L3 17 L3 7 Z" fill="white" />
 				</svg>
@@ -53,13 +48,16 @@
 		{#if showMenu}
 			<div
 				class="fixed inset-0 z-10 bg-black/30 md:hidden"
-				onclick={() => (showMenu = false)}
 				role="none"
+				transition:fade={{ duration: 200 }}
+				onclick={() => (showMenu = false)}
 			></div>
 		{/if}
 		<aside
-			class={`flex shrink-0 flex-col border-r border-ink-900/8 bg-white p-4 md:relative md:z-auto md:flex ${sidebarClass} ${
-				showMenu ? 'fixed inset-y-0 left-0 z-20 block' : 'hidden'
+			class={`flex shrink-0 flex-col border-r border-ink-900/8 bg-white p-4 transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 z-20 md:relative md:z-auto md:translate-x-0 md:pointer-events-auto ${sidebarClass} ${
+				showMenu
+					? 'translate-x-0 pointer-events-auto'
+					: '-translate-x-full pointer-events-none'
 			}`}
 		>
 			<UserInfoCard

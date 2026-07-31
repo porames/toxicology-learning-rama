@@ -17,6 +17,7 @@
 	import LectureListPanel from '$lib/components/classes/LectureListPanel.svelte';
 	import LectureDetailPanel from '$lib/components/classes/LectureDetailPanel.svelte';
 	import DashboardLayout from '$lib/components/DashboardLayout.svelte';
+	import Breadcrumbs from '$lib/components/Breadcrumbs.svelte';
 
 	let { classId }: { classId?: string } = $props();
 
@@ -281,6 +282,15 @@
 </script>
 
 <DashboardLayout>
+	{#snippet headerLeft()}
+		<Breadcrumbs
+			crumbs={[
+				{ label: 'All Classes', href: '/classes' },
+				...(currentClass ? [{ label: currentClass.name, active: true }] : []),
+			]}
+		/>
+	{/snippet}
+
 	{#snippet sidebarBottom()}
 		<div class="flex-1 overflow-y-auto pt-3">
 			<p

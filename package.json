@@ -9,12 +9,17 @@
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"format": "prettier --write 'src/**/*.{svelte,ts,js,css}'",
+		"format:check": "prettier --check 'src/**/*.{svelte,ts,js,css}'"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^7.0.1",
 		"@sveltejs/kit": "^2.63.0",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
+		"@types/papaparse": "^5.5.2",
+		"prettier": "^3.9.6",
+		"prettier-plugin-svelte": "^4.1.1",
 		"svelte": "^5.56.1",
 		"svelte-check": "^4.6.0",
 		"typescript": "^6.0.3",
@@ -25,6 +30,7 @@
 		"@tailwindcss/vite": "^4.3.3",
 		"firebase": "^12.17.0",
 		"moment": "^2.30.1",
+		"papaparse": "^5.5.4",
 		"tailwindcss": "^4.3.3"
 	}
 }

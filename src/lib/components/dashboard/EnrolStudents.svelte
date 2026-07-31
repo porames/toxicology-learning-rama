@@ -204,7 +204,7 @@
 					type="button"
 					onclick={() => addStudents()}
 					disabled={enrolling || selectedStudents.length === 0}
-					class="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+					class="inline-flex items-center gap-2 rounded-md bg-gradient-to-b from-blue-500 to-blue-700 px-4 py-2 text-xs font-semibold text-white shadow-button-sky transition-colors hover:from-blue-500 hover:to-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					{#if enrolling}
 						<Loader2 size={14} class="animate-spin" />

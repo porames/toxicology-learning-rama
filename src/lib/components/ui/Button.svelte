@@ -25,7 +25,7 @@
 	const variants: Record<string, string> = {
 		primary:
 			'bg-gradient-to-b from-iris-500 to-iris-700 text-white shadow-button hover:from-iris-500 hover:to-iris-800',
-		accent: 'bg-sky-500 text-white hover:bg-sky-600',
+		accent: 'bg-gradient-to-b from-sky-500 to-sky-700 text-white shadow-button-sky hover:from-sky-500 hover:to-sky-800',
 		ghost: 'border border-ink-900/15 bg-white text-ink-700 hover:bg-ink-900/[0.03] hover:border-ink-900/25',
 		danger: 'text-red-600 hover:text-red-700 hover:bg-red-50',
 		'danger-solid': 'bg-red-500 text-white hover:bg-red-600',

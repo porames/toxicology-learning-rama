@@ -30,7 +30,7 @@
 
 	const actions = $derived.by(() => [
 		{ label: 'Edit quiz', description: 'Add, remove, or modify questions and settings.', href: `/quiz/${quizId}/edit`, icon: Pencil, color: 'iris' },
-		{ label: 'Preview', description: 'Take the quiz to see how it looks for students.', href: `/quiz/${quizId}/take`, icon: Play, color: 'emerald' },
+		{ label: 'Preview', description: 'Review the quiz and its correct answers.', href: `/quiz/${quizId}/preview`, icon: Play, color: 'emerald' },
 		{ label: 'Results', description: 'View student submissions and scores.', href: `/quiz/${quizId}/results`, icon: BarChart3, color: 'amber' }
 	] as const);
 
@@ -46,7 +46,7 @@
 		<div class="h-8 w-8 animate-spin rounded-full border-2 border-ink-900/10 border-t-iris-600"></div>
 	</div>
 {:else if quiz}
-	<div class="mx-auto max-w-xl px-8 py-10">
+	<div class="mx-auto w-2xl px-8 py-10">
 		<div class="flex items-center gap-2.5">
 			<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-iris-50 text-iris-500">
 				<FileQuestion class="h-5 w-5" />

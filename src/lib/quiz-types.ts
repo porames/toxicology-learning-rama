@@ -15,6 +15,7 @@ export interface Question {
 	correctAnswer: string | string[];
 	explanation: string;
 	points: number;
+	imageUrl?: string;
 }
 
 export interface Quiz {

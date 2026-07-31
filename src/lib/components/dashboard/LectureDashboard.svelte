@@ -7,10 +7,9 @@
 	import ClassEditor from '$lib/components/dashboard/ClassEditor.svelte';
 	import DashboardLayout from '$lib/components/DashboardLayout.svelte';
 	import Breadcrumbs from '$lib/components/Breadcrumbs.svelte';
-	import { db, auth } from '$lib/firebase';
+	import { db } from '$lib/firebase';
 	import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
-	import { signOut } from 'firebase/auth';
-	import { Plus, UserRound, LogOut, ChevronRight, Folder } from '@lucide/svelte';
+	import { Plus, UserRound, ChevronRight, Folder } from '@lucide/svelte';
 	import * as Utils from '$lib/dashboard/utils';
 	import * as Selectors from '$lib/dashboard/selectors';
 
@@ -33,7 +32,6 @@
 					students: d.data()['enroledStudents'],
 				}));
 				classes = classesData;
-				expanded = new Set(classesData.map((c) => c.id));
 			} catch (err) {
 				console.log(err);
 			} finally {
@@ -145,6 +143,7 @@
 	}
 
 	async function loadLectureForClass(sel: Selection) {
+		selection = sel;
 		if (sel && 'classId' in sel && sel.level === 'class') {
 			lectureLoading = true;
 			try {
@@ -171,7 +170,6 @@
 				lectureLoading = false;
 			}
 		}
-		selection = sel;
 	}
 
 	function deleteLecture(classId: string, lectureId: string) {
@@ -243,16 +241,6 @@
 				</button>
 			</div>
 		</div>
-		<div class="border-t border-ink-900/8 px-2 py-2">
-			<button
-				type="button"
-				onclick={() => signOut(auth)}
-				class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium text-ink-500 transition hover:bg-red-50 hover:text-red-600"
-			>
-				<LogOut class="h-4 w-4" />
-				Sign out
-			</button>
-		</div>
 	{/snippet}
 
 	{#if loading}
@@ -265,8 +253,7 @@
 			</div>
 		</div>
 	{:else if !selectedClass && !selection}
-		<!-- Mobile class list -->
-		<div class="block overflow-y-auto px-6 py-5 w-full">
+		<div class="block overflow-y-auto px-6 py-5 w-xl">
 			<h2 class="mb-3 px-2 text-[11px] font-semibold uppercase tracking-wider text-ink-300">
 				All Classes
 			</h2>

@@ -43,20 +43,31 @@
 				role="button"
 				tabindex="0"
 				onclick={() => onSelect({ level: 'class', classId: cls.id })}
-				onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect({ level: 'class', classId: cls.id })}
+				onkeydown={(e) =>
+					(e.key === 'Enter' || e.key === ' ') &&
+					onSelect({ level: 'class', classId: cls.id })}
 				class={`group relative flex h-9 items-center gap-1.5 rounded-md pr-1.5 text-left transition pl-2 ${
-					classSelected ? 'bg-iris-50 text-iris-700' : 'text-ink-700 hover:bg-ink-900/[0.03]'
+					classSelected
+						? 'bg-iris-50 text-iris-700'
+						: 'text-ink-700 hover:bg-ink-900/[0.03]'
 				}`}
 			>
 				<button
 					type="button"
-					onclick={(e) => { e.stopPropagation(); onToggle(cls.id, classExpanded); }}
+					onclick={(e) => {
+						e.stopPropagation();
+						onToggle(cls.id, classExpanded);
+					}}
 					class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-ink-300 hover:text-ink-500"
 					aria-label={classExpanded ? 'Collapse' : 'Expand'}
 				>
-					<ChevronRight class={`h-3.5 w-3.5 transition-transform ${classExpanded ? 'rotate-90' : ''}`} />
+					<ChevronRight
+						class={`h-3.5 w-3.5 transition-transform ${classExpanded ? 'rotate-90' : ''}`}
+					/>
 				</button>
-				<span class={`flex h-5 w-5 shrink-0 items-center justify-center ${classSelected ? 'text-iris-600' : 'text-ink-300'}`}>
+				<span
+					class={`flex h-5 w-5 shrink-0 items-center justify-center ${classSelected ? 'text-iris-600' : 'text-ink-300'}`}
+				>
 					<Folder class="h-4 w-4" />
 				</span>
 				<span class="flex min-w-0 flex-1 items-baseline gap-2">
@@ -78,34 +89,50 @@
 						{:else}
 							{#each groupedLectures(cls.lectures) as [key, lecs]}
 								{@const firstLec = lecs[0]}
-								<div class="px-1 py-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-ink-400">
+								<div
+									class="px-1 py-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-ink-400"
+								>
 									{moment(firstLec.startTime).format('ddd, MMM D, YYYY')}
 								</div>
 								{#each lecs as lec}
 									{@const lecExpanded = expanded.has(lec.id)}
-									{@const lecSelected = selection?.level === 'lecture' && selection.lectureId === lec.id}
+									{@const lecSelected =
+										selection?.level === 'lecture' &&
+										selection.lectureId === lec.id}
 									<div
 										role="button"
 										tabindex="0"
-										onclick={() => onSelect({ level: 'lecture', classId: cls.id, lectureId: lec.id })}
-										onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect({ level: 'lecture', classId: cls.id, lectureId: lec.id })}
+										onclick={() =>
+											onSelect({
+												level: 'lecture',
+												classId: cls.id,
+												lectureId: lec.id,
+											})}
+										onkeydown={(e) =>
+											(e.key === 'Enter' || e.key === ' ') &&
+											onSelect({
+												level: 'lecture',
+												classId: cls.id,
+												lectureId: lec.id,
+											})}
 										class={`group relative flex h-9 items-center gap-1.5 rounded-md pr-1.5 text-left transition pl-2 ${
-											lecSelected ? 'bg-iris-50 text-iris-700' : 'text-ink-700 hover:bg-ink-900/[0.03]'
+											lecSelected
+												? 'bg-iris-50 text-iris-700'
+												: 'text-ink-700 hover:bg-ink-900/[0.03]'
 										}`}
 									>
-										<button
-											type="button"
-											onclick={(e) => { e.stopPropagation(); onToggle(lec.id, lecExpanded); }}
-											class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-ink-300 hover:text-ink-500"
+										<span
+											class={`flex h-5 w-5 shrink-0 items-center justify-center ${lecSelected ? 'text-iris-600' : 'text-ink-300'}`}
 										>
-											<ChevronRight class={`h-3.5 w-3.5 transition-transform ${lecExpanded ? 'rotate-90' : ''}`} />
-										</button>
-										<span class={`flex h-5 w-5 shrink-0 items-center justify-center ${lecSelected ? 'text-iris-600' : 'text-ink-300'}`}>
 											<Clock class="h-4 w-4" />
 										</span>
 										<span class="flex min-w-0 flex-1 items-baseline gap-2">
-											<span class="truncate text-[13.5px] font-medium">{lec.title || 'Untitled lecture'}</span>
-											<span class="shrink-0 truncate text-[12px] text-ink-300">{formatTimeRange(lec.startTime, lec.endTime)}</span>
+											<span class="truncate text-[13.5px] font-medium"
+												>{lec.title || 'Untitled lecture'}</span
+											>
+											<span class="shrink-0 truncate text-[12px] text-ink-300"
+												>{formatTimeRange(lec.startTime, lec.endTime)}</span
+											>
 										</span>
 									</div>
 								{/each}

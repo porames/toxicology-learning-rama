@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { LogOut, LoaderCircle } from '@lucide/svelte';
-	import { db, auth } from '$lib/firebase';
+	import { LoaderCircle } from '@lucide/svelte';
+	import { db } from '$lib/firebase';
 	import {
 		collection,
 		getDocs,
@@ -10,7 +10,6 @@
 		setDoc,
 		doc,
 	} from 'firebase/firestore';
-	import { signOut } from 'firebase/auth';
 	import { goto } from '$app/navigation';
 	import { authState } from '$lib/auth.svelte';
 	import type { ClassItem, Lecture, Selection, CompletedLecture } from '$lib/dashboard/types';
@@ -18,6 +17,7 @@
 	import LectureDetailPanel from '$lib/components/classes/LectureDetailPanel.svelte';
 	import DashboardLayout from '$lib/components/DashboardLayout.svelte';
 	import Breadcrumbs from '$lib/components/Breadcrumbs.svelte';
+	import ClassesList from './ClassesList.svelte';
 
 	let { classId }: { classId?: string } = $props();
 
@@ -274,11 +274,6 @@
 			completingLec = false;
 		}
 	}
-
-	async function handleLogout() {
-		await signOut(auth);
-		goto('/');
-	}
 </script>
 
 <DashboardLayout>
@@ -287,6 +282,7 @@
 			crumbs={[
 				{ label: 'All Classes', href: '/classes' },
 				...(currentClass ? [{ label: currentClass.name, active: true }] : []),
+				...(selectedLecture ? [{ label: selectedLecture.title, active: true }] : []),
 			]}
 		/>
 	{/snippet}
@@ -322,62 +318,56 @@
 				{/each}
 			{/if}
 		</div>
-		<div class="border-t border-ink-900/8">
-			<button
-				onclick={handleLogout}
-				class="flex w-full items-center gap-2 rounded-lg px-3 py-2 mt-2 text-[13px] font-medium text-ink-500 transition hover:bg-red-50 hover:text-red-600"
-			>
-				<LogOut class="h-4 w-4" />
-				Sign out
-			</button>
-		</div>
 	{/snippet}
-
-	{#if !classId}
-		<div
-			class="hidden md:flex flex-1 flex-col items-center justify-center gap-2 overflow-y-auto px-5 text-center"
-		>
-			<p class="text-sm font-medium text-ink-900">Pick a class</p>
-			<p class="max-w-xs text-sm text-ink-900/50">
-				Choose a class from the sidebar to see its lectures and materials.
-			</p>
+	{#if classesLoading}
+		<div class="flex h-full items-center justify-center w-full">
+			<div class="flex flex-col items-center gap-3">
+				<div
+					class="h-8 w-8 animate-spin rounded-full border-4 border-ink-900/10 border-t-iris-600"
+				></div>
+				<span class="text-[13px] text-ink-500">Loading classes…</span>
+			</div>
 		</div>
 	{:else}
-		<div class="flex flex-1 min-w-0 overflow-hidden">
-			<LectureListPanel
-				{lectures}
-				{currentClass}
-				selectedLectureId={selectedLecture?.id}
-				{completedIds}
-				loading={lecturesLoading}
-				error={lecturesError}
-				onSelectLecture={handleLecSelection}
-			/>
-			<LectureDetailPanel
-				{selectedLecture}
-				{displayQuiz}
-				{currentClass}
-				{completedIds}
-				{completingLec}
-				{allRequiredPassed}
-				{materialsLoading}
-				{materialsError}
-				{videoUrls}
-				{quizAttempts}
-				{quizResult}
-				onBack={() => (selection = null)}
-				onBackFromQuiz={() => (displayQuiz = null)}
-				onStartQuiz={(quizId) => (displayQuiz = quizId)}
-				onComplete={() => completedLec()}
-				onCloseQuizResult={() => {
-					quizResult = null;
-					displayQuiz = null;
-				}}
-				onViewAttempts={() => {
-					quizResult = null;
-					quizViewKey++;
-				}}
-			/>
-		</div>
+		{#if !classId}
+			<ClassesList {classes} />
+		{:else}
+			<div class="flex flex-1 min-w-0 overflow-hidden">
+				<LectureListPanel
+					{lectures}
+					{currentClass}
+					selectedLectureId={selectedLecture?.id}
+					{completedIds}
+					loading={lecturesLoading}
+					error={lecturesError}
+					onSelectLecture={handleLecSelection}
+				/>
+				<LectureDetailPanel
+					{selectedLecture}
+					{displayQuiz}
+					{currentClass}
+					{completedIds}
+					{completingLec}
+					{allRequiredPassed}
+					{materialsLoading}
+					{materialsError}
+					{videoUrls}
+					{quizAttempts}
+					{quizResult}
+					onBack={() => (selection = null)}
+					onBackFromQuiz={() => (displayQuiz = null)}
+					onStartQuiz={(quizId) => (displayQuiz = quizId)}
+					onComplete={() => completedLec()}
+					onCloseQuizResult={() => {
+						quizResult = null;
+						displayQuiz = null;
+					}}
+					onViewAttempts={() => {
+						quizResult = null;
+						quizViewKey++;
+					}}
+				/>
+			</div>
+		{/if}
 	{/if}
 </DashboardLayout>

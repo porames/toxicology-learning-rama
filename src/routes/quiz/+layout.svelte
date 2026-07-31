@@ -59,6 +59,8 @@
 					crumbs.push({ label: 'Edit', href: null });
 				} else if (segments[2] === 'take') {
 					crumbs.push({ label: 'Take', href: null });
+				} else if (segments[2] === 'preview') {
+					crumbs.push({ label: 'Preview', href: null });
 				} else if (segments[2] === 'results') {
 					crumbs.push({ label: 'Results', href: null });
 				}

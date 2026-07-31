@@ -9,7 +9,7 @@
 	import { MATERIAL_LABELS } from '$lib/dashboard/types';
 	import { MATERIAL_ICON, MATERIAL_COLOR } from '$lib/dashboard/icons';
 	import { authState } from '$lib/auth.svelte';
-	import { db, storage } from '$lib/firebase';
+	import { db } from '$lib/firebase';
 	import {
 		collection,
 		getDocs,
@@ -19,18 +19,13 @@
 		deleteDoc,
 		doc,
 	} from 'firebase/firestore';
-	import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-	import {
-		Plus,
-		ChevronRight,
-		GripVertical,
-		FileQuestion,
-		X,
-		Check,
-		Trash2,
-	} from '@lucide/svelte';
-	import { Button, FileUpload, Input, Textarea } from '$lib/components/ui';
+	import { ChevronRight } from '@lucide/svelte';
+	import { Button, Input } from '$lib/components/ui';
+	import { DragDropProvider, DragOverlay } from '@dnd-kit/svelte';
+	import { initMaterialState, type MaterialState } from '$lib/dashboard/materialState';
 	import * as Utils from '$lib/dashboard/utils';
+	import MaterialItem from './materials/MaterialItem.svelte';
+	import QuizPicker from './materials/QuizPicker.svelte';
 
 	let {
 		selectedClass,
@@ -48,7 +43,6 @@
 		onDeleteLecture: (classId: string, lectureId: string) => void;
 	} = $props();
 
-	// Lecture editor materials state
 	let lectureMaterials: Material[] = $state([]);
 	let materialsOrder: string[] = $state([]);
 	let materialsLoading = $state(false);
@@ -56,67 +50,11 @@
 	let showQuizPicker = $state(false);
 	let leDeleteLecture = $state(false);
 
-	// per-material UI state
-	let materialStates = $state<
-		Record<
-			string,
-			{
-				videoMode: 'youtube' | 'upload';
-				uploading: boolean;
-				progress: number;
-				videoId: string;
-				embedUrl: string | null;
-				deleting: boolean;
-				requiredPostTest: boolean;
-				pdfUrl: string;
-				fileUploading: boolean;
-				fileProgress: number;
-				fileUrl: string;
-			}
-		>
-	>({});
+	let materialStates = $state<Record<string, MaterialState>>({});
 
-	function initMaterialState(mat: Material) {
+	function ensureMaterialState(mat: Material) {
 		if (!materialStates[mat.id]) {
-			materialStates[mat.id] = {
-				videoMode: 'youtube',
-				uploading: false,
-				progress: 0,
-				videoId: mat.type === 'video' ? mat.value || '' : '',
-				embedUrl: null,
-				deleting: false,
-				requiredPostTest: mat.requiredPostTest ?? false,
-				pdfUrl: mat.type === 'pdf' ? mat.value || '' : '',
-				fileUploading: false,
-				fileProgress: 0,
-				fileUrl: mat.type === 'file' ? mat.value || '' : '',
-			};
-		}
-	}
-
-	async function fetchVideoEmbed(matId: string, vid: string) {
-		try {
-			const user = authState.user;
-			const token = await user?.getIdToken();
-			const res = await fetch(
-				'https://us-central1-rama-toxico-edu.cloudfunctions.net/getVideoPlaybackUrl',
-				{
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${token}`,
-					},
-					body: JSON.stringify({ videoId: vid }),
-				},
-			);
-			if (res.ok) {
-				const data = await res.json();
-				if (materialStates[matId]) {
-					materialStates[matId].embedUrl = data.embedUrl;
-				}
-			}
-		} catch (err) {
-			console.error(err);
+			materialStates[mat.id] = initMaterialState(mat);
 		}
 	}
 
@@ -146,10 +84,7 @@
 			}
 			lectureMaterials = mats;
 			for (const mat of mats) {
-				initMaterialState(mat);
-				if (mat.type === 'video' && mat.value) {
-					fetchVideoEmbed(mat.id, mat.value);
-				}
+				ensureMaterialState(mat);
 			}
 		} catch (err) {
 			console.error(err);
@@ -169,6 +104,12 @@
 		lectureMaterials = lectureMaterials.map((m) =>
 			m.id === materialId ? { ...m, ...patch } : m,
 		);
+	}
+
+	function persistMaterialsOrder(classId: string, lectureId: string, order: string[]) {
+		return updateDoc(doc(db, 'classes', classId, 'lectures', lectureId), {
+			materialsOrder: order,
+		});
 	}
 
 	async function addMaterialOp(type: MaterialType) {
@@ -192,10 +133,8 @@
 		const newOrder = [...materialsOrder, docRef.id];
 		materialsOrder = newOrder;
 		lectureMaterials = [...lectureMaterials, newMat];
-		initMaterialState(newMat);
-		await updateDoc(doc(db, 'classes', classId, 'lectures', lectureId), {
-			materialsOrder: newOrder,
-		});
+		ensureMaterialState(newMat);
+		await persistMaterialsOrder(classId, lectureId, newOrder);
 	}
 
 	async function addMaterialWithQuiz(quizId: string, quizTitle: string) {
@@ -214,10 +153,8 @@
 		const newOrder = [...materialsOrder, docRef.id];
 		materialsOrder = newOrder;
 		lectureMaterials = [...lectureMaterials, newMat];
-		initMaterialState(newMat);
-		await updateDoc(doc(db, 'classes', classId, 'lectures', lectureId), {
-			materialsOrder: newOrder,
-		});
+		ensureMaterialState(newMat);
+		await persistMaterialsOrder(classId, lectureId, newOrder);
 	}
 
 	function handleAddMaterial(type: MaterialType) {
@@ -246,9 +183,19 @@
 			return aIdx - bIdx;
 		});
 
-		await updateDoc(doc(db, 'classes', classId, 'lectures', lectureId), {
-			materialsOrder: newOrder,
-		});
+		await persistMaterialsOrder(classId, lectureId, newOrder);
+	}
+
+	function handleDragEnd(event: {
+		operation: { source: { id: string | number } | null; target: { id: string | number } | null };
+		canceled: boolean;
+	}) {
+		if (event.canceled) return;
+		const sourceId = event.operation.source?.id;
+		const targetId = event.operation.target?.id;
+		if (sourceId != null && targetId != null && sourceId !== targetId) {
+			handleMaterialDragEnd(String(sourceId), String(targetId));
+		}
 	}
 
 	async function deleteMaterialOp(materialId: string) {
@@ -256,7 +203,8 @@
 		const lectureId = selectedLecture.id;
 
 		const mat = lectureMaterials.find((m) => m.id === materialId);
-		if (mat?.type === 'video' && materialStates[materialId]?.videoId) {
+		const state = materialStates[materialId];
+		if (mat?.type === 'video' && state?.videoId) {
 			try {
 				const user = authState.user;
 				const token = await user?.getIdToken();
@@ -266,7 +214,7 @@
 						'Content-Type': 'application/json',
 						Authorization: `Bearer ${token}`,
 					},
-					body: JSON.stringify({ videoId: materialStates[materialId].videoId }),
+					body: JSON.stringify({ videoId: state.videoId }),
 				});
 			} catch (err) {
 				console.error(err);
@@ -277,12 +225,25 @@
 		materialsOrder = newOrder;
 		lectureMaterials = lectureMaterials.filter((m) => m.id !== materialId);
 
-		await updateDoc(doc(db, 'classes', classId, 'lectures', lectureId), {
-			materialsOrder: newOrder,
-		});
+		await persistMaterialsOrder(classId, lectureId, newOrder);
 		deleteDoc(
 			doc(db, 'classes', classId, 'lectures', lectureId, 'materials', materialId),
 		).catch(console.error);
+	}
+
+	async function toggleRequiredPostTest(mat: Material, checked: boolean) {
+		await updateDoc(
+			doc(
+				db,
+				'classes',
+				selectedClass.id,
+				'lectures',
+				selectedLecture.id,
+				'materials',
+				mat.id,
+			),
+			{ requiredPostTest: checked },
+		);
 	}
 
 	async function saveLectureChanges() {
@@ -329,120 +290,6 @@
 			console.error(err);
 		} finally {
 			leDeleteLecture = false;
-		}
-	}
-
-	// Quiz picker state
-	let quizPickerQuizzes: { id: string; title: string; questions: unknown[] }[] = $state([]);
-	let quizPickerLoading = $state(true);
-
-	async function loadQuizzes() {
-		quizPickerLoading = true;
-		try {
-			const snap = await getDocs(collection(db, 'quizzes'));
-			quizPickerQuizzes = snap.docs.map((d) => ({
-				id: d.id,
-				title: d.data().title || 'Untitled',
-				questions: d.data().questions || [],
-			}));
-		} catch (err) {
-			console.error(err);
-		} finally {
-			quizPickerLoading = false;
-		}
-	}
-
-	$effect(() => {
-		if (showQuizPicker) {
-			loadQuizzes();
-		}
-	});
-
-	// Video upload handler
-	async function handleVideoUpload(matId: string, file: File) {
-		const classId = selectedClass.id;
-		const lectureId = selectedLecture.id;
-		const state = materialStates[matId];
-		if (!state) return;
-
-		state.uploading = true;
-		state.progress = 0;
-		try {
-			const user = authState.user;
-			const token = await user?.getIdToken();
-			const uploadRes = await fetch(
-				'https://us-central1-rama-toxico-edu.cloudfunctions.net/getVideoUploadUrl',
-				{
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${token}`,
-					},
-					body: JSON.stringify({ title: file.name }),
-				},
-			);
-			if (!uploadRes.ok) throw new Error('Failed to get upload URL');
-			const { apiKey, libraryId, videoId } = await uploadRes.json();
-			const uploadUrl = `https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`;
-			const xhr = new XMLHttpRequest();
-			xhr.upload.onprogress = (e) => {
-				if (e.lengthComputable) {
-					state.progress = Math.round((e.loaded / e.total) * 100);
-				}
-			};
-			await new Promise<void>((resolve, reject) => {
-				xhr.onload = () => resolve();
-				xhr.onerror = () => reject(new Error('Upload failed'));
-				xhr.open('PUT', uploadUrl);
-				xhr.setRequestHeader('AccessKey', apiKey);
-				xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
-				xhr.send(file);
-			});
-
-			state.videoId = videoId;
-			updateMaterialLocal(matId, { value: videoId });
-			fetchVideoEmbed(matId, videoId);
-			await updateDoc(
-				doc(db, 'classes', classId, 'lectures', lectureId, 'materials', matId),
-				{ value: videoId },
-			);
-		} catch (err) {
-			console.error(err);
-		} finally {
-			state.uploading = false;
-		}
-	}
-
-	// File upload handler (Firebase Storage)
-	async function handleFileUpload(matId: string, file: File) {
-		const classId = selectedClass.id;
-		const lectureId = selectedLecture.id;
-		const state = materialStates[matId];
-		if (!state) return;
-
-		state.fileUploading = true;
-		state.fileProgress = 0;
-		try {
-			const ext = file.name.split('.').pop();
-			const storageRef = ref(storage, `materials/${matId}.${ext}`);
-			const uploadTask = uploadBytesResumable(storageRef, file);
-			uploadTask.on('state_changed', (snapshot) => {
-				state.fileProgress = Math.round(
-					(snapshot.bytesTransferred / snapshot.totalBytes) * 100,
-				);
-			});
-			await uploadTask;
-			const downloadUrl = await getDownloadURL(storageRef);
-			state.fileUrl = downloadUrl;
-			updateMaterialLocal(matId, { value: downloadUrl });
-			await updateDoc(
-				doc(db, 'classes', classId, 'lectures', lectureId, 'materials', matId),
-				{ value: downloadUrl },
-			);
-		} catch (err) {
-			console.error(err);
-		} finally {
-			state.fileUploading = false;
 		}
 	}
 
@@ -537,433 +384,48 @@
 		{:else if lectureMaterials.length === 0}
 			<p class="py-4 text-center text-[13px] text-ink-400">No materials yet.</p>
 		{:else}
-			<div class="mt-4 space-y-3" ondragover={(e) => e.preventDefault()}>
-				{#each lectureMaterials as mat (mat.id)}
-					{@const ms = materialStates[mat.id]}
-					{@const Icon = MATERIAL_ICON[mat.type]}
-					{@const color = MATERIAL_COLOR[mat.type]}
-					{@const highlighted = mat.id === highlightMaterialId}
-
-					{@const videoMode = ms?.videoMode ?? 'youtube'}
-					{@const uploading = ms?.uploading ?? false}
-					{@const progress = ms?.progress ?? 0}
-					{@const videoId = ms?.videoId ?? ''}
-					{@const embedUrl = ms?.embedUrl ?? null}
-					{@const requiredPostTest = ms?.requiredPostTest ?? false}
-					{@const fileUrl = ms?.fileUrl ?? ''}
-					{@const fileUploading = ms?.fileUploading ?? false}
-					{@const fileProgress = ms?.fileProgress ?? 0}
-					{@const pdfUrl = ms?.pdfUrl ?? ''}
-
-					<div
-						draggable="true"
-						ondragstart={(e) => {
-							e.dataTransfer?.setData('text/plain', mat.id);
-							if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
-						}}
-						ondrop={(e) => {
-							e.preventDefault();
-							const draggedId = e.dataTransfer?.getData('text/plain');
-							if (draggedId) handleMaterialDragEnd(draggedId, mat.id);
-						}}
-						ondragover={(e) => e.preventDefault()}
-						class={`rounded-xl border bg-white p-3.5 transition ${
-							highlighted
-								? `border-transparent ring-2 ${color.ring}`
-								: 'border-ink-900/10'
-						}`}
-					>
-						<div class="flex items-start gap-1.5">
-							<button
-								type="button"
-								class="mt-1 flex h-6 w-5 shrink-0 cursor-grab items-center justify-center rounded text-ink-300 transition active:cursor-grabbing hover:text-ink-500"
-								aria-label="Drag to reorder"
+			<DragDropProvider onDragEnd={handleDragEnd}>
+				<div class="mt-4 space-y-3">
+					{#each lectureMaterials as mat, i (mat.id)}
+						{@const state = materialStates[mat.id]}
+						{@const highlighted = mat.id === highlightMaterialId}
+						{#if state}
+							<MaterialItem
+								material={mat}
+								{state}
+								index={i}
+								classId={selectedClass.id}
+								lectureId={selectedLecture.id}
+								{highlighted}
+								onTitleChange={(title) => updateMaterialLocal(mat.id, { title })}
+								onValueChange={(value) => updateMaterialLocal(mat.id, { value })}
+								onDelete={() => deleteMaterialOp(mat.id)}
+								onTogglePostTest={(checked) => toggleRequiredPostTest(mat, checked)}
+							/>
+						{/if}
+					{/each}
+				</div>
+				<DragOverlay>
+					{#snippet children(dragSource)}
+						{@const data = dragSource.data as { title?: string; type?: MaterialType }}
+						<div class="flex items-center gap-2.5 rounded-xl border border-ink-900/10 bg-white p-3.5 shadow-xl">
+							<span
+								class={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${
+									MATERIAL_COLOR[data.type ?? 'link'].bg
+								} ${MATERIAL_COLOR[data.type ?? 'link'].text}`}
 							>
-								<GripVertical class="h-4 w-4" />
-							</button>
-							<div class="flex items-start gap-2.5 min-w-0 flex-1">
-								<span
-									class={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${color.bg} ${color.text}`}
-								>
-									<Icon class="h-3.5 w-3.5" />
-								</span>
-
-								<div class="min-w-0 flex-1 space-y-2">
-									<Input
-										value={mat.title}
-										oninput={(e) => {
-											const target = e.target as HTMLInputElement;
-											updateMaterialLocal(mat.id, { title: target.value });
-										}}
-										placeholder="Material title"
-									/>
-
-									{#if mat.type === 'youtube'}
-										<div class="space-y-2">
-											<Input
-												value={mat.value}
-												oninput={(e) => {
-													const target = e.target as HTMLInputElement;
-													updateMaterialLocal(mat.id, {
-														value: target.value,
-													});
-												}}
-												placeholder="https://youtube.com/watch?v=..."
-												error={mat.value &&
-												!Utils.getYoutubeVideoId(mat.value)
-													? 'Please enter a valid YouTube link'
-													: ''}
-											/>
-											{#if Utils.getYoutubeVideoId(mat.value)}
-												<div
-													class="overflow-hidden rounded-lg border border-ink-900/8"
-												>
-													<div class="aspect-video">
-														<iframe
-															title="YouTube video"
-															src={`https://www.youtube.com/embed/${Utils.getYoutubeVideoId(mat.value)}`}
-															class="h-full w-full"
-															allow="autoplay; encrypted-media; picture-in-picture"
-															allowfullscreen
-														></iframe>
-													</div>
-												</div>
-											{/if}
-										</div>
-									{/if}
-
-									{#if mat.type === 'link'}
-										<Input
-											value={mat.value}
-											oninput={(e) => {
-												const target = e.target as HTMLInputElement;
-												updateMaterialLocal(mat.id, {
-													value: target.value,
-												});
-											}}
-											placeholder="https://example.com/resource"
-										/>
-									{/if}
-
-									{#if mat.type === 'text'}
-										<Textarea
-											value={mat.value}
-											oninput={(e) => {
-												const target = e.target as HTMLTextAreaElement;
-												updateMaterialLocal(mat.id, {
-													value: target.value,
-												});
-											}}
-											placeholder="Write the note or instructions here…"
-											rows={3}
-										/>
-									{/if}
-
-									{#if mat.type === 'pdf' && pdfUrl}
-										<div
-											class="flex items-center gap-2 text-[12.5px] text-emerald-600"
-										>
-											<Check class="h-4 w-4" />
-											<a
-												href={pdfUrl}
-												target="_blank"
-												rel="noopener noreferrer"
-												class="underline hover:text-emerald-700 truncate max-w-[200px]"
-											>
-												View PDF
-											</a>
-											<button
-												type="button"
-												onclick={() => {
-													if (ms) ms.pdfUrl = '';
-													updateMaterialLocal(mat.id, { value: '' });
-												}}
-												class="text-[12px] text-ink-400 hover:text-red-500 underline ml-auto"
-											>
-												Remove
-											</button>
-										</div>
-									{/if}
-
-									{#if mat.type === 'file'}
-										<div class="space-y-2">
-											{#if !fileUrl}
-												<div class="flex items-center gap-3">
-													<FileUpload
-														accept="image/*,.ppt,.pptx,.docx,.pdf"
-														disabled={fileUploading}
-														label={fileUploading
-															? `Uploading ${fileProgress}%`
-															: 'Choose file'}
-														onupload={(file) => {
-															if (file instanceof File)
-																handleFileUpload(mat.id, file);
-														}}
-													/>
-													{#if fileUploading}
-														<div
-															class="flex-1 h-2 rounded-full bg-ink-900/10 overflow-hidden"
-														>
-															<div
-																class="h-full rounded-full bg-iris-500 transition-all duration-300"
-																style="width: {fileProgress}%"
-															></div>
-														</div>
-													{/if}
-												</div>
-											{:else}
-												<div
-													class="flex items-center gap-2 text-[12.5px] text-emerald-600"
-												>
-													<Check class="h-4 w-4" />
-													<a
-														href={fileUrl}
-														target="_blank"
-														rel="noopener noreferrer"
-														class="underline hover:text-emerald-700 truncate max-w-[200px]"
-													>
-														View file
-													</a>
-													<button
-														type="button"
-														onclick={() => {
-															if (ms) ms.fileUrl = '';
-															updateMaterialLocal(mat.id, {
-																value: '',
-															});
-														}}
-														class="text-[12px] text-ink-400 hover:text-red-500 underline ml-auto"
-													>
-														Remove
-													</button>
-												</div>
-											{/if}
-										</div>
-									{/if}
-
-									{#if mat.type === 'quiz'}
-										<div class="space-y-2">
-											<div class="flex items-center gap-2">
-												<FileQuestion
-													class="h-5 w-5 shrink-0 text-iris-500"
-												/>
-												<span class="text-[13px] text-ink-700">
-													{mat.title || 'Untitled quiz'}
-												</span>
-												{#if mat.value}
-													<button
-														type="button"
-														onclick={() => {
-															window.open(
-																`/quiz/${mat.value}/edit`,
-																'_blank',
-															);
-														}}
-														class="ml-auto text-[12px] font-medium text-iris-600 underline hover:text-iris-700"
-													>
-														Edit quiz
-													</button>
-												{/if}
-											</div>
-											<label
-												class="flex cursor-pointer items-center gap-2 text-[12.5px] text-ink-600"
-											>
-												<input
-													type="checkbox"
-													checked={requiredPostTest}
-													onchange={async (e) => {
-														const checked = (
-															e.target as HTMLInputElement
-														).checked;
-														if (ms) ms.requiredPostTest = checked;
-														try {
-															await updateDoc(
-																doc(
-																	db,
-																	'classes',
-																	selectedClass.id,
-																	'lectures',
-																	selectedLecture.id,
-																	'materials',
-																	mat.id,
-																),
-																{ requiredPostTest: checked },
-															);
-														} catch (err) {
-															console.error(err);
-															if (ms) ms.requiredPostTest = !checked;
-														}
-													}}
-													class="h-3.5 w-3.5 rounded border-ink-900/20 text-iris-500"
-												/>
-												Required post-test
-											</label>
-										</div>
-									{/if}
-
-									{#if mat.type === 'video'}
-										<div class="space-y-2">
-											{#if videoId}
-												<div class="space-y-2">
-													{#if embedUrl}
-														<div
-															class="overflow-hidden rounded-lg border border-ink-900/8"
-														>
-															<div class="aspect-video">
-																<iframe
-																	title="Video player"
-																	src={embedUrl}
-																	class="h-full w-full"
-																	allow="autoplay; encrypted-media; picture-in-picture"
-																	allowfullscreen
-																></iframe>
-															</div>
-														</div>
-													{:else}
-														<div
-															class="flex items-center gap-2 text-[12.5px] text-ink-500"
-														>
-															<div
-																class="h-4 w-4 animate-spin rounded-full border-2 border-ink-900/10 border-t-iris-600"
-															></div>
-															Loading video…
-														</div>
-													{/if}
-													<div
-														class="flex items-center gap-2 text-[12.5px] text-emerald-600"
-													>
-														<Check class="h-4 w-4" />
-														Video uploaded
-														<button
-															type="button"
-															onclick={() => {
-																if (ms) {
-																	ms.videoId = '';
-																	ms.embedUrl = null;
-																}
-																updateMaterialLocal(mat.id, {
-																	value: '',
-																});
-															}}
-															class="text-[12px] text-ink-400 hover:text-red-500 underline ml-2"
-														>
-															Remove
-														</button>
-													</div>
-												</div>
-											{:else}
-												<div class="flex gap-1">
-													<button
-														type="button"
-														onclick={() => {
-															if (ms) ms.videoMode = 'youtube';
-														}}
-														class={`rounded-md px-3 py-1 text-[12px] font-medium transition-colors ${
-															videoMode === 'youtube'
-																? 'bg-iris-600 text-white'
-																: 'bg-ink-900/5 text-ink-700 hover:bg-ink-900/10'
-														}`}
-													>
-														YouTube
-													</button>
-													<button
-														type="button"
-														onclick={() => {
-															if (ms) ms.videoMode = 'upload';
-														}}
-														class={`rounded-md px-3 py-1 text-[12px] font-medium transition-colors ${
-															videoMode === 'upload'
-																? 'bg-iris-600 text-white'
-																: 'bg-ink-900/5 text-ink-700 hover:bg-ink-900/10'
-														}`}
-													>
-														Upload
-													</button>
-												</div>
-
-												{#if videoMode === 'youtube'}
-													<div class="space-y-2">
-														<Input
-															value={mat.value}
-															oninput={(e) => {
-																const target =
-																	e.target as HTMLInputElement;
-																updateMaterialLocal(mat.id, {
-																	value: target.value,
-																});
-															}}
-															placeholder="https://youtube.com/watch?v=..."
-															error={mat.value &&
-															!Utils.getYoutubeVideoId(mat.value)
-																? 'Please enter a valid YouTube link'
-																: ''}
-														/>
-														{#if Utils.getYoutubeVideoId(mat.value)}
-															<div
-																class="overflow-hidden rounded-lg border border-ink-900/8"
-															>
-																<div class="aspect-video">
-																	<iframe
-																		title="YouTube video"
-																		src={`https://www.youtube.com/embed/${Utils.getYoutubeVideoId(mat.value)}`}
-																		class="h-full w-full"
-																		allow="autoplay; encrypted-media; picture-in-picture"
-																		allowfullscreen
-																	></iframe>
-																</div>
-															</div>
-														{/if}
-													</div>
-												{:else}
-													<div class="flex items-center gap-3">
-														<FileUpload
-															accept="video/*"
-															disabled={uploading}
-															label={uploading
-																? `Uploading ${progress}%`
-																: 'Choose video file'}
-															onupload={(file) => {
-																if (file instanceof File)
-																	handleVideoUpload(mat.id, file);
-															}}
-														/>
-														{#if uploading}
-															<div
-																class="flex-1 h-2 rounded-full bg-ink-900/10 overflow-hidden"
-															>
-																<div
-																	class="h-full rounded-full bg-iris-500 transition-all duration-300"
-																	style="width: {progress}%"
-																></div>
-															</div>
-														{/if}
-													</div>
-												{/if}
-											{/if}
-										</div>
-									{/if}
-								</div>
-
-								<button
-									type="button"
-									disabled={ms?.deleting ?? false}
-									onclick={() => deleteMaterialOp(mat.id)}
-									aria-label="Delete material"
-									class="flex h-6 w-6 shrink-0 items-center justify-center rounded text-ink-300 transition hover:bg-red-50 hover:text-red-500 disabled:opacity-40"
-								>
-									{#if ms?.deleting}
-										<div
-											class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-ink-900/10 border-t-red-500"
-										></div>
-									{:else}
-										<Trash2 class="h-3.5 w-3.5" />
-									{/if}
-								</button>
-							</div>
+								<svelte:component
+									this={MATERIAL_ICON[data.type ?? 'link']}
+									class="h-3.5 w-3.5"
+								/>
+							</span>
+							<span class="text-[13px] font-medium text-ink-900">
+								{data.title || 'Material'}
+							</span>
 						</div>
-					</div>
-				{/each}
-			</div>
+					{/snippet}
+				</DragOverlay>
+			</DragDropProvider>
 		{/if}
 
 		<div class="mt-4">
@@ -991,84 +453,13 @@
 	</div>
 
 	{#if showQuizPicker}
-		<!-- QuizPickerModal -->
-		<div
-			class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-			onclick={() => (showQuizPicker = false)}
-			role="none"
-		>
-			<div
-				class="mx-4 w-full max-w-lg rounded-xl bg-white shadow-xl"
-				onclick={(e) => e.stopPropagation()}
-				role="none"
-			>
-				<div class="flex items-center justify-between border-b border-ink-900/10 px-5 py-4">
-					<p class="text-[15px] font-semibold text-ink-900">Link a quiz</p>
-					<button
-						onclick={() => (showQuizPicker = false)}
-						class="flex h-7 w-7 items-center justify-center rounded text-ink-400 hover:bg-ink-900/5 hover:text-ink-700"
-					>
-						<X class="h-4 w-4" />
-					</button>
-				</div>
-				<div class="max-h-80 overflow-y-auto px-5 py-3">
-					{#if quizPickerLoading}
-						<div class="flex items-center justify-center py-8">
-							<div
-								class="h-5 w-5 animate-spin rounded-full border-2 border-ink-900/10 border-t-iris-600"
-							></div>
-						</div>
-					{:else if quizPickerQuizzes.length === 0}
-						<p class="py-8 text-center text-[13px] text-ink-400">
-							No quizzes yet.&nbsp;
-							<button
-								onclick={() => {
-									showQuizPicker = false;
-									window.open('/quiz/new', '_blank');
-								}}
-								class="text-iris-600 underline hover:text-iris-700"
-							>
-								Create one
-							</button>
-						</p>
-					{:else}
-						<div class="space-y-2">
-							{#each quizPickerQuizzes as q (q.id)}
-								<button
-									onclick={() => {
-										addMaterialWithQuiz(q.id, q.title);
-										showQuizPicker = false;
-									}}
-									class="flex w-full items-center gap-3 rounded-lg border border-ink-900/10 px-4 py-3 text-left transition hover:border-iris-400 hover:bg-iris-50"
-								>
-									<FileQuestion class="h-5 w-5 shrink-0 text-iris-500" />
-									<div class="min-w-0 flex-1">
-										<p class="truncate text-[14px] font-medium text-ink-900">
-											{q.title}
-										</p>
-										<p class="text-[12px] text-ink-400">
-											{q.questions.length} questions
-										</p>
-									</div>
-								</button>
-							{/each}
-						</div>
-					{/if}
-					<div class="border-t border-ink-900/10 mt-3 pt-3">
-						<button
-							onclick={() => {
-								showQuizPicker = false;
-								window.open('/quiz/new', '_blank');
-							}}
-							class="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-ink-900/15 px-3 py-2 text-[13px] font-medium text-iris-600 transition hover:border-iris-400 hover:bg-iris-50"
-						>
-							<Plus class="h-3.5 w-3.5" />
-							Create new quiz
-						</button>
-					</div>
-				</div>
-			</div>
-		</div>
+		<QuizPicker
+			onSelect={(quizId, quizTitle) => {
+				addMaterialWithQuiz(quizId, quizTitle);
+				showQuizPicker = false;
+			}}
+			onClose={() => (showQuizPicker = false)}
+		/>
 	{/if}
 
 	<button

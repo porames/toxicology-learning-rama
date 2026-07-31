@@ -1,7 +1,10 @@
 <script lang="ts">
-	import { Plus, Trash2, ChevronDown } from '@lucide/svelte';
+	import { Plus, Trash2, ChevronDown, X } from '@lucide/svelte';
 	import type { Option, Question, QuestionType } from '$lib/quiz-types';
 	import { QUESTION_TYPE_LABELS } from '$lib/quiz-types';
+	import { storage } from '$lib/firebase';
+	import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+	import FileUpload from '$lib/components/ui/FileUpload.svelte';
 
 	const fieldClass =
 		'w-full rounded-md bg-white px-3 py-2 text-[14px] text-ink-900 placeholder:text-ink-300 outline-1 -outline-offset-1 outline-ink-900/15 focus:outline-2 focus:-outline-offset-2 focus:outline-iris-500 transition';
@@ -28,6 +31,8 @@
 		ondelete: () => void;
 		ontoggle: () => void;
 	} = $props();
+
+	let uploadingImage = $state(false);
 
 	function handleTypeChange(type: QuestionType) {
 		let options: Option[] = [];
@@ -67,6 +72,32 @@
 			correct = '';
 		}
 		onupdate({ options: opts, correctAnswer: correct });
+	}
+
+	async function handleImageUpload(file: File) {
+		uploadingImage = true;
+		try {
+			const ext = file.name.split('.').pop();
+			const storageRef = ref(storage, `quiz-images/${question.id}.${ext}`);
+			await uploadBytes(storageRef, file);
+			const url = await getDownloadURL(storageRef);
+			onupdate({ imageUrl: url });
+		} catch (err) {
+			console.error(err);
+		} finally {
+			uploadingImage = false;
+		}
+	}
+
+	async function removeImage() {
+		if (!question.imageUrl) return;
+		try {
+			const storageRef = ref(storage, question.imageUrl);
+			await deleteObject(storageRef);
+		} catch (err) {
+			console.error(err);
+		}
+		onupdate({ imageUrl: '' });
 	}
 </script>
 
@@ -125,6 +156,35 @@
 					class="{fieldClass} resize-none"
 					placeholder="Type your question here…"
 				></textarea>
+			</div>
+
+			<div>
+				<label class={labelClass}>Image (optional)</label>
+				{#if question.imageUrl}
+					<div class="relative overflow-hidden rounded-lg border border-ink-900/10">
+						<img
+							src={question.imageUrl}
+							alt=""
+							class="max-h-56 w-full object-cover"
+						/>
+						<button
+							type="button"
+							onclick={removeImage}
+							disabled={uploadingImage}
+							class="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-black/80"
+							title="Remove image"
+						>
+							<X class="h-4 w-4" />
+						</button>
+					</div>
+				{:else}
+					<FileUpload
+						label={uploadingImage ? 'Uploading…' : 'Upload image'}
+						accept="image/*"
+						disabled={uploadingImage}
+						onupload={(file) => handleImageUpload(file as File)}
+					/>
+				{/if}
 			</div>
 
 			{#if question.type === 'multiple-choice' || question.type === 'multiple-answer'}

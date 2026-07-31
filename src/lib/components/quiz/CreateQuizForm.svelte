@@ -3,10 +3,7 @@
 	import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 	import { db } from '$lib/firebase';
 	import { ArrowLeft, Plus } from '@lucide/svelte';
-
-	const fieldClass =
-		'w-full rounded-md bg-white px-3 py-2 text-[14px] text-ink-900 placeholder:text-ink-300 outline-1 -outline-offset-1 outline-ink-900/15 focus:outline-2 focus:-outline-offset-2 focus:outline-iris-500 transition';
-	const labelClass = 'mb-1.5 block text-[12.5px] font-medium text-ink-700';
+	import { Button, Input } from '$lib/components/ui';
 
 	let title = $state('');
 	let passingScore = $state(70);
@@ -44,18 +41,14 @@
 	<p class="mt-6 text-[12px] font-medium uppercase tracking-wider text-ink-300">New quiz</p>
 
 	<div class="mt-4 space-y-6">
-		<div>
-			<label class={labelClass}>Quiz title</label>
-			<input
-				bind:value={title}
-				class={fieldClass}
-				placeholder="e.g. Cardiology Quiz 1"
-				autofocus
-			/>
-		</div>
+		<Input
+			label="Quiz title"
+			bind:value={title}
+			placeholder="e.g. Cardiology Quiz 1"
+		/>
 
 		<div>
-			<label class={labelClass}>Passing score (%)</label>
+			<p class="mb-1.5 text-[13px] font-medium text-ink-700">Passing score (%)</p>
 			<div class="flex items-center gap-4">
 				<input
 					type="range"
@@ -82,10 +75,10 @@
 			</label>
 		</div>
 
-		<button
+		<Button
 			onclick={handleCreate}
 			disabled={saving || !title.trim()}
-			class="flex w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-b from-iris-500 to-iris-700 px-3.5 py-2 text-[13px] font-semibold text-white shadow-button transition hover:from-iris-500 hover:to-iris-800 disabled:cursor-not-allowed disabled:opacity-50"
+			class="w-full"
 		>
 			{#if saving}
 				<div class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
@@ -94,6 +87,6 @@
 				<Plus class="h-3.5 w-3.5" />
 				Create quiz
 			{/if}
-		</button>
+		</Button>
 	</div>
 </div>

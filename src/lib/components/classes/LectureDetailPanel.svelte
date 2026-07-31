@@ -87,41 +87,18 @@
 		</div>
 	{:else}
 		<div>
-			<div class="flex md:hidden items-center gap-1 mb-4 min-w-0">
-				<button
-					type="button"
-					onclick={onBack}
-					class="text-ink-900/40 hover:text-ink-900 shrink-0"
-					aria-label="Back to lectures"
-				>
-					<ChevronLeft size={16} />
-				</button>
-				<button
-					type="button"
-					onclick={() => goto('/classes')}
-					class="text-xs text-ink-900/40 hover:text-ink-900 shrink-0"
-				>
-					All Classes
-				</button>
-				<ChevronRight size={12} class="text-xs text-ink-900/20 shrink-0" />
-				<button
-					type="button"
-					onclick={onBack}
-					class="text-xs text-ink-900/60 hover:text-iris-600 truncate"
-				>
-					{currentClass?.name}
-				</button>
-				<ChevronRight size={12} class="text-xs text-ink-900/20 shrink-0" />
-				<span class="text-xs font-medium text-ink-900 truncate">{selectedLecture.title}</span>
-			</div>
-
 			<h2 class="text-base font-semibold text-ink-900">{selectedLecture.title}</h2>
 			<div class="flex items-center gap-2 mt-0.5">
 				<p class="text-xs text-ink-900/50">
-					{moment(selectedLecture.startTime).format('Do MMM')} · {formatTimeRange(selectedLecture.startTime, selectedLecture.endTime)}
+					{moment(selectedLecture.startTime).format('Do MMM')} · {formatTimeRange(
+						selectedLecture.startTime,
+						selectedLecture.endTime,
+					)}
 				</p>
 				{#if completedIds.has(selectedLecture.id)}
-					<span class="inline-flex items-center gap-1 rounded-full bg-teal-500/10 px-2 py-0.5 text-xs font-medium text-teal-600">
+					<span
+						class="inline-flex items-center gap-1 rounded-full bg-teal-500/10 px-2 py-0.5 text-xs font-medium text-teal-600"
+					>
 						<Check size={12} />
 						Completed
 					</span>
@@ -138,7 +115,9 @@
 				{:else if materialsError}
 					<p class="text-xs text-red-600">{materialsError}</p>
 				{:else if selectedLecture.materials.length === 0}
-					<p class="text-xs text-ink-900/40">No materials uploaded for this lecture yet.</p>
+					<p class="text-xs text-ink-900/40">
+						No materials uploaded for this lecture yet.
+					</p>
 				{:else}
 					<ul class="space-y-1.5">
 						{#each selectedLecture.materials as mat}
@@ -161,7 +140,10 @@
 
 	<button
 		onclick={onComplete}
-		disabled={!selectedLecture || completingLec || (!!selectedLecture && completedIds.has(selectedLecture.id)) || (!!selectedLecture && !allRequiredPassed)}
+		disabled={!selectedLecture ||
+			completingLec ||
+			(!!selectedLecture && completedIds.has(selectedLecture.id)) ||
+			(!!selectedLecture && !allRequiredPassed)}
 		class="mt-5 inline-flex items-center gap-2 rounded-lg bg-gradient-to-b from-teal-500 to-teal-700 px-4 py-2.5 md:py-2 text-sm font-semibold text-white transition hover:from-teal-500 hover:to-teal-800 focus:outline-none focus:ring-2 focus:ring-teal-500/50 disabled:cursor-not-allowed disabled:opacity-50"
 	>
 		{#if completingLec}

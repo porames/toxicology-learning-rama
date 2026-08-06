@@ -4,7 +4,6 @@
 		Lecture,
 		Material,
 		MaterialType,
-		Selection,
 	} from '$lib/dashboard/types';
 	import { MATERIAL_LABELS } from '$lib/dashboard/types';
 	import { MATERIAL_ICON, MATERIAL_COLOR } from '$lib/dashboard/icons';
@@ -20,26 +19,30 @@
 		doc,
 	} from 'firebase/firestore';
 	import { ChevronRight } from '@lucide/svelte';
-	import { Button, Input } from '$lib/components/ui';
+	import { Button, Input, Modal } from '$lib/components/ui';
 	import { DragDropProvider, DragOverlay } from '@dnd-kit/svelte';
 	import { initMaterialState, type MaterialState } from '$lib/dashboard/materialState';
 	import * as Utils from '$lib/dashboard/utils';
 	import MaterialItem from './materials/MaterialItem.svelte';
 	import QuizPicker from './materials/QuizPicker.svelte';
+	import { beforeNavigate, goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 
 	let {
 		selectedClass,
 		selectedLecture,
 		highlightMaterialId = undefined,
 		onUpdateLecture,
-		onNavigate,
+		onBackToClasses,
+		onBackToClass,
 		onDeleteLecture,
 	}: {
 		selectedClass: ClassItem;
 		selectedLecture: Lecture;
 		highlightMaterialId: string | undefined;
 		onUpdateLecture: (patch: Partial<Pick<Lecture, 'title' | 'startTime' | 'endTime'>>) => void;
-		onNavigate: (selection: Selection) => void;
+		onBackToClasses: () => void;
+		onBackToClass: () => void;
 		onDeleteLecture: (classId: string, lectureId: string) => void;
 	} = $props();
 
@@ -51,6 +54,101 @@
 	let leDeleteLecture = $state(false);
 
 	let materialStates = $state<Record<string, MaterialState>>({});
+
+	let lastLectureId = $state<string | null>(null);
+	let baselineReady = $state(false);
+	let baselineLecture = $state({ title: '', startTime: 0, endTime: 0 });
+	let baselineMaterials = $state<
+		{ id: string; type: string; title: string; value: string; requiredPostTest: boolean }[]
+	>([]);
+	let baselineOrder = $state<string[]>([]);
+	let allowLeave = $state(false);
+	let showLeaveWarning = $state(false);
+	let pendingUrl = $state<string | null>(null);
+
+	function syncBaseline() {
+		baselineLecture = {
+			title: selectedLecture.title,
+			startTime: new Date(selectedLecture.startTime).getTime(),
+			endTime: new Date(selectedLecture.endTime).getTime(),
+		};
+		baselineMaterials = lectureMaterials.map((m) => ({
+			id: m.id,
+			type: m.type,
+			title: m.title,
+			value: m.value,
+			requiredPostTest: m.requiredPostTest ?? false,
+		}));
+		baselineOrder = [...materialsOrder];
+	}
+
+	const lectureChanged = $derived(
+		baselineReady &&
+			(baselineLecture.title !== selectedLecture.title ||
+				baselineLecture.startTime !== new Date(selectedLecture.startTime).getTime() ||
+				baselineLecture.endTime !== new Date(selectedLecture.endTime).getTime()),
+	);
+	const materialsChanged = $derived(
+		baselineReady &&
+			(baselineOrder.join('\x00') !== materialsOrder.join('\x00') ||
+				baselineMaterials.length !== lectureMaterials.length ||
+				baselineMaterials.some((b, i) => {
+					const m = lectureMaterials[i];
+					return (
+						!m ||
+						m.id !== b.id ||
+						m.type !== b.type ||
+						m.title !== b.title ||
+						m.value !== b.value ||
+						(m.requiredPostTest ?? false) !== b.requiredPostTest
+					);
+				})),
+	);
+	const dirty = $derived(lectureChanged || materialsChanged);
+	const timeInvalid = $derived(
+		new Date(selectedLecture.startTime).getTime() >= new Date(selectedLecture.endTime).getTime(),
+	);
+
+	$effect(() => {
+		if (lastLectureId !== selectedLecture.id) {
+			lastLectureId = selectedLecture.id;
+			baselineReady = false;
+			allowLeave = false;
+		}
+	});
+
+	beforeNavigate((navigation) => {
+		if (allowLeave || !dirty) return;
+		const url = navigation.to?.url;
+		if (!url) return;
+		navigation.cancel();
+		pendingUrl = url.pathname + url.search;
+		showLeaveWarning = true;
+	});
+
+	onMount(() => {
+		const handler = (e: BeforeUnloadEvent) => {
+			if (dirty) {
+				e.preventDefault();
+				e.returnValue = '';
+			}
+		};
+		window.addEventListener('beforeunload', handler);
+		return () => window.removeEventListener('beforeunload', handler);
+	});
+
+	function confirmLeave() {
+		allowLeave = true;
+		showLeaveWarning = false;
+		onUpdateLecture({
+			title: baselineLecture.title,
+			startTime: new Date(baselineLecture.startTime),
+			endTime: new Date(baselineLecture.endTime),
+		});
+		if (pendingUrl) {
+			goto(pendingUrl);
+		}
+	}
 
 	function ensureMaterialState(mat: Material) {
 		if (!materialStates[mat.id]) {
@@ -90,11 +188,16 @@
 			console.error(err);
 		} finally {
 			materialsLoading = false;
+			syncBaseline();
+			baselineReady = true;
 		}
 	}
 
+	const classId = $derived(selectedClass.id);
+	const lectureId = $derived(selectedLecture.id);
+
 	$effect(() => {
-		loadMaterialsForLecture(selectedClass.id, selectedLecture.id);
+		loadMaterialsForLecture(classId, lectureId);
 	});
 
 	function updateMaterialLocal(
@@ -187,7 +290,10 @@
 	}
 
 	function handleDragEnd(event: {
-		operation: { source: { id: string | number } | null; target: { id: string | number } | null };
+		operation: {
+			source: { id: string | number } | null;
+			target: { id: string | number } | null;
+		};
 		canceled: boolean;
 	}) {
 		if (event.canceled) return;
@@ -232,6 +338,9 @@
 	}
 
 	async function toggleRequiredPostTest(mat: Material, checked: boolean) {
+		lectureMaterials = lectureMaterials.map((m) =>
+			m.id === mat.id ? { ...m, requiredPostTest: checked } : m,
+		);
 		await updateDoc(
 			doc(
 				db,
@@ -247,6 +356,7 @@
 	}
 
 	async function saveLectureChanges() {
+		if (timeInvalid) return;
 		const classId = selectedClass.id;
 		const lectureId = selectedLecture.id;
 		leSaving = true;
@@ -272,6 +382,7 @@
 					);
 				}),
 			);
+			syncBaseline();
 		} catch (err) {
 			console.error(err);
 		} finally {
@@ -297,30 +408,9 @@
 </script>
 
 <div class="mx-auto max-w-xl px-8 py-10">
-	<div class="md:hidden flex items-center gap-1.5 mb-4">
-		<button
-			type="button"
-			onclick={() => onNavigate(null)}
-			class="text-[12px] text-ink-400 hover:text-iris-600 transition-colors"
-		>
-			All Classes
-		</button>
-		<ChevronRight class="h-3 w-3 text-ink-300" />
-		<button
-			type="button"
-			onclick={() => onNavigate({ level: 'class', classId: selectedClass.id })}
-			class="text-[12px] text-ink-400 hover:text-iris-600 transition-colors"
-		>
-			{selectedClass.name}
-		</button>
-		<ChevronRight class="h-3 w-3 text-ink-300" />
-		<span class="text-[12px] font-medium text-ink-900">
-			{selectedLecture.title || 'Untitled lecture'}
-		</span>
-	</div>
 	<div class="flex item-center justify-between">
 		<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">Lecture</p>
-		<Button variant="accent" disabled={leSaving} onclick={saveLectureChanges}>
+		<Button variant="accent" disabled={leSaving || !dirty || timeInvalid} onclick={saveLectureChanges}>
 			{#if leSaving}
 				<div
 					class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
@@ -368,6 +458,14 @@
 		/>
 	</div>
 
+	{#if timeInvalid}
+		<p
+			class="mt-2 rounded-md bg-red-50 px-3 py-2 text-[12.5px] font-medium text-red-600"
+		>
+			End time must be after the start time.
+		</p>
+	{/if}
+
 	<div class="mt-9 border-t border-ink-900/10 pt-6">
 		<p class="text-[13.5px] font-medium text-ink-900">
 			Class materials
@@ -408,7 +506,9 @@
 				<DragOverlay>
 					{#snippet children(dragSource)}
 						{@const data = dragSource.data as { title?: string; type?: MaterialType }}
-						<div class="flex items-center gap-2.5 rounded-xl border border-ink-900/10 bg-white p-3.5 shadow-xl">
+						<div
+							class="flex items-center gap-2.5 rounded-xl border border-ink-900/10 bg-white p-3.5 shadow-xl"
+						>
 							<span
 								class={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${
 									MATERIAL_COLOR[data.type ?? 'link'].bg
@@ -474,4 +574,22 @@
 			Delete this lecture
 		{/if}
 	</button>
+
+	<Modal
+		open={showLeaveWarning}
+		title="Unsaved changes"
+		onclose={() => (showLeaveWarning = false)}
+	>
+		<p class="text-[13px] text-ink-500">
+			You have unsaved changes to this lecture. If you leave now, your changes will be lost.
+		</p>
+		{#snippet footer()}
+			<Button variant="ghost" onclick={() => (showLeaveWarning = false)}>
+				Keep editing
+			</Button>
+			<Button variant="danger-solid" onclick={confirmLeave}>
+				Discard &amp; leave
+			</Button>
+		{/snippet}
+	</Modal>
 </div>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Sun, ClockCheck, ListChecks, Folder } from '@lucide/svelte';
 	import formatTimeRange from '$lib/formatTimeRange';
+	import { Tooltip } from '$lib/components/ui';
 	import type { Lecture, ClassItem } from '$lib/dashboard/types';
 	import moment from 'moment';
 
@@ -31,12 +32,20 @@
 		return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 	}
 
+	function statusLabel(status: 'checkedIn' | 'completed', time?: Date): string {
+		const label = status === 'checkedIn' ? 'Checked in' : 'Completed';
+		if (!time) return label;
+		return `${label} · ${moment(time).format('ddd, MMM D · hh:mm A')}`;
+	}
+
 	interface Props {
 		lectures: Lecture[];
 		currentClass?: ClassItem;
 		selectedLectureId?: string;
 		completedIds: Set<string>;
 		checkedInIds: Set<string>;
+		checkedInTimes: Record<string, Date>;
+		completedTimes: Record<string, Date>;
 		loading: boolean;
 		error: string | null;
 		onSelectLecture: (lec: Lecture) => void;
@@ -48,6 +57,8 @@
 		selectedLectureId,
 		completedIds,
 		checkedInIds,
+		checkedInTimes,
+		completedTimes,
 		loading,
 		error,
 		onSelectLecture,
@@ -124,18 +135,48 @@
 										</div>
 										<div class="flex flex-col gap-2 items-center">
 											{#if checkedInIds.has(lec.id)}
-												<div
-													class="bg-teal-50 px-1.5 py-1 rounded-full text-teal-600 flex flex-row items-center gap-1 font-semibold"
+												<Tooltip
+													text={statusLabel(
+														'checkedIn',
+														checkedInTimes[lec.id],
+													)}
 												>
-													<ClockCheck size={13} />
-												</div>
+													<div
+														class="bg-emerald-300/20 px-1.5 py-1 rounded-full text-emerald-200 flex flex-row items-center gap-1 font-semibold"
+													>
+														<ClockCheck size={13} />
+													</div>
+												</Tooltip>
+											{:else}
+												<Tooltip text="Hasn't checked in">
+													<div
+														class="bg-yellow-300/20 px-1.5 py-1 rounded-full text-yellow-200 flex flex-row items-center gap-1 font-semibold"
+													>
+														<ClockCheck size={13} />
+													</div>
+												</Tooltip>
 											{/if}
 											{#if completedIds.has(lec.id)}
-												<div
-													class="bg-teal-50 px-1.5 py-1 rounded-full text-teal-600 flex flex-row items-center gap-1 font-semibold"
+												<Tooltip
+													text={statusLabel(
+														'completed',
+														completedTimes[lec.id],
+													)}
 												>
-													<ListChecks size={13} />
-												</div>
+													<div
+														class="bg-emerald-300/20 px-1.5 py-1 rounded-full text-emerald-200 flex flex-row items-center gap-1 font-semibold"
+													>
+														<ListChecks size={13} />
+													</div>
+												</Tooltip>
+											{:else}
+												<Tooltip text="Hasn't completed lecture">
+													<div
+														class="bg-yellow-300/20 px-1.5 py-1 rounded-full text-yellow-200 flex flex-row items-center gap-1 font-semibold"
+													>
+														<ListChecks size={13} />
+													</div>
+												</Tooltip>
 											{/if}
 										</div>
 									</div>
@@ -230,19 +271,46 @@
 				{lec.title || 'Untitled'}
 			</p>
 			{#if checkedInIds.has(lec.id)}
-				<ClockCheck size={13} class="shrink-0 text-iris-500" />
+				<Tooltip text={statusLabel('checkedIn', checkedInTimes[lec.id])}>
+					<div
+						class="bg-emerald-300/20 px-1.5 py-1 rounded-full text-emerald-600 flex flex-row items-center gap-1 font-semibold"
+					>
+						<ClockCheck size={13} />
+					</div>
+				</Tooltip>
+			{:else}
+				<Tooltip text="Hasn't checked in">
+					<div
+						class="bg-yellow-300/20 px-1.5 py-1 rounded-full text-yellow-600 flex flex-row items-center gap-1 font-semibold"
+					>
+						<ClockCheck size={13} />
+					</div>
+				</Tooltip>
 			{/if}
+
 			{#if completedIds.has(lec.id)}
-				<ListChecks size={14} class="shrink-0 text-teal-500" />
+				<Tooltip text={statusLabel('completed', completedTimes[lec.id])}>
+					<div
+						class="bg-emerald-300/20 px-1.5 py-1 rounded-full text-emerald-600 flex flex-row items-center gap-1 font-semibold"
+					>
+						<ListChecks size={13} />
+					</div>
+				</Tooltip>
+			{:else}
+				<Tooltip text="Hasn't completed lecture">
+					<div
+						class="bg-yellow-300/20 px-1.5 py-1 rounded-full text-yellow-600 flex flex-row items-center gap-1 font-semibold"
+					>
+						<ListChecks size={13} />
+					</div>
+				</Tooltip>
 			{/if}
 		</div>
 		<p class="text-xs text-ink-900/50">
 			{formatTimeRange(lec.startTime, lec.endTime)}
 		</p>
 		{#if showAlert && !checkedInIds.has(lec.id) && !completedIds.has(lec.id)}
-			<p
-				class="mt-1.5 rounded-md bg-red-50 px-2 py-1 text-[11.5px] font-medium text-red-600"
-			>
+			<p class="mt-1.5 rounded-md bg-red-50 px-2 py-1 text-[11.5px] font-medium text-red-600">
 				Not checked in or completed
 			</p>
 		{/if}

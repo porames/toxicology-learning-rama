@@ -1,21 +1,25 @@
 <script lang="ts">
 	import { ChevronRight, Folder, Clock } from '@lucide/svelte';
-	import type { ClassItem, Lecture, Selection } from '$lib/dashboard/types';
+	import type { ClassItem, Lecture } from '$lib/dashboard/types';
 	import formatTimeRange from '$lib/formatTimeRange';
 	import moment from 'moment';
 
 	let {
 		classes,
-		selection,
+		activeClassId,
+		activeLectureId,
 		expanded,
 		onToggle,
-		onSelect,
+		onSelectClass,
+		onSelectLecture,
 	}: {
 		classes: ClassItem[];
-		selection: Selection;
+		activeClassId?: string;
+		activeLectureId?: string;
 		expanded: Set<string>;
 		onToggle: (classId: string, isExpanded: boolean) => void;
-		onSelect: (sel: Selection) => void;
+		onSelectClass: (classId: string) => void;
+		onSelectLecture: (classId: string, lectureId: string) => void;
 	} = $props();
 
 	function groupedLectures(lectures: Lecture[]): [string, Lecture[]][] {
@@ -37,15 +41,13 @@
 	<div class="space-y-0.5 py-2">
 		{#each classes as cls}
 			{@const classExpanded = expanded.has(cls.id)}
-			{@const classSelected = selection?.level === 'class' && selection.classId === cls.id}
+			{@const classSelected = activeClassId === cls.id}
 
 			<div
 				role="button"
 				tabindex="0"
-				onclick={() => onSelect({ level: 'class', classId: cls.id })}
-				onkeydown={(e) =>
-					(e.key === 'Enter' || e.key === ' ') &&
-					onSelect({ level: 'class', classId: cls.id })}
+				onclick={() => onSelectClass(cls.id)}
+				onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelectClass(cls.id)}
 				class={`group relative flex h-9 items-center gap-1.5 rounded-md pr-1.5 text-left transition pl-2 ${
 					classSelected
 						? 'bg-iris-50 text-iris-700'
@@ -97,24 +99,14 @@
 								{#each lecs as lec}
 									{@const lecExpanded = expanded.has(lec.id)}
 									{@const lecSelected =
-										selection?.level === 'lecture' &&
-										selection.lectureId === lec.id}
+										activeClassId === cls.id && activeLectureId === lec.id}
 									<div
 										role="button"
 										tabindex="0"
-										onclick={() =>
-											onSelect({
-												level: 'lecture',
-												classId: cls.id,
-												lectureId: lec.id,
-											})}
+										onclick={() => onSelectLecture(cls.id, lec.id)}
 										onkeydown={(e) =>
 											(e.key === 'Enter' || e.key === ' ') &&
-											onSelect({
-												level: 'lecture',
-												classId: cls.id,
-												lectureId: lec.id,
-											})}
+											onSelectLecture(cls.id, lec.id)}
 										class={`group relative flex h-9 items-center gap-1.5 rounded-md pr-1.5 text-left transition pl-2 ${
 											lecSelected
 												? 'bg-iris-50 text-iris-700'

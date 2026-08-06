@@ -42,7 +42,7 @@ export interface Activity {
 }
 
 export interface Student {
-	uid: string;
+	id: string;
 	rama_id: string;
 	name: string;
 	email: string;

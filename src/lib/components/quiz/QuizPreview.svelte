@@ -5,6 +5,8 @@
 	import { Check, Pencil, ArrowLeft } from '@lucide/svelte';
 	import type { Quiz, Question } from '$lib/quiz-types';
 	import { getOptionLabel, QUESTION_TYPE_LABELS } from '$lib/quiz-types';
+	import Markdown from '$lib/components/ui/Markdown.svelte';
+	import ImageContainer from '$lib/components/ui/ImageContainer.svelte';
 
 	let { quizId }: { quizId: string } = $props();
 
@@ -38,7 +40,9 @@
 
 	function formatCorrectAnswer(question: Question): string {
 		if (Array.isArray(question.correctAnswer)) {
-			return question.correctAnswer.map((id) => getOptionLabel(question.options, id)).join(', ');
+			return question.correctAnswer
+				.map((id) => getOptionLabel(question.options, id))
+				.join(', ');
 		}
 		if (question.type === 'short-answer') return question.correctAnswer;
 		return getOptionLabel(question.options, question.correctAnswer);
@@ -60,7 +64,10 @@
 					{quiz.title || 'Untitled quiz'}
 				</h1>
 				<p class="mt-0.5 text-[13px] text-ink-500">
-					{quiz.questions?.length || 0} question{(quiz.questions?.length || 0) !== 1 ? 's' : ''} · Pass: {quiz.passingScore ?? 70}%{#if quiz.shuffleQuestions} · Shuffled{/if}
+					{quiz.questions?.length || 0} question{(quiz.questions?.length || 0) !== 1
+						? 's'
+						: ''} · Pass: {quiz.passingScore ?? 70}%{#if quiz.shuffleQuestions}
+						· Shuffled{/if}
 				</p>
 			</div>
 			<button
@@ -73,9 +80,7 @@
 		</div>
 
 		{#if quiz.questions?.length === 0}
-			<div
-				class="mt-8 rounded-xl border border-dashed border-ink-900/15 py-12 text-center"
-			>
+			<div class="mt-8 rounded-xl border border-dashed border-ink-900/15 py-12 text-center">
 				<p class="text-[14px] text-ink-500">No questions in this quiz yet.</p>
 				<button
 					onclick={() => goto(`/quiz/${quizId}/edit`)}
@@ -96,16 +101,20 @@
 								{i + 1}
 							</span>
 							<div class="min-w-0 flex-1">
-								<p class="text-[15px] font-medium text-ink-900">{q.prompt}</p>
-								<p class="mt-1 text-[12.5px] font-medium uppercase tracking-wider text-ink-400">
-									{QUESTION_TYPE_LABELS[q.type]} · {q.points} pt{q.points !== 1 ? 's' : ''}
+								<Markdown value={q.prompt} />
+								<p
+									class="mt-1 text-[12.5px] font-medium uppercase tracking-wider text-ink-400"
+								>
+									{QUESTION_TYPE_LABELS[q.type]} · {q.points} pt{q.points !== 1
+										? 's'
+										: ''}
 								</p>
 							</div>
 						</div>
 
 						{#if q.imageUrl}
 							<div class="mt-4 overflow-hidden rounded-lg border border-ink-900/10">
-								<img src={q.imageUrl} alt="" class="max-h-64 w-full object-cover" />
+								<ImageContainer imageUrl={q.imageUrl} height="h-64" />
 							</div>
 						{/if}
 
@@ -127,11 +136,17 @@
 									{/each}
 								</div>
 							{:else if q.type === 'short-answer'}
-								<div class="rounded-lg border border-dashed border-ink-900/15 bg-ink-900/[0.02] px-4 py-3">
-									<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">
+								<div
+									class="rounded-lg border border-dashed border-ink-900/15 bg-ink-900/[0.02] px-4 py-3"
+								>
+									<p
+										class="text-[12px] font-medium uppercase tracking-wider text-ink-300"
+									>
 										Expected answer
 									</p>
-									<p class="mt-1 flex items-center gap-1.5 text-[14px] font-medium text-emerald-700">
+									<p
+										class="mt-1 flex items-center gap-1.5 text-[14px] font-medium text-emerald-700"
+									>
 										<Check class="h-4 w-4 shrink-0" />
 										{q.correctAnswer}
 									</p>
@@ -155,7 +170,9 @@
 												{String.fromCharCode(65 + oi)}
 											{/if}
 										</span>
-										<span class="min-w-0 flex-1">{opt.value || `Option ${oi + 1}`}</span>
+										<span class="min-w-0 flex-1"
+											>{opt.value || `Option ${oi + 1}`}</span
+										>
 									</div>
 								{/each}
 							{/if}

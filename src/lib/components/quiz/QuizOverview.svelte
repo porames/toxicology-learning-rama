@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { doc, getDoc } from 'firebase/firestore';
 	import { db } from '$lib/firebase';
-	import { Pencil, Play, BarChart3, FileQuestion } from '@lucide/svelte';
+	import { Pencil, Play, BarChart3, FileQuestion, ClipboardCheck } from '@lucide/svelte';
 	import type { Quiz } from '$lib/quiz-types';
 
 	let { quizId }: { quizId: string } = $props();
@@ -30,6 +30,7 @@
 
 	const actions = $derived.by(() => [
 		{ label: 'Edit quiz', description: 'Add, remove, or modify questions and settings.', href: `/quiz/${quizId}/edit`, icon: Pencil, color: 'iris' },
+		{ label: 'Take quiz', description: 'Take the quiz as a student would.', href: `/quiz/${quizId}/take`, icon: ClipboardCheck, color: 'emerald' },
 		{ label: 'Preview', description: 'Review the quiz and its correct answers.', href: `/quiz/${quizId}/preview`, icon: Play, color: 'emerald' },
 		{ label: 'Results', description: 'View student submissions and scores.', href: `/quiz/${quizId}/results`, icon: BarChart3, color: 'amber' }
 	] as const);

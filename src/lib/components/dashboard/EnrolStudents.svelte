@@ -2,7 +2,14 @@
 	import { authState } from '$lib/auth.svelte';
 	import type { Student } from '$lib/dashboard/types';
 	import ManageStudents from '$lib/components/dashboard/ManageStudents.svelte';
-	import { Users, UserPlus, AlertCircle, CheckCircle2, Loader2, GraduationCap } from '@lucide/svelte';
+	import {
+		Users,
+		UserPlus,
+		AlertCircle,
+		CheckCircle2,
+		Loader2,
+		GraduationCap,
+	} from '@lucide/svelte';
 
 	let { classId }: { classId: string } = $props();
 
@@ -30,7 +37,7 @@
 						Authorization: `Bearer ${token}`,
 					},
 					body: JSON.stringify({ classId }),
-				}
+				},
 			);
 
 			if (!res.ok) {
@@ -39,6 +46,7 @@
 			}
 
 			const data = await res.json();
+			console.log(data);
 			students = data.students;
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Something went wrong';
@@ -77,9 +85,9 @@
 					},
 					body: JSON.stringify({
 						classId,
-						studentIds: selectedStudents.map((s) => s.uid),
+						studentIds: selectedStudents.map((s) => s.id),
 					}),
-				}
+				},
 			);
 
 			if (!res.ok) {
@@ -108,7 +116,9 @@
 	<section class="rounded-lg border border-gray-200 bg-white shadow-sm">
 		<div class="flex items-center justify-between gap-3 border-b border-gray-100 px-5 py-4">
 			<div class="flex items-center gap-2.5">
-				<div class="flex h-8 w-8 items-center justify-center rounded-md bg-blue-50 text-blue-600">
+				<div
+					class="flex h-8 w-8 items-center justify-center rounded-md bg-blue-50 text-blue-600"
+				>
 					<Users size={16} />
 				</div>
 				<div>
@@ -125,7 +135,9 @@
 		<div class="overflow-x-auto">
 			<table class="min-w-full text-sm">
 				<thead>
-					<tr class="border-b border-gray-100 bg-gray-50 text-[11px] uppercase tracking-wide text-gray-500">
+					<tr
+						class="border-b border-gray-100 bg-gray-50 text-[11px] uppercase tracking-wide text-gray-500"
+					>
 						<th class="px-5 py-2.5 text-left font-medium">Student ID</th>
 						<th class="px-5 py-2.5 text-left font-medium">Full name</th>
 						<th class="px-5 py-2.5 text-left font-medium">Email</th>
@@ -138,16 +150,22 @@
 						{#each Array(4) as _, i}
 							<tr>
 								<td colspan={columnCount} class="px-5 py-3">
-									<div class="h-4 w-full max-w-md animate-pulse rounded bg-gray-100"></div>
+									<div
+										class="h-4 w-full max-w-md animate-pulse rounded bg-gray-100"
+									></div>
 								</td>
 							</tr>
 						{/each}
 					{:else if students.length === 0}
 						<tr>
 							<td colspan={columnCount} class="px-5 py-10">
-								<div class="flex flex-col items-center justify-center gap-2 text-center">
+								<div
+									class="flex flex-col items-center justify-center gap-2 text-center"
+								>
 									<GraduationCap size={22} class="text-gray-300" />
-									<p class="text-sm font-medium text-gray-600">No students enrolled yet</p>
+									<p class="text-sm font-medium text-gray-600">
+										No students enrolled yet
+									</p>
 									<p class="text-xs text-gray-400">
 										Import students from the list below to get started.
 									</p>
@@ -155,9 +173,13 @@
 							</td>
 						</tr>
 					{:else}
-						{#each students as user, idx (user.uid)}
-							<tr class={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'} transition-colors hover:bg-blue-50/60`}>
-								<td class="whitespace-nowrap px-5 py-2.5 font-mono text-xs text-gray-500">
+						{#each students as user, idx (user.id)}
+							<tr
+								class={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'} transition-colors hover:bg-blue-50/60`}
+							>
+								<td
+									class="whitespace-nowrap px-5 py-2.5 font-mono text-xs text-gray-500"
+								>
 									{user.rama_id}
 								</td>
 								<td class="whitespace-nowrap px-5 py-2.5">
@@ -165,13 +187,19 @@
 										<span class="font-medium text-gray-800">{user.name}</span>
 									</div>
 								</td>
-								<td class="whitespace-nowrap px-5 py-2.5 text-gray-500">{user.email}</td>
+								<td class="whitespace-nowrap px-5 py-2.5 text-gray-500"
+									>{user.email}</td
+								>
 								<td class="whitespace-nowrap px-5 py-2.5">
-									<span class="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium capitalize text-gray-600">
+									<span
+										class="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium capitalize text-gray-600"
+									>
 										{user.role}
 									</span>
 								</td>
-								<td class="whitespace-nowrap px-5 py-2.5 text-gray-500">{user.year}</td>
+								<td class="whitespace-nowrap px-5 py-2.5 text-gray-500"
+									>{user.year}</td
+								>
 							</tr>
 						{/each}
 					{/if}
@@ -182,7 +210,9 @@
 
 	<section class="mt-6 rounded-lg border border-gray-200 bg-white shadow-sm">
 		<div class="flex items-center gap-2.5 border-b border-gray-100 px-5 py-4">
-			<div class="flex h-8 w-8 items-center justify-center rounded-md bg-blue-50 text-blue-600">
+			<div
+				class="flex h-8 w-8 items-center justify-center rounded-md bg-blue-50 text-blue-600"
+			>
 				<UserPlus size={16} />
 			</div>
 			<div>
@@ -194,10 +224,7 @@
 		</div>
 
 		<div class="px-5 py-4">
-			<ManageStudents
-				enableSelection={true}
-				setSelectedStudents={handleSelectedStudents}
-			/>
+			<ManageStudents enableSelection={true} setSelectedStudents={handleSelectedStudents} />
 
 			<div class="mt-5 flex flex-wrap items-center gap-3 border-t border-gray-100 pt-4">
 				<button
@@ -217,13 +244,17 @@
 				</button>
 
 				{#if error}
-					<div class="flex items-center gap-1.5 rounded-md bg-red-50 px-2.5 py-1.5 text-xs text-red-600">
+					<div
+						class="flex items-center gap-1.5 rounded-md bg-red-50 px-2.5 py-1.5 text-xs text-red-600"
+					>
 						<AlertCircle size={14} class="shrink-0" />
 						<span>{error}</span>
 					</div>
 				{/if}
 				{#if success}
-					<div class="flex items-center gap-1.5 rounded-md bg-green-50 px-2.5 py-1.5 text-xs text-green-700">
+					<div
+						class="flex items-center gap-1.5 rounded-md bg-green-50 px-2.5 py-1.5 text-xs text-green-700"
+					>
 						<CheckCircle2 size={14} class="shrink-0" />
 						<span>{success}</span>
 					</div>

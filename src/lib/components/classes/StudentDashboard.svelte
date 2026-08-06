@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { LoaderCircle, ClockCheck } from '@lucide/svelte';
+	import { LoaderCircle, ClockCheck, CheckCircle2 } from '@lucide/svelte';
 	import { db } from '$lib/firebase';
 	import {
 		collection,
@@ -10,6 +10,7 @@
 		serverTimestamp,
 		setDoc,
 		doc,
+		Timestamp,
 	} from 'firebase/firestore';
 	import { goto } from '$app/navigation';
 	import { authState } from '$lib/auth.svelte';
@@ -35,6 +36,7 @@
 	let materialsError = $state<string | null>(null);
 	let activities = $state<Activity[]>([]);
 	let completingLec = $state(false);
+	let showCompletedModal = $state(false);
 	let showCheckInModal = $state(false);
 	let pendingCheckInLecture = $state<Lecture | null>(null);
 	let checkingIn = $state(false);
@@ -273,6 +275,7 @@
 
 	$effect(() => {
 		if (!selectedLecture || !authState.user) return;
+		void quizViewKey;
 		const user = authState.user;
 		const lec = selectedLecture;
 
@@ -363,8 +366,9 @@
 				{ merge: true },
 			);
 
+			const completedAt = Timestamp.now();
 			activities = activities.map((a) =>
-				a.lectureId === lectureId ? { ...a, completedAt: serverTimestamp() as any } : a,
+				a.lectureId === lectureId ? { ...a, completedAt } : a,
 			);
 			if (!activities.some((a) => a.lectureId === lectureId)) {
 				activities = [
@@ -374,15 +378,28 @@
 						classId: classId ?? '',
 						lectureId,
 						checkedInAt: null,
-						completedAt: serverTimestamp() as any,
+						completedAt,
 					},
 				];
 			}
+			showCompletedModal = true;
 		} catch (err) {
 			console.log(err);
 		} finally {
 			completingLec = false;
 		}
+	}
+
+	function handleQuizComplete(result: {
+		id: string;
+		score: number;
+		totalPoints: number;
+		passed: boolean;
+		pct: number;
+	}) {
+		quizResult = result;
+		displayQuiz = null;
+		quizViewKey++;
 	}
 </script>
 
@@ -449,6 +466,8 @@
 					selectedLectureId={selectedLecture?.id}
 					{completedIds}
 					{checkedInIds}
+					{checkedInTimes}
+					{completedTimes}
 					loading={lecturesLoading}
 					error={lecturesError}
 					onSelectLecture={handleLecSelection}
@@ -471,6 +490,7 @@
 					onBackFromQuiz={() => (displayQuiz = null)}
 					onStartQuiz={(quizId) => (displayQuiz = quizId)}
 					onComplete={() => completedLec()}
+					onQuizComplete={handleQuizComplete}
 					onCloseQuizResult={() => {
 						quizResult = null;
 						displayQuiz = null;
@@ -532,6 +552,25 @@
 					Check in
 				{/if}
 			</Button>
+		{/snippet}
+	</Modal>
+{/if}
+
+{#if showCompletedModal}
+	<Modal open onclose={() => (showCompletedModal = false)} title="Lecture completed">
+		<div class="flex flex-col items-center gap-2 py-2 text-center">
+			<div
+				class="flex h-12 w-12 items-center justify-center rounded-full bg-teal-50 text-teal-600"
+			>
+				<CheckCircle2 class="h-6 w-6" />
+			</div>
+			<p class="text-sm font-semibold text-ink-900">Great job!</p>
+			<p class="text-[13px] text-ink-500">
+				This lecture has been marked as completed.
+			</p>
+		</div>
+		{#snippet footer()}
+			<Button onclick={() => (showCompletedModal = false)}>Done</Button>
 		{/snippet}
 	</Modal>
 {/if}

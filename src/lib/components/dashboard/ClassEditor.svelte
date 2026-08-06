@@ -1,10 +1,12 @@
 <script lang="ts">
-	import type { ClassItem, Selection } from '$lib/dashboard/types';
+	import type { ClassItem } from '$lib/dashboard/types';
 	import { Button, Input, Modal } from '$lib/components/ui';
-	import { Plus, ChevronRight } from '@lucide/svelte';
+	import { Plus, ChevronRight, CalendarCheck } from '@lucide/svelte';
 	import formatTimeRange from '$lib/formatTimeRange';
 	import { db } from '$lib/firebase';
 	import { updateDoc, deleteDoc, doc } from 'firebase/firestore';
+	import { beforeNavigate, goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import moment from 'moment';
 	import * as Utils from '$lib/dashboard/utils';
 
@@ -14,19 +16,59 @@
 		onAddLecture,
 		onDeleteClass,
 		onSelectLecture,
-		onNavigate,
+		onEnrolStudents,
+		onViewAttendance,
 	}: {
 		selectedClass: ClassItem;
 		onRename: (patch: Partial<Pick<ClassItem, 'name' | 'code'>>) => void;
 		onAddLecture: (classId: string) => void;
 		onDeleteClass: (classId: string) => void;
-		onSelectLecture: (sel: Selection) => void;
-		onNavigate: (sel: Selection) => void;
+		onSelectLecture: (classId: string, lectureId: string) => void;
+		onEnrolStudents: (classId: string) => void;
+		onViewAttendance: (classId: string) => void;
 	} = $props();
 
 	let ceSaving = $state(false);
 	let ceDeleting = $state(false);
 	let ceShowConfirm = $state(false);
+
+	let lastClassId = $state<string | null>(null);
+	let baseline = $state({ name: '', code: '' });
+	let allowLeave = $state(false);
+	let showLeaveWarning = $state(false);
+	let pendingUrl = $state<string | null>(null);
+
+	const dirty = $derived(
+		baseline.name !== selectedClass.name || baseline.code !== selectedClass.code,
+	);
+
+	$effect(() => {
+		if (lastClassId !== selectedClass.id) {
+			lastClassId = selectedClass.id;
+			baseline = { name: selectedClass.name, code: selectedClass.code };
+			allowLeave = false;
+		}
+	});
+
+	beforeNavigate((navigation) => {
+		if (allowLeave || !dirty) return;
+		const url = navigation.to?.url;
+		if (!url) return;
+		navigation.cancel();
+		pendingUrl = url.pathname + url.search;
+		showLeaveWarning = true;
+	});
+
+	onMount(() => {
+		const handler = (e: BeforeUnloadEvent) => {
+			if (dirty) {
+				e.preventDefault();
+				e.returnValue = '';
+			}
+		};
+		window.addEventListener('beforeunload', handler);
+		return () => window.removeEventListener('beforeunload', handler);
+	});
 
 	async function handleSaveClass() {
 		ceSaving = true;
@@ -35,10 +77,20 @@
 				name: selectedClass.name,
 				code: selectedClass.code,
 			});
+			baseline = { name: selectedClass.name, code: selectedClass.code };
 		} catch (err) {
 			console.error(err);
 		} finally {
 			ceSaving = false;
+		}
+	}
+
+	function confirmLeave() {
+		allowLeave = true;
+		showLeaveWarning = false;
+		onRename({ name: baseline.name, code: baseline.code });
+		if (pendingUrl) {
+			goto(pendingUrl);
 		}
 	}
 
@@ -57,17 +109,6 @@
 </script>
 
 <div class="mx-auto max-w-xl w-full px-8 py-10">
-	<div class="md:hidden flex items-center gap-1.5 mb-4">
-		<button
-			type="button"
-			onclick={() => onNavigate(null)}
-			class="text-[12px] text-ink-400 hover:text-iris-600 transition-colors"
-		>
-			All Classes
-		</button>
-		<ChevronRight class="h-3 w-3 text-ink-300" />
-		<span class="text-[12px] font-medium text-ink-900">{selectedClass.name}</span>
-	</div>
 	<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">Class</p>
 	<div class="mt-4 grid grid-cols-[1fr_auto] gap-3">
 		<Input
@@ -90,7 +131,7 @@
 			class="w-28"
 		/>
 	</div>
-	<Button variant="accent" disabled={ceSaving} onclick={handleSaveClass} class="mt-4">
+	<Button variant="accent" disabled={ceSaving || !dirty} onclick={handleSaveClass} class="mt-4">
 		{#if ceSaving}
 			<div
 				class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
@@ -109,19 +150,21 @@
 			</p>
 			<p class="text-[12.5px] text-ink-500">Manage students enrolment.</p>
 		</div>
-		<Button
-			variant="primary"
-			onclick={() => onNavigate({ level: 'enrol_student', classId: selectedClass.id })}
-		>
-			<Plus class="h-3.5 w-3.5" />
-			Enrol students
-		</Button>
+		<div class="flex shrink-0 items-center gap-2">
+			<Button variant="primary" onclick={() => onEnrolStudents(selectedClass.id)}>
+				<Plus class="h-3.5 w-3.5" />
+				Enrol students
+			</Button>
+			<Button variant="primary" onclick={() => onViewAttendance(selectedClass.id)}>
+				<CalendarCheck class="h-3.5 w-3.5" />
+				Attendance
+			</Button>
+		</div>
 	</div>
 	<div class="mt-8 flex items-center justify-between border-t border-ink-900/10 pt-6">
 		<div>
 			<p class="text-[13.5px] font-medium text-ink-900">
-				{selectedClass.lectures?.length ?? 0} lecture
-				{(selectedClass.lectures?.length ?? 0) === 1 ? '' : 's'}
+				{selectedClass.lectures?.length ?? 0} lecture{selectedClass.lectures?.length === 1 ? '' : 's'}
 			</p>
 			<p class="text-[12.5px] text-ink-500">Add a lecture to start scheduling materials.</p>
 		</div>
@@ -140,12 +183,7 @@
 					<div class="space-y-2">
 						{#each lecs as lec}
 							<button
-								onclick={() =>
-									onSelectLecture({
-										level: 'lecture',
-										classId: selectedClass.id,
-										lectureId: lec.id,
-									})}
+								onclick={() => onSelectLecture(selectedClass.id, lec.id)}
 								class="w-full text-left rounded-lg border border-gray-200 bg-white px-4 py-3 transition-colors hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
 							>
 								<div class="flex items-center justify-between gap-3">
@@ -177,6 +215,24 @@
 			<Button variant="ghost" onclick={() => (ceShowConfirm = false)}>Cancel</Button>
 			<Button variant="danger-solid" disabled={ceDeleting} onclick={handleDeleteClass}>
 				{ceDeleting ? 'Deleting...' : 'Delete'}
+			</Button>
+		{/snippet}
+	</Modal>
+
+	<Modal
+		open={showLeaveWarning}
+		title="Unsaved changes"
+		onclose={() => (showLeaveWarning = false)}
+	>
+		<p class="text-[13px] text-ink-500">
+			You have unsaved changes to this class. If you leave now, your changes will be lost.
+		</p>
+		{#snippet footer()}
+			<Button variant="ghost" onclick={() => (showLeaveWarning = false)}>
+				Keep editing
+			</Button>
+			<Button variant="danger-solid" onclick={confirmLeave}>
+				Discard &amp; leave
 			</Button>
 		{/snippet}
 	</Modal>

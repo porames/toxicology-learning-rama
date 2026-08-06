@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { X } from '@lucide/svelte';
+	import { fade } from 'svelte/transition';
 	import type { Snippet } from 'svelte';
 
 	interface Props {
@@ -33,12 +34,14 @@
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
 		role="none"
+		transition:fade={{ duration: 150 }}
 		onclick={() => onclose?.()}
 	>
 		<div
 			class="mx-4 w-full max-w-sm rounded-xl bg-white shadow-xl {className}"
 			role="dialog"
 			aria-modal="true"
+			transition:fade={{ duration: 150 }}
 			onclick={(e) => e.stopPropagation()}
 		>
 			{#if title}

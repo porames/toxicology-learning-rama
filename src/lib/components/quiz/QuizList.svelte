@@ -1,13 +1,17 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
+	import { collection, getDocs, deleteDoc, doc, addDoc, serverTimestamp } from 'firebase/firestore';
 	import { db } from '$lib/firebase';
 	import { ClipboardList, Plus, Pencil, Trash2, FileQuestion } from '@lucide/svelte';
+	import { Button, Input, Modal } from '$lib/components/ui';
 	import type { Quiz } from '$lib/quiz-types';
 	import moment from 'moment';
 
 	let loading = $state(true);
 	let quizzes = $state<Quiz[]>([]);
+	let showCreateModal = $state(false);
+	let newQuizTitle = $state('');
+	let creating = $state(false);
 
 	$effect(() => {
 		async function load() {
@@ -33,6 +37,29 @@
 			console.error(err);
 		}
 	}
+
+	function openCreateModal() {
+		newQuizTitle = '';
+		showCreateModal = true;
+	}
+
+	async function handleCreate() {
+		if (!newQuizTitle.trim() || creating) return;
+		creating = true;
+		try {
+			const docRef = await addDoc(collection(db, 'quizzes'), {
+				title: newQuizTitle.trim(),
+				questions: [],
+				passingScore: 70,
+				shuffleQuestions: false,
+				createdAt: serverTimestamp(),
+			});
+			goto(`/quiz/${docRef.id}`);
+		} catch (err) {
+			console.error(err);
+			creating = false;
+		}
+	}
 </script>
 
 {#if loading}
@@ -46,7 +73,7 @@
 		<div class="flex items-center justify-between">
 			<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">Quizzes</p>
 			<button
-				onclick={() => goto('/quiz/new')}
+				onclick={openCreateModal}
 				class="flex items-center gap-1.5 rounded-lg bg-gradient-to-b from-iris-500 to-iris-700 px-3.5 py-2 text-[13px] font-semibold text-white shadow-button transition hover:from-iris-500 hover:to-iris-800"
 			>
 				<Plus class="h-3.5 w-3.5" />
@@ -71,7 +98,7 @@
 					Create your first quiz to start building questions for your students.
 				</p>
 				<button
-					onclick={() => goto('/quiz/new')}
+					onclick={openCreateModal}
 					class="mt-5 flex items-center gap-1.5 rounded-lg bg-gradient-to-b from-iris-500 to-iris-700 px-4 py-2 text-[13.5px] font-semibold text-white shadow-button transition hover:from-iris-500 hover:to-iris-800"
 				>
 					<Plus class="h-3.5 w-3.5" />
@@ -128,3 +155,34 @@
 		{/if}
 	</div>
 {/if}
+
+<Modal
+	open={showCreateModal}
+	title="New quiz"
+	onclose={() => (showCreateModal = false)}
+>
+	<Input
+		label="Quiz title"
+		bind:value={newQuizTitle}
+		placeholder="e.g. Cardiology Quiz 1"
+		onkeydown={(e) => {
+			if (e.key === 'Enter') handleCreate();
+		}}
+	/>
+	{#snippet footer()}
+		<Button variant="ghost" onclick={() => (showCreateModal = false)} disabled={creating}>
+			Cancel
+		</Button>
+		<Button onclick={handleCreate} disabled={creating || !newQuizTitle.trim()}>
+			{#if creating}
+				<div
+					class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
+				></div>
+				Creating…
+			{:else}
+				<Plus class="h-3.5 w-3.5" />
+				Create quiz
+			{/if}
+		</Button>
+	{/snippet}
+</Modal>

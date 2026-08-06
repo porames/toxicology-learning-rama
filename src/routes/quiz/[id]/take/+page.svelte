@@ -1,12 +1,10 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import QuizTaker from '$lib/components/quiz/QuizTaker.svelte';
 
-	$effect(() => {
-		goto(`/quiz/${page.params.id}`);
-	});
+	let quizId = $derived(page.params.id);
 </script>
 
-<div class="flex min-h-screen items-center justify-center">
-	<div class="h-8 w-8 animate-spin rounded-full border-2 border-ink-900/10 border-t-iris-600"></div>
-</div>
+{#if quizId}
+	<QuizTaker {quizId} />
+{/if}

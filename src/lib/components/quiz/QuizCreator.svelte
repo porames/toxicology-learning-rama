@@ -110,6 +110,14 @@
 			saving = false;
 		}
 	}
+
+	async function autoSaveImageRemoval() {
+		try {
+			await updateDoc(doc(db, 'quizzes', quizId), { questions });
+		} catch (err) {
+			console.error(err);
+		}
+	}
 </script>
 
 {#if loading}
@@ -123,7 +131,7 @@
 		<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">Quiz</p>
 
 		<div class="mt-4 space-y-4">
-			<div class="flex items-start justify-between gap-4">
+			<div class="flex items-end justify-between gap-4">
 				<div class="min-w-0 flex-1">
 					<Input
 						label="Quiz title"
@@ -131,11 +139,7 @@
 						placeholder="e.g. Cardiology Quiz 1"
 					/>
 				</div>
-				<Button
-					onclick={saveChanges}
-					disabled={saving}
-					class="mt-5 shrink-0"
-				>
+				<Button onclick={saveChanges} disabled={saving} class="shrink-0">
 					{#if saving}
 						<div
 							class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
@@ -192,6 +196,7 @@
 						expanded={expandedQuestion === q.id}
 						onupdate={(patch) => updateQuestion(q.id, patch)}
 						ondelete={() => deleteQuestion(q.id)}
+						onremoveimage={autoSaveImageRemoval}
 						ontoggle={() =>
 							(expandedQuestion = expandedQuestion === q.id ? null : q.id)}
 					/>

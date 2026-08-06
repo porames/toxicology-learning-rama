@@ -4,10 +4,16 @@
 		class="absolute inset-0 opacity-[0.07]"
 		style="background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px); background-size: 40px 40px"
 	></div>
-	<div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-ink-900/40"></div>
+	<div
+		class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-ink-900/40"
+	></div>
 
-	<div class="absolute -left-16 top-1/4 h-56 w-56 animate-float-slow rounded-full bg-mesh-teal/30 blur-3xl"></div>
-	<div class="absolute right-0 top-10 h-64 w-64 animate-float rounded-full bg-mesh-pink/20 blur-3xl"></div>
+	<div
+		class="absolute -left-16 top-1/4 h-56 w-56 animate-float-slow rounded-full bg-mesh-teal/30 blur-3xl"
+	></div>
+	<div
+		class="absolute right-0 top-10 h-64 w-64 animate-float rounded-full bg-mesh-pink/20 blur-3xl"
+	></div>
 
 	<div class="relative z-10 flex w-full flex-col justify-between p-12 xl:p-16">
 		<div class="flex items-center gap-2.5">
@@ -16,35 +22,20 @@
 					<path d="M12 2 L21 7 L21 17 L12 22 L3 17 L3 7 Z" fill="#6842E0" />
 				</svg>
 			</div>
-			<span class="text-[15px] font-semibold tracking-tight text-white">Lumen</span>
+			<span class="text-[15px] font-semibold tracking-tight text-white">RAMA Toxicology</span>
 		</div>
 
 		<div class="max-w-sm">
-			<p class="text-[13px] font-medium uppercase tracking-wider text-white/60">
-				Welcome back
-			</p>
+			<p class="text-[13px] font-medium uppercase tracking-wider text-white/60">Welcome to</p>
 			<h1 class="mt-3 text-[32px] font-semibold leading-[1.15] tracking-tight text-white">
-				Everything you built,
+				RAMA Toxicology
 				<br />
-				right where you left it.
+				E-Learning Platform
 			</h1>
-
-			<div class="mt-10 animate-float-delayed rounded-2xl border border-white/15 bg-white/10 p-4 shadow-2xl backdrop-blur-md">
-				<div class="flex items-center justify-between">
-					<div class="flex items-center gap-2">
-						<div class="h-7 w-7 rounded-full bg-gradient-to-br from-mesh-teal to-iris-500"></div>
-						<div>
-							<div class="h-2 w-20 rounded-full bg-white/70"></div>
-							<div class="mt-1.5 h-2 w-12 rounded-full bg-white/35"></div>
-						</div>
-					</div>
-					<span class="rounded-full bg-mesh-teal/20 px-2 py-1 text-[10px] font-medium text-mesh-teal">
-						Synced
-					</span>
-				</div>
-			</div>
 		</div>
 
-		<p class="text-[13px] text-white/45">&copy; {new Date().getFullYear()} Lumen, Inc.</p>
+		<p class="text-[13px] text-white/45">
+			&copy; {new Date().getFullYear()} Toxicology unit, Faculty of Medicine Ramathibodi Hospital
+		</p>
 	</div>
 </div>

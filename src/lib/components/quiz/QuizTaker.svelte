@@ -5,6 +5,8 @@
 	import { Play, CheckCircle, XCircle } from '@lucide/svelte';
 	import type { Quiz, Question, QuizAttempt } from '$lib/quiz-types';
 	import moment from 'moment';
+	import Markdown from '$lib/components/ui/Markdown.svelte';
+	import ImageContainer from '$lib/components/ui/ImageContainer.svelte';
 
 	let {
 		quizId,
@@ -12,7 +14,7 @@
 		oncomplete
 	}: {
 		quizId: string;
-		lectureId: string;
+		lectureId?: string;
 		oncomplete?: (result: { id: string; score: number; totalPoints: number; passed: boolean; pct: number }) => void;
 	} = $props();
 
@@ -69,12 +71,14 @@
 
 		async function loadAttempts() {
 			try {
-				const q = query(
-					collection(db, 'quizAttempts'),
+				const constraints = [
 					where('authId', '==', user!.uid),
 					where('quizId', '==', quizId),
-					where('lectureId', '==', lectureId)
-				);
+				];
+				if (lectureId) {
+					constraints.push(where('lectureId', '==', lectureId));
+				}
+				const q = query(collection(db, 'quizAttempts'), ...constraints);
 				const snap = await getDocs(q);
 				previousAttempts = snap.docs.map((d) => ({ id: d.id, ...d.data() } as QuizAttempt));
 			} catch (err) {
@@ -93,17 +97,19 @@
 		submitting = true;
 		try {
 			const token = await auth.currentUser?.getIdToken();
-			const res = await fetch(
-				'https://us-central1-rama-toxico-edu.cloudfunctions.net/submitQuiz',
-				{
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${token}`
-					},
-					body: JSON.stringify({ quizId, lectureId, answers })
-				}
-			);
+				const body: Record<string, unknown> = { quizId, answers };
+				if (lectureId) body.lectureId = lectureId;
+				const res = await fetch(
+					'https://us-central1-rama-toxico-edu.cloudfunctions.net/submitQuiz',
+					{
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							Authorization: `Bearer ${token}`
+						},
+						body: JSON.stringify(body)
+					}
+				);
 
 			if (!res.ok) {
 				const err = await res.json();
@@ -227,12 +233,19 @@
 								{i + 1}
 							</span>
 							<div class="min-w-0 flex-1">
-								<p class="text-[15px] font-medium text-ink-900">{q.prompt}</p>
+								<Markdown value={q.prompt} />
 								<p class="mt-3 text-[12.5px] font-medium text-ink-400 uppercase tracking-wider">
 									{q.points} pt{q.points !== 1 ? 's' : ''}
 								</p>
 							</div>
 						</div>
+
+						{#if q.imageUrl}
+							<ImageContainer
+								imageUrl={q.imageUrl}
+								class="mt-4 overflow-hidden rounded-lg border border-ink-900/10"
+							/>
+						{/if}
 
 						<div class="mt-4 space-y-2">
 							{#if q.type === 'multiple-choice'}

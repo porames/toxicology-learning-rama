@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { LoaderCircle } from '@lucide/svelte';
+	import { LoaderCircle, ClockCheck } from '@lucide/svelte';
 	import { db } from '$lib/firebase';
 	import {
 		collection,
 		getDocs,
+		getDoc,
 		query,
 		where,
 		serverTimestamp,
@@ -179,21 +180,27 @@
 		checkingIn = true;
 		checkInError = null;
 		try {
-			await setDoc(doc(db, 'users', authState.profile.docId, 'activities', lec.id), {
+			const docRef = doc(db, 'users', authState.profile.docId, 'activities', lec.id);
+
+			await setDoc(docRef, {
 				classId,
 				lectureId: lec.id,
 				checkedInAt: serverTimestamp(),
 			});
+			const docSnap = await getDoc(docRef);
+			if (!docSnap.exists()) return;
 			activities = [
 				...activities,
 				{
 					id: lec.id,
 					classId,
 					lectureId: lec.id,
-					checkedInAt: serverTimestamp() as any,
+					checkedInAt: docSnap.data().checkedInAt,
 					completedAt: null,
 				},
 			];
+			console.log('activities recorded');
+			console.log(activities);
 		} catch (err) {
 			console.error(err);
 			checkInError = "Couldn't check in. Please try again.";
@@ -226,6 +233,12 @@
 	const checkedInTimes = $derived(
 		activities.reduce<Record<string, Date>>((map, a) => {
 			if (a.checkedInAt) map[a.lectureId] = a.checkedInAt.toDate();
+			return map;
+		}, {}),
+	);
+	const completedTimes = $derived(
+		activities.reduce<Record<string, Date>>((map, a) => {
+			if (a.completedAt) map[a.lectureId] = a.completedAt.toDate();
 			return map;
 		}, {}),
 	);
@@ -351,9 +364,7 @@
 			);
 
 			activities = activities.map((a) =>
-				a.lectureId === lectureId
-					? { ...a, completedAt: serverTimestamp() as any }
-					: a,
+				a.lectureId === lectureId ? { ...a, completedAt: serverTimestamp() as any } : a,
 			);
 			if (!activities.some((a) => a.lectureId === lectureId)) {
 				activities = [
@@ -448,6 +459,7 @@
 					{currentClass}
 					{completedIds}
 					checkedInTime={selectedLecture ? checkedInTimes[selectedLecture.id] : undefined}
+					completedTime={selectedLecture ? completedTimes[selectedLecture.id] : undefined}
 					{completingLec}
 					{allRequiredPassed}
 					{materialsLoading}
@@ -476,34 +488,40 @@
 {#if showCheckInModal && pendingCheckInLecture}
 	<Modal open onclose={cancelCheckIn} title="Check in to this lecture?">
 		<div class="space-y-3">
-			<p class="text-[14px] font-medium text-ink-900">
-				{pendingCheckInLecture.title || 'Untitled lecture'}
+			<p class="text-ink-500">
+				Lecture name: <span class="font-bold text-ink-700"
+					>{pendingCheckInLecture.title || 'Untitled lecture'}</span
+				>
 			</p>
 			<p class="text-[13px] text-ink-500">
-				Now: <span class="font-medium text-ink-700">{moment(now).format('hh:mm:ss A')}</span>
+				Current device time: <span class="font-medium text-ink-700"
+					>{moment(now).format('hh:mm:ss A')}</span
+				>
 			</p>
 			<p class="rounded-lg bg-iris-50 px-3 py-2 text-[14px] font-semibold text-iris-700">
 				Starts at {moment(pendingCheckInLecture.startTime).format('ddd, MMM D · hh:mm A')}
 			</p>
-			<div class="rounded-lg bg-ink-900/[0.03] px-3 py-2.5 text-[12.5px] text-ink-500">
-				You can check in from <span class="font-medium text-ink-700">15 minutes before</span> the
-				lecture starts until <span class="font-medium text-ink-700">15 minutes after</span>.
+			<div class="flex items-start gap-2 rounded-lg bg-ink-900/[0.03] px-3 py-2.5 text-[12.5px] text-ink-500">
+				<ClockCheck class="mt-0.5 h-4 w-4 shrink-0 text-iris-500" />
+				<span>
+					You can check in from <span class="font-medium text-ink-700">15 minutes before</span>
+					the lecture starts until
+					<span class="font-medium text-ink-700">15 minutes after</span>.
+				</span>
 			</div>
 			{#if checkInError}
 				<p class="rounded-lg bg-red-50 px-3 py-2 text-[12.5px] text-red-600">
 					{checkInError}
 				</p>
 			{:else if !canCheckIn}
-				<p class="rounded-lg bg-amber-50 px-3 py-2.5 text-[12.5px] text-amber-700">
-					You're outside the check-in window for this lecture. If this is a mistake, please
-					contact your admin.
+				<p class="rounded-lg bg-red-50 px-3 py-2.5 text-[12.5px] text-red-600">
+					You're outside the check-in window for this lecture. If this is a mistake,
+					please contact your admin.
 				</p>
 			{/if}
 		</div>
 		{#snippet footer()}
-			<Button variant="ghost" onclick={cancelCheckIn} disabled={checkingIn}>
-				Cancel
-			</Button>
+			<Button variant="ghost" onclick={cancelCheckIn} disabled={checkingIn}>Cancel</Button>
 			<Button onclick={confirmCheckIn} disabled={checkingIn || !canCheckIn}>
 				{#if checkingIn}
 					<div

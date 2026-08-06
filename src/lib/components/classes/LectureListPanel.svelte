@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { ChevronLeft, ChevronRight, Check, Sun, MapPin } from '@lucide/svelte';
-	import { goto } from '$app/navigation';
+	import { Sun, ClockCheck, ListChecks, Folder } from '@lucide/svelte';
 	import formatTimeRange from '$lib/formatTimeRange';
 	import type { Lecture, ClassItem } from '$lib/dashboard/types';
+	import moment from 'moment';
 
 	function groupLecturesByDate(lectures: Lecture[]): Record<string, Lecture[]> {
 		const sorted = [...lectures].sort(
@@ -59,10 +59,14 @@
 			.filter((lec) => getDateKey(new Date(lec.startTime)) === todayKey)
 			.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()),
 	);
-	const upcomingTodayIds = $derived(new Set(upcomingToday.map((lec) => lec.id)));
-	const groupedLectures = $derived(
-		groupLecturesByDate(lectures.filter((lec) => !upcomingTodayIds.has(lec.id))),
+	const upcomingLectures = $derived(
+		lectures.filter((lec) => getDateKey(new Date(lec.startTime)) > todayKey),
 	);
+	const pastLectures = $derived(
+		lectures.filter((lec) => getDateKey(new Date(lec.startTime)) < todayKey),
+	);
+	const groupedUpcoming = $derived(groupLecturesByDate(upcomingLectures));
+	const groupedPast = $derived(Object.entries(groupLecturesByDate(pastLectures)).reverse());
 </script>
 
 <div
@@ -92,43 +96,49 @@
 								>
 									<Sun class="h-3.5 w-3.5" />
 								</span>
-								<p class="text-[12.5px] font-semibold uppercase tracking-wide">
-									Today's lectures
-								</p>
+								<p class="text-[12.5px] font-semibold">Today's lectures</p>
 							</div>
 							<p class="text-[12px] font-medium text-white/80">
-								{new Date().toLocaleDateString(undefined, {
-									weekday: 'short',
-									month: 'short',
-									day: 'numeric',
-								})}
+								{moment().format('Do MMM')}
 							</p>
 						</div>
-						<div class="mt-1.5 space-y-0.5 p-1.5">
+						<div class="mt-1.5 divide-y divide-white/10 rounded-lg p-1.5">
 							{#each upcomingToday as lec}
 								<button
 									type="button"
 									onclick={() => onSelectLecture(lec)}
-									class={`block w-full rounded-lg py-2 px-2.5 text-left transition-colors ${
+									class={`block w-full py-2 px-2.5 text-left transition-colors ${
 										selectedLectureId === lec.id
 											? 'bg-white/25'
 											: 'hover:bg-white/15'
 									}`}
 								>
-									<div class="flex items-center gap-2">
-										<p class="text-[13.5px] font-medium text-white flex-1">
-											{lec.title || 'Untitled'}
-										</p>
-										{#if checkedInIds.has(lec.id)}
-											<MapPin size={13} class="shrink-0 text-white/80" />
-										{/if}
-										{#if completedIds.has(lec.id)}
-											<Check size={14} class="shrink-0 text-emerald-200" />
-										{/if}
+									<div class="flex items-center gap-2 justify-between">
+										<div>
+											<p class="text-[13.5px] font-medium text-white flex-1">
+												{lec.title || 'Untitled'}
+											</p>
+											<p class="text-[12px] text-white/70">
+												{formatTimeRange(lec.startTime, lec.endTime)}
+											</p>
+										</div>
+										<div class="flex flex-col gap-2 items-center">
+											{#if checkedInIds.has(lec.id)}
+												<div
+													class="bg-teal-50 px-1.5 py-1 rounded-full text-teal-600 flex flex-row items-center gap-1 font-semibold"
+												>
+													<ClockCheck size={13} />
+												</div>
+											{/if}
+											{#if completedIds.has(lec.id)}
+												<div
+													class="bg-teal-50 px-1.5 py-1 rounded-full text-teal-600 flex flex-row items-center gap-1 font-semibold"
+												>
+													<ListChecks size={13} />
+												</div>
+											{/if}
+										</div>
 									</div>
-									<p class="text-[12px] text-white/70">
-										{formatTimeRange(lec.startTime, lec.endTime)}
-									</p>
 								</button>
 							{/each}
 						</div>
@@ -155,44 +165,86 @@
 					</div>
 				{/if}
 
-				{#each Object.entries(groupedLectures) as [dateKey, lecsForDay]}
-					<div class="mb-4 last:mb-0">
-						<p
-							class="mb-1.5 px-2 text-xs font-semibold uppercase tracking-wide text-ink-900/40"
-						>
-							{formatDateHeader(dateKey)}
-						</p>
-						<div class="space-y-1">
-							{#each lecsForDay as lec}
-								<button
-									type="button"
-									onclick={() => onSelectLecture(lec)}
-									class={`block w-full rounded-md py-2 px-2 md:py-1.5 text-left transition-colors ${
-										selectedLectureId === lec.id
-											? 'bg-iris-600/10'
-											: 'hover:bg-ink-900/5'
-									}`}
-								>
-									<div class="flex items-center gap-2">
-										<p class="text-sm font-medium text-ink-900 flex-1">
-											{lec.title || 'Untitled'}
-										</p>
-										{#if checkedInIds.has(lec.id)}
-											<MapPin size={13} class="shrink-0 text-iris-500" />
-										{/if}
-										{#if completedIds.has(lec.id)}
-											<Check size={14} class="shrink-0 text-teal-500" />
-										{/if}
-									</div>
-									<p class="text-xs text-ink-900/50">
-										{formatTimeRange(lec.startTime, lec.endTime)}
-									</p>
-								</button>
-							{/each}
-						</div>
+				{#if Object.keys(groupedUpcoming).length > 0}
+					<div
+						class="my-2 flex items-center gap-1.5 px-2 text-xs font-semibold uppercase tracking-wide text-iris-600"
+					>
+						<Folder class="h-3.5 w-3.5 shrink-0" />
+						Upcoming
+						<span class="h-px flex-1 bg-ink-900/10"></span>
 					</div>
-				{/each}
+					{#each Object.entries(groupedUpcoming) as [dateKey, lecsForDay]}
+						<div class="mb-3 last:mb-0">
+							<p
+								class="mb-1.5 px-2 text-xs font-semibold uppercase tracking-wide text-ink-900/40"
+							>
+								{formatDateHeader(dateKey)}
+							</p>
+							<div class="divide-y divide-ink-900/5">
+								{#each lecsForDay as lec}
+									{@render lectureRow(lec)}
+								{/each}
+							</div>
+						</div>
+					{/each}
+				{/if}
+
+				{#if groupedPast.length > 0}
+					<div
+						class="my-2 mt-5 flex items-center gap-1.5 px-2 text-xs font-semibold uppercase tracking-wide text-iris-600"
+					>
+						<Folder class="h-3.5 w-3.5 shrink-0" />
+						Past lectures
+						<span class="h-px flex-1 bg-ink-900/10"></span>
+					</div>
+					{#each groupedPast as [dateKey, lecsForDay]}
+						<div class="mb-3 last:mb-0">
+							<p
+								class="mb-1.5 px-2 text-xs font-semibold uppercase tracking-wide text-ink-900/40"
+							>
+								{formatDateHeader(dateKey)}
+							</p>
+							<div class="divide-y divide-ink-900/5">
+								{#each lecsForDay as lec}
+									{@render lectureRow(lec, true)}
+								{/each}
+							</div>
+						</div>
+					{/each}
+				{/if}
 			</div>
 		{/if}
 	</div>
 </div>
+
+{#snippet lectureRow(lec: Lecture, showAlert = false)}
+	<button
+		type="button"
+		onclick={() => onSelectLecture(lec)}
+		class={`block w-full py-2 px-2 md:py-1.5 text-left transition-colors ${
+			selectedLectureId === lec.id ? 'bg-iris-600/10' : 'hover:bg-ink-900/5'
+		}`}
+	>
+		<div class="flex items-center gap-2">
+			<p class="text-sm font-medium text-ink-900 flex-1">
+				{lec.title || 'Untitled'}
+			</p>
+			{#if checkedInIds.has(lec.id)}
+				<ClockCheck size={13} class="shrink-0 text-iris-500" />
+			{/if}
+			{#if completedIds.has(lec.id)}
+				<ListChecks size={14} class="shrink-0 text-teal-500" />
+			{/if}
+		</div>
+		<p class="text-xs text-ink-900/50">
+			{formatTimeRange(lec.startTime, lec.endTime)}
+		</p>
+		{#if showAlert && !checkedInIds.has(lec.id) && !completedIds.has(lec.id)}
+			<p
+				class="mt-1.5 rounded-md bg-red-50 px-2 py-1 text-[11.5px] font-medium text-red-600"
+			>
+				Not checked in or completed
+			</p>
+		{/if}
+	</button>
+{/snippet}

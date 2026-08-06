@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronLeft, ChevronRight, Check, LoaderCircle } from '@lucide/svelte';
+	import { ChevronLeft, ChevronRight, LoaderCircle, ClockCheck, ListChecks } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import moment from 'moment';
 	import formatTimeRange from '$lib/formatTimeRange';
@@ -27,6 +27,7 @@
 		currentClass?: ClassItem;
 		completedIds: Set<string>;
 		checkedInTime: Date | undefined;
+		completedTime: Date | undefined;
 		completingLec: boolean;
 		allRequiredPassed: boolean;
 		materialsLoading: boolean;
@@ -48,6 +49,7 @@
 		currentClass,
 		completedIds,
 		checkedInTime,
+		completedTime,
 		completingLec,
 		allRequiredPassed,
 		materialsLoading,
@@ -101,6 +103,7 @@
 					<span
 						class="inline-flex items-center gap-1 rounded-full bg-iris-500/10 px-2 py-0.5 text-xs font-medium text-iris-600"
 					>
+						<ClockCheck size={12} />
 						Checked in · {moment(checkedInTime).format('hh:mm A')}
 					</span>
 				{/if}
@@ -108,8 +111,8 @@
 					<span
 						class="inline-flex items-center gap-1 rounded-full bg-teal-500/10 px-2 py-0.5 text-xs font-medium text-teal-600"
 					>
-						<Check size={12} />
-						Completed
+						<ListChecks size={12} />
+						Completed{completedTime ? ` · ${moment(completedTime).format('hh:mm A')}` : ''}
 					</span>
 				{/if}
 			</div>
@@ -159,10 +162,10 @@
 			<LoaderCircle class="h-4 w-4 animate-spin" />
 			Marking...
 		{:else if selectedLecture && completedIds.has(selectedLecture.id)}
-			<Check class="h-4 w-4" />
+			<ListChecks class="h-4 w-4" />
 			Completed
 		{:else}
-			<Check class="h-4 w-4" />
+			<ListChecks class="h-4 w-4" />
 			Mark as completed
 		{/if}
 	</button>

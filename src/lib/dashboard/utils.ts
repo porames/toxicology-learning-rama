@@ -51,6 +51,15 @@ export function stringInputToDate(strDate: string) {
 	return new Date(strDate);
 }
 
+export function validateDateTimeInput(value: string): string | null {
+	if (!value) return 'Required';
+	const date = new Date(value);
+	if (isNaN(date.getTime())) return 'Invalid date';
+	const year = date.getFullYear();
+	if (year > 2050) return 'Year looks like พ.ศ. — please use ค.ศ. (e.g. 2025)';
+	return null;
+}
+
 export function defaultTimes() {
 	const start = new Date();
 	start.setMinutes(0, 0, 0);

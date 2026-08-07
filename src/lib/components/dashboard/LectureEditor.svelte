@@ -109,6 +109,12 @@
 	const timeInvalid = $derived(
 		new Date(selectedLecture.startTime).getTime() >= new Date(selectedLecture.endTime).getTime(),
 	);
+	const startTimeError = $derived(
+		Utils.validateDateTimeInput(Utils.dateToStringInput(selectedLecture.startTime)),
+	);
+	const endTimeError = $derived(
+		Utils.validateDateTimeInput(Utils.dateToStringInput(selectedLecture.endTime)),
+	);
 
 	$effect(() => {
 		if (lastLectureId !== selectedLecture.id) {
@@ -440,6 +446,7 @@
 			type="datetime-local"
 			label="Start time"
 			value={Utils.dateToStringInput(selectedLecture.startTime)}
+			error={startTimeError ?? ''}
 			oninput={(e) => {
 				const target = e.target as HTMLInputElement;
 				onUpdateLecture({
@@ -451,6 +458,7 @@
 			type="datetime-local"
 			label="End time"
 			value={Utils.dateToStringInput(selectedLecture.endTime)}
+			error={endTimeError ?? (timeInvalid ? 'End time must be after the start time.' : '')}
 			oninput={(e) => {
 				const target = e.target as HTMLInputElement;
 				onUpdateLecture({

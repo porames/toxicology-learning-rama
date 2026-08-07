@@ -145,7 +145,7 @@
 </script>
 
 <div
-	class={`overflow-y-auto border-r border-ink-900/8 px-6 py-5 ${selectedLectureId ? 'hidden md:block md:w-[280px] md:shrink-0' : 'block w-full md:w-[280px] md:shrink-0'}`}
+	class={`overflow-y-auto border-r border-ink-900/8 px-6 py-5 ${selectedLectureId || selectedAssignmentId ? 'hidden md:block md:w-[280px] md:shrink-0' : 'block w-full md:w-[280px] md:shrink-0'}`}
 >
 	<div class="-mx-4 px-2">
 		{#if loading}
@@ -311,7 +311,9 @@
 										}`}
 									>
 										<p class="truncate text-[13px] font-medium text-ink-900">
-											{assignment.instructions.split('\n')[0] || 'Assignment'}
+											{assignment.title ||
+												assignment.instructions.split('\n')[0] ||
+												'Assignment'}
 										</p>
 										<p class="mt-0.5 text-[11.5px] text-ink-500">
 											Opens {assignment.opensAt?.toDate?.()
@@ -326,13 +328,6 @@
 														'MMM D · hh:mm A',
 													)
 												: '—'}
-											{#if (assignment.requiredAttachments ?? []).length > 0}
-												· {(assignment.requiredAttachments ?? []).length} required
-												file
-												{(assignment.requiredAttachments ?? []).length === 1
-													? ''
-													: 's'}
-											{/if}
 										</p>
 									</button>
 								{/each}

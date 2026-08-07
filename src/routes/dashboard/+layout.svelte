@@ -16,6 +16,7 @@
 	const lectureId = $derived(page.params.lectureId);
 	const assignmentId = $derived(page.params.assignmentId);
 	const isAssignmentsPage = $derived(page.url.pathname.includes('/assignments'));
+	const isSubmissionsPage = $derived(page.url.pathname.endsWith('/submissions'));
 	const selectedClass = $derived(classId ? dashboardStore.getClass(classId) : null);
 	const selectedLecture = $derived(
 		classId && lectureId ? dashboardStore.getLecture(classId, lectureId) : null,
@@ -31,8 +32,11 @@
 			}
 			try {
 				const snap = await getDoc(doc(db, 'classes', classId, 'assignments', assignmentId));
-				const instructions: string = snap.exists() ? (snap.data()?.instructions ?? '') : '';
-				assignmentTitle = instructions.split('\n')[0]?.trim() || 'Assignment';
+				if (snap.exists()) {
+					const instructions: string = snap.data()?.instructions ?? '';
+					assignmentTitle = (snap.data()?.title || instructions.split('\n')[0])?.trim() ||
+						'Assignment';
+				}
 			} catch (err) {
 				console.error(err);
 				assignmentTitle = null;
@@ -68,7 +72,18 @@
 				]
 			: []),
 		...(assignmentId
-			? [{ label: assignmentTitle ?? 'Assignment', active: true }]
+			? [
+					{
+						label: assignmentTitle ?? 'Assignment',
+						href: isSubmissionsPage
+							? `/dashboard/${classId}/assignments/${assignmentId}`
+							: undefined,
+						active: !isSubmissionsPage,
+					},
+				]
+			: []),
+		...(isSubmissionsPage
+			? [{ label: 'Submissions', active: true }]
 			: []),
 		...(selectedLecture
 			? [{ label: selectedLecture.title || 'Untitled lecture', active: true }]

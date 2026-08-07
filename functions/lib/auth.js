@@ -1,4 +1,4 @@
-import {admin, db} from "./admin.js";
+import { admin, db } from "./admin.js";
 
 class HttpError extends Error {
   constructor(status, message) {
@@ -17,15 +17,15 @@ export async function verifyAdmin(req) {
   const decodedToken = await admin.auth().verifyIdToken(idToken);
 
   const snap = await db
-      .collection("users")
-      .where("authId", "==", decodedToken.uid)
-      .get();
+    .collection("users")
+    .where("authId", "==", decodedToken.uid)
+    .get();
 
   if (snap.empty || snap.docs[0].data().role !== "admin") {
     throw new HttpError(403, "Forbidden");
   }
 
-  return {id: snap.docs[0].id, uid: decodedToken.uid, ...snap.docs[0].data()};
+  return { id: snap.docs[0].id, uid: decodedToken.uid, ...snap.docs[0].data() };
 }
 
 export async function verifyUser(req) {
@@ -38,13 +38,13 @@ export async function verifyUser(req) {
   const decodedToken = await admin.auth().verifyIdToken(idToken);
 
   const snap = await db
-      .collection("users")
-      .where("authId", "==", decodedToken.uid)
-      .get();
+    .collection("users")
+    .where("authId", "==", decodedToken.uid)
+    .get();
 
   if (snap.empty) {
     throw new HttpError(403, "Forbidden");
   }
 
-  return {uid: decodedToken.uid, ...snap.docs[0].data()};
+  return { uid: decodedToken.uid, ...snap.docs[0].data(), id: snap.docs[0].id };
 }

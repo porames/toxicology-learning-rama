@@ -57,6 +57,7 @@ export interface RequiredAttachment {
 
 export interface Assignment {
 	id: string;
+	title: string;
 	instructions: string;
 	dueDate: { toDate: () => Date };
 	opensAt: { toDate: () => Date };
@@ -67,7 +68,8 @@ export interface Assignment {
 
 export interface SubmissionAttachment {
 	name: string;
-	refId: string;
+	filePath: string;
+	attachmentId: string;
 	uploadedAt: { toDate: () => Date } | null;
 }
 
@@ -77,6 +79,8 @@ export interface AssignmentSubmission {
 	submittedAt: { toDate: () => Date } | null;
 	updatedAt: { toDate: () => Date } | null;
 	attachments: SubmissionAttachment[];
+	requirementsMet?: boolean;
+	missingAttachmentIds?: string[];
 }
 
 export const MATERIAL_LABELS: Record<MaterialType, string> = {

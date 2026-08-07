@@ -10,6 +10,7 @@
 	import type { Assignment, RequiredAttachment, Student } from '$lib/dashboard/types';
 	import { Button, Input, Modal, Textarea } from '$lib/components/ui';
 	import { Plus, X, FileIcon, AlertCircle } from '@lucide/svelte';
+	import * as Utils from '$lib/dashboard/utils';
 	import moment from 'moment';
 
 	let {
@@ -22,6 +23,7 @@
 		onDeleted: () => void;
 	} = $props();
 
+	let title = $state(assignment.title ?? '');
 	let instructions = $state(assignment.instructions ?? '');
 	let opensAt = $state(
 		assignment.opensAt?.toDate?.()
@@ -73,6 +75,14 @@
 		}
 	}
 
+	const opensAtError = $derived(opensAt ? Utils.validateDateTimeInput(opensAt) : null);
+	const dueDateError = $derived(dueDate ? Utils.validateDateTimeInput(dueDate) : null);
+	const dueAfterOpensError = $derived(
+		opensAt && dueDate && new Date(dueDate).getTime() <= new Date(opensAt).getTime()
+			? 'Due date must be after the opening submission time.'
+			: null,
+	);
+
 	function toggleStudent(id: string) {
 		if (assignedStudentIds.includes(id)) {
 			assignedStudentIds = assignedStudentIds.filter((s) => s !== id);
@@ -108,6 +118,10 @@
 			error = 'Due date is required.';
 			return;
 		}
+		if (opensAtError || dueDateError) {
+			error = 'Please fix the date and time fields.';
+			return;
+		}
 		if (new Date(dueDate).getTime() <= new Date(opensAt).getTime()) {
 			error = 'Due date must be after the opening submission time.';
 			return;
@@ -118,6 +132,7 @@
 		saved = false;
 		try {
 			await updateDoc(doc(db, 'classes', classId, 'assignments', assignment.id), {
+				title: title.trim(),
 				instructions: instructions.trim(),
 				opensAt: new Date(opensAt),
 				dueDate: new Date(dueDate),
@@ -173,6 +188,14 @@
 	</div>
 
 	<div class="mt-4">
+		<Input
+			label="Assignment title"
+			bind:value={title}
+			placeholder="e.g. Lab Report 1"
+		/>
+	</div>
+
+	<div class="mt-4">
 		<Textarea
 			label="Instructions"
 			bind:value={instructions}
@@ -186,12 +209,14 @@
 			type="datetime-local"
 			label="Opening submission"
 			bind:value={opensAt}
+			error={opensAtError ?? ''}
 			hint="Students can submit from this time."
 		/>
 		<Input
 			type="datetime-local"
 			label="Due date"
 			bind:value={dueDate}
+			error={dueDateError ?? dueAfterOpensError ?? ''}
 			hint="Submissions close at this time."
 		/>
 	</div>

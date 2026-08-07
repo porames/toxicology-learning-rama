@@ -1,4 +1,5 @@
 export {submitQuiz} from "./functions/submitQuiz.js";
+export {submitAssignment} from "./functions/submitAssignment.js";
 export {enrolStudents} from "./functions/enrolStudents.js";
 export {getStudents} from "./functions/getStudents.js";
 export {signUp} from "./functions/signUp.js";

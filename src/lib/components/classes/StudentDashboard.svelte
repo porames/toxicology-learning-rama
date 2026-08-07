@@ -438,7 +438,10 @@
 				...(selectedAssignment
 					? [
 							{
-								label: selectedAssignment.instructions.split('\n')[0] || 'Assignment',
+								label:
+									selectedAssignment.title ||
+									selectedAssignment.instructions.split('\n')[0] ||
+									'Assignment',
 								active: true,
 							},
 						]
@@ -509,36 +512,43 @@
 					onSelectAssignment={handleSelectAssignment}
 				/>
 				{#if selectedAssignment}
-					<AssignmentDetailPanel classId={classId ?? ''} assignment={selectedAssignment} />
+					<AssignmentDetailPanel
+						classId={classId ?? ''}
+						assignment={selectedAssignment}
+					/>
 				{:else}
 					<LectureDetailPanel
-					{selectedLecture}
-					{displayQuiz}
-					{currentClass}
-					{completedIds}
-					checkedInTime={selectedLecture ? checkedInTimes[selectedLecture.id] : undefined}
-					completedTime={selectedLecture ? completedTimes[selectedLecture.id] : undefined}
-					{completingLec}
-					{allRequiredPassed}
-					{materialsLoading}
-					{materialsError}
-					{videoUrls}
-					{quizAttempts}
-					{quizResult}
-					onBack={() => (selection = null)}
-					onBackFromQuiz={() => (displayQuiz = null)}
-					onStartQuiz={(quizId) => (displayQuiz = quizId)}
-					onComplete={() => completedLec()}
-					onQuizComplete={handleQuizComplete}
-					onCloseQuizResult={() => {
-						quizResult = null;
-						displayQuiz = null;
-					}}
-					onViewAttempts={() => {
-						quizResult = null;
-						quizViewKey++;
-					}}
-				/>
+						{selectedLecture}
+						{displayQuiz}
+						{currentClass}
+						{completedIds}
+						checkedInTime={selectedLecture
+							? checkedInTimes[selectedLecture.id]
+							: undefined}
+						completedTime={selectedLecture
+							? completedTimes[selectedLecture.id]
+							: undefined}
+						{completingLec}
+						{allRequiredPassed}
+						{materialsLoading}
+						{materialsError}
+						{videoUrls}
+						{quizAttempts}
+						{quizResult}
+						onBack={() => (selection = null)}
+						onBackFromQuiz={() => (displayQuiz = null)}
+						onStartQuiz={(quizId) => (displayQuiz = quizId)}
+						onComplete={() => completedLec()}
+						onQuizComplete={handleQuizComplete}
+						onCloseQuizResult={() => {
+							quizResult = null;
+							displayQuiz = null;
+						}}
+						onViewAttempts={() => {
+							quizResult = null;
+							quizViewKey++;
+						}}
+					/>
 				{/if}
 			</div>
 		{/if}

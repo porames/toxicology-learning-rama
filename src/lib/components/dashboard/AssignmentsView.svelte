@@ -2,7 +2,7 @@
 	import { db } from '$lib/firebase';
 	import { collection, getDocs, getDoc, doc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 	import { goto } from '$app/navigation';
-	import { FileText, Plus, Trash2, ClipboardList, CalendarClock, FileIcon } from '@lucide/svelte';
+	import { FileText, Plus, Trash2, ClipboardList, CalendarClock, FileIcon, Users } from '@lucide/svelte';
 	import type { Assignment, RequiredAttachment } from '$lib/dashboard/types';
 	import { Button, Modal } from '$lib/components/ui';
 	import moment from 'moment';
@@ -47,6 +47,7 @@
 			const now = new Date();
 			const dueDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 			const assignmentRef = await addDoc(collection(db, 'classes', classId, 'assignments'), {
+				title: '',
 				instructions: '',
 				opensAt: now,
 				dueDate,
@@ -135,7 +136,9 @@
 							<div class="flex items-center gap-2">
 								<FileText class="h-4 w-4 shrink-0 text-ink-400" />
 								<p class="truncate text-[14.5px] font-semibold text-ink-900">
-									Assignment · {moment(assignment.dueDate?.toDate?.()).format('MMM D')}
+									{assignment.title ||
+										assignment.instructions.split('\n')[0] ||
+										'Untitled assignment'}
 								</p>
 							</div>
 							{#if assignment.instructions}
@@ -156,14 +159,26 @@
 								<span>{assignment.assignedStudentIds.length} student{assignment.assignedStudentIds.length === 1 ? '' : 's'}</span>
 							</div>
 						</button>
-						<button
-							type="button"
-							onclick={() => (confirmingDelete = assignment)}
-							aria-label="Delete assignment"
-							class="shrink-0 rounded-lg p-2 text-ink-400 transition hover:bg-red-50 hover:text-red-600"
-						>
-							<Trash2 class="h-4 w-4" />
-						</button>
+						<div class="flex shrink-0 items-center gap-1">
+							<Button
+								variant="ghost"
+								onclick={() =>
+									goto(
+										`/dashboard/${classId}/assignments/${assignment.id}/submissions`,
+									)}
+							>
+								<Users class="h-3.5 w-3.5" />
+								View submissions
+							</Button>
+							<button
+								type="button"
+								onclick={() => (confirmingDelete = assignment)}
+								aria-label="Delete assignment"
+								class="shrink-0 rounded-lg p-2 text-ink-400 transition hover:bg-red-50 hover:text-red-600"
+							>
+								<Trash2 class="h-4 w-4" />
+							</button>
+						</div>
 					</div>
 					{#if assignment.requiredAttachments.length > 0}
 						<div class="border-t border-ink-900/5 px-4 py-2.5">

@@ -8,6 +8,7 @@ secret
 .wrangler
 /.svelte-kit
 /build
+,vscode
 
 # OS
 .DS_Store

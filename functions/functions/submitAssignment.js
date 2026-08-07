@@ -67,7 +67,7 @@ export const submitAssignment = onRequest(async (req, res) => {
             requirementsMet: result.met,
             missingAttachmentIds: result.missing.map((m) => m.id),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            submittedAt = admin.firestore.FieldValue.serverTimestamp()
+            submittedAt: admin.firestore.FieldValue.serverTimestamp(),
         };
         await submissionSnap.ref.update(patch);
 

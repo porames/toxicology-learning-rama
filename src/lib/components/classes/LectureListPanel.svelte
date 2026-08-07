@@ -140,7 +140,8 @@
 
 	function isAccessible(lec: Lecture): boolean {
 		const t = now.getTime();
-		return t >= new Date(lec.startTime).getTime() && t <= new Date(lec.endTime).getTime();
+		const start = new Date(lec.startTime).getTime() - 15 * 60 * 1000;
+		return t >= start && t <= new Date(lec.endTime).getTime();
 	}
 </script>
 

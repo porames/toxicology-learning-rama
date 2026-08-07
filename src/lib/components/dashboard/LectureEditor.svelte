@@ -52,6 +52,7 @@
 	let leSaving = $state(false);
 	let showQuizPicker = $state(false);
 	let leDeleteLecture = $state(false);
+	let leShowConfirm = $state(false);
 
 	let materialStates = $state<Record<string, MaterialState>>({});
 
@@ -396,6 +397,7 @@
 		leDeleteLecture = true;
 		try {
 			await deleteDoc(doc(db, 'classes', classId, 'lectures', lectureId));
+			leShowConfirm = false;
 			onDeleteLecture(classId, lectureId);
 		} catch (err) {
 			console.error(err);
@@ -564,9 +566,9 @@
 
 	<button
 		type="button"
-		onclick={handleDeleteLecture}
+		onclick={() => (leShowConfirm = true)}
 		disabled={leDeleteLecture}
-		class="mt-9 text-[13px] font-medium text-red-500 hover:text-red-600 disabled:opacity-50"
+		class="mt-12 mb-4 text-[13px] font-medium text-red-500 hover:text-red-600 disabled:opacity-50"
 	>
 		{#if leDeleteLecture}
 			Deleting...
@@ -574,6 +576,19 @@
 			Delete this lecture
 		{/if}
 	</button>
+
+	<Modal open={leShowConfirm} title="Delete lecture?" onclose={() => (leShowConfirm = false)}>
+		<p class="text-[13px] text-ink-500">
+			This will permanently delete "{selectedLecture.title}" and all its materials. This
+			action cannot be undone.
+		</p>
+		{#snippet footer()}
+			<Button variant="ghost" onclick={() => (leShowConfirm = false)}>Cancel</Button>
+			<Button variant="danger-solid" disabled={leDeleteLecture} onclick={handleDeleteLecture}>
+				{leDeleteLecture ? 'Deleting...' : 'Delete'}
+			</Button>
+		{/snippet}
+	</Modal>
 
 	<Modal
 		open={showLeaveWarning}

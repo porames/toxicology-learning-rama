@@ -46,7 +46,6 @@
 			}
 
 			const data = await res.json();
-			console.log(data);
 			students = data.students;
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Something went wrong';
@@ -112,7 +111,7 @@
 	}
 </script>
 
-<div class="mx-auto max-w-5xl px-4 py-10">
+<div class="mx-auto w-full min-w-0 max-w-5xl px-4 py-10">
 	<section class="rounded-lg border border-gray-200 bg-white shadow-sm">
 		<div class="flex items-center justify-between gap-3 border-b border-gray-100 px-5 py-4">
 			<div class="flex items-center gap-2.5">

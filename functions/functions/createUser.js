@@ -16,6 +16,24 @@ export const createUser = onRequest(async (req, res) => {
       return;
     }
 
+    const snap = await db
+        .collection("users")
+        .where(
+            admin.firestore.Filter.or(
+                admin.firestore.Filter.where("rama_id", "==", rama_id),
+                admin.firestore.Filter.where("email", "==", email),
+            ),
+        )
+        .limit(1)
+        .get();
+
+    if (!snap.empty) {
+      const hit = snap.docs[0].data();
+      const exists = hit.rama_id === rama_id ? `RAMA ID "${rama_id}"` : `Email "${email}"`;
+      res.status(400).json({error: `${exists} is already in use.`});
+      return;
+    }
+
     const userRef = db.collection("users").doc();
     await userRef.set({
       email,

@@ -6,11 +6,15 @@ import {verifyAdmin} from "../lib/auth.js";
 export const deleteUser = onRequest(async (req, res) => {
   try {
     if (handleCors(req, res)) return;
-    await verifyAdmin(req);
 
     const {id} = req.body;
     if (!id || typeof id !== "string") {
       return res.status(400).json({message: "id is required."});
+    }
+
+    const admin = await verifyAdmin(req);
+    if (admin.id === id) {
+      return res.status(400).json({message: "You cannot delete your own account."});
     }
 
     const userRef = db.collection("users").doc(id);

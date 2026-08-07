@@ -25,7 +25,7 @@ export async function verifyAdmin(req) {
     throw new HttpError(403, "Forbidden");
   }
 
-  return {uid: decodedToken.uid, ...snap.docs[0].data()};
+  return {id: snap.docs[0].id, uid: decodedToken.uid, ...snap.docs[0].data()};
 }
 
 export async function verifyUser(req) {

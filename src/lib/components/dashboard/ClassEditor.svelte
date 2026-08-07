@@ -202,7 +202,7 @@
 		{/if}
 	</div>
 
-	<Button variant="danger" onclick={() => (ceShowConfirm = true)} class="mt-8 -mx-3.5">
+	<Button variant="danger" onclick={() => (ceShowConfirm = true)} class="mt-8 mb-4 -mx-3.5">
 		Delete this class
 	</Button>
 

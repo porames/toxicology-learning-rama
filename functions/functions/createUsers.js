@@ -52,24 +52,37 @@ export const createUsers = onRequest(async (req, res) => {
       cleaned.push(s);
     }
 
-    // Reject entries that collide with existing users (case-insensitive).
-    const usersSnap = await db.collection("users").get();
-    const existingRama = new Set();
-    const existingEmail = new Set();
-    usersSnap.forEach((doc) => {
-      const data = doc.data();
-      if (data.rama_id) existingRama.add(String(data.rama_id).toLowerCase());
-      if (data.email) existingEmail.add(String(data.email).toLowerCase());
-    });
+    // Reject entries that collide with existing users (exact match, case-sensitive).
+    const uniqueRamaIds = [...new Set(cleaned.map((s) => String(s.rama_id)))];
+    const uniqueEmails = [...new Set(cleaned.map((s) => String(s.email)))];
+    const foundRama = new Set();
+    const foundEmail = new Set();
+    const CHUNK = 30;
+    for (let i = 0; i < Math.max(uniqueRamaIds.length, uniqueEmails.length); i += CHUNK) {
+      const snap = await db
+          .collection("users")
+          .where(
+              admin.firestore.Filter.or(
+                  admin.firestore.Filter.where("rama_id", "in", uniqueRamaIds.slice(i, i + CHUNK)),
+                  admin.firestore.Filter.where("email", "in", uniqueEmails.slice(i, i + CHUNK)),
+              ),
+          )
+          .get();
+      snap.forEach((doc) => {
+        const data = doc.data();
+        if (data.rama_id) foundRama.add(String(data.rama_id));
+        if (data.email) foundEmail.add(String(data.email));
+      });
+    }
 
     for (const s of cleaned) {
-      if (existingRama.has(String(s.rama_id).toLowerCase())) {
+      if (foundRama.has(String(s.rama_id))) {
         res.status(400).json({
           error: `RAMA ID "${s.rama_id}" is already in use by an existing user.`,
         });
         return;
       }
-      if (existingEmail.has(String(s.email).toLowerCase())) {
+      if (foundEmail.has(String(s.email))) {
         res.status(400).json({
           error: `Email "${s.email}" is already in use by an existing user.`,
         });

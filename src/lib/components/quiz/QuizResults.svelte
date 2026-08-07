@@ -228,13 +228,13 @@
 		></div>
 	</div>
 {:else if !attemptId}
-	<div class="mx-auto w-4xl px-8 py-10">
-		<div class="flex items-center justify-between gap-3">
-			<div>
+	<div class="mx-auto w-full max-w-4xl px-4 py-10 md:px-8">
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<div class="min-w-0 flex-1">
 				<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">Results</p>
-				<h1 class="mt-1 flex items-center gap-2 text-[18px] font-semibold text-ink-900">
-					<BarChart3 class="h-4 w-4 text-amber-500" />
-					{quiz?.title || 'Untitled quiz'}
+				<h1 class="mt-1 flex items-center gap-2 truncate text-[18px] font-semibold text-ink-900">
+					<BarChart3 class="h-4 w-4 shrink-0 text-amber-500" />
+					<span class="truncate">{quiz?.title || 'Untitled quiz'}</span>
 				</h1>
 			</div>
 			<button
@@ -268,7 +268,7 @@
 						>
 							<button
 								onclick={() => toggleGroup(group.key)}
-								class="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-ink-900/[0.02]"
+								class="flex w-full flex-wrap items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-ink-900/[0.02]"
 							>
 								{#if expandedGroups.has(group.key)}
 									<ChevronDown class="h-4 w-4 shrink-0 text-ink-400" />
@@ -285,7 +285,7 @@
 									</p>
 									<p class="truncate text-[12.5px] text-ink-500">{group.email}</p>
 								</div>
-								<div class="flex shrink-0 items-center gap-3">
+								<div class="flex shrink-0 flex-wrap items-center gap-3">
 									<span class="text-[12px] text-ink-400">
 										{group.rows.length} attempt{group.rows.length === 1
 											? ''
@@ -398,7 +398,7 @@
 	{@const pct =
 		attempt.totalPoints > 0 ? Math.round((attempt.score / attempt.totalPoints) * 100) : 0}
 
-	<div class="mx-auto w-4xl px-8 py-10">
+	<div class="mx-auto w-full max-w-4xl px-4 py-10 md:px-8">
 		<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">Results</p>
 
 		<div class="mt-4 rounded-xl border border-ink-900/10 bg-white p-8 shadow-soft">
@@ -484,7 +484,7 @@
 							</div>
 						</div>
 
-						<div class="mt-3 space-y-1.5 pl-10">
+						<div class="mt-3 space-y-1.5 pl-0 sm:pl-10">
 							<p class="text-[13px] text-ink-500">
 								<span class="font-medium text-ink-700">Your answer:</span>
 								{formatAnswerDisplay(attemptAnswer?.answer, q)}

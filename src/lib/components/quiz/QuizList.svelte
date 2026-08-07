@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { collection, getDocs, deleteDoc, doc, addDoc, serverTimestamp } from 'firebase/firestore';
+	import {
+		collection,
+		getDocs,
+		deleteDoc,
+		doc,
+		addDoc,
+		serverTimestamp,
+	} from 'firebase/firestore';
 	import { db } from '$lib/firebase';
 	import { ClipboardList, Plus, Pencil, Trash2, FileQuestion } from '@lucide/svelte';
 	import { Button, Input, Modal } from '$lib/components/ui';
@@ -134,7 +141,7 @@
 							</div>
 							<div class="flex shrink-0 gap-1">
 								<button
-									onclick={() => goto(`/quiz/${quiz.id}/edit`)}
+									onclick={() => goto(`/quiz/${quiz.id}`)}
 									class="flex h-7 w-7 items-center justify-center rounded text-ink-400 transition hover:bg-iris-50 hover:text-iris-600"
 									title="Edit"
 								>
@@ -156,11 +163,7 @@
 	</div>
 {/if}
 
-<Modal
-	open={showCreateModal}
-	title="New quiz"
-	onclose={() => (showCreateModal = false)}
->
+<Modal open={showCreateModal} title="New quiz" onclose={() => (showCreateModal = false)}>
 	<Input
 		label="Quiz title"
 		bind:value={newQuizTitle}

@@ -11,11 +11,17 @@
 	let {
 		quizId,
 		lectureId,
-		oncomplete
+		oncomplete,
 	}: {
 		quizId: string;
 		lectureId?: string;
-		oncomplete?: (result: { id: string; score: number; totalPoints: number; passed: boolean; pct: number }) => void;
+		oncomplete?: (result: {
+			id: string;
+			score: number;
+			totalPoints: number;
+			passed: boolean;
+			pct: number;
+		}) => void;
 	} = $props();
 
 	let loading = $state(true);
@@ -44,7 +50,7 @@
 					const bTime = b.completedAt?.toDate?.()?.getTime() ?? 0;
 					return aTime > bTime ? a : b;
 				})
-			: null
+			: null,
 	);
 
 	$effect(() => {
@@ -80,7 +86,7 @@
 				}
 				const q = query(collection(db, 'quizAttempts'), ...constraints);
 				const snap = await getDocs(q);
-				previousAttempts = snap.docs.map((d) => ({ id: d.id, ...d.data() } as QuizAttempt));
+				previousAttempts = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as QuizAttempt);
 			} catch (err) {
 				console.error(err);
 			}
@@ -97,19 +103,19 @@
 		submitting = true;
 		try {
 			const token = await auth.currentUser?.getIdToken();
-				const body: Record<string, unknown> = { quizId, answers };
-				if (lectureId) body.lectureId = lectureId;
-				const res = await fetch(
-					'https://us-central1-rama-toxico-edu.cloudfunctions.net/submitQuiz',
-					{
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json',
-							Authorization: `Bearer ${token}`
-						},
-						body: JSON.stringify(body)
-					}
-				);
+			const body: Record<string, unknown> = { quizId, answers };
+			if (lectureId) body.lectureId = lectureId;
+			const res = await fetch(
+				'https://us-central1-rama-toxico-edu.cloudfunctions.net/submitQuiz',
+				{
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						Authorization: `Bearer ${token}`,
+					},
+					body: JSON.stringify(body),
+				},
+			);
 
 			if (!res.ok) {
 				const err = await res.json();
@@ -132,12 +138,14 @@
 
 {#if loading}
 	<div class="flex min-h-screen items-center justify-center">
-		<div class="h-8 w-8 animate-spin rounded-full border-2 border-ink-900/10 border-t-iris-600"></div>
+		<div
+			class="h-8 w-8 animate-spin rounded-full border-2 border-ink-900/10 border-t-iris-600"
+		></div>
 	</div>
 {:else if quiz}
 	{#if !started}
 		<!-- StartPage -->
-		<div class="mx-auto w-2xl px-8 py-10">
+		<div class="mx-auto max-w-2xl px-8 py-10">
 			<div class="rounded-xl border border-ink-900/10 bg-white p-8 shadow-soft">
 				<div class="text-center">
 					<h1 class="text-2xl font-bold text-ink-900">{quiz.title}</h1>
@@ -147,12 +155,18 @@
 				</div>
 
 				<div class="mt-6 grid grid-cols-2 gap-3">
-					<div class="rounded-lg border border-ink-900/10 bg-ink-900/[0.02] px-4 py-3 text-center">
+					<div
+						class="rounded-lg border border-ink-900/10 bg-ink-900/[0.02] px-4 py-3 text-center"
+					>
 						<p class="text-[24px] font-bold text-ink-900">{quiz.questions.length}</p>
 						<p class="text-[12px] text-ink-500">Questions</p>
 					</div>
-					<div class="rounded-lg border border-ink-900/10 bg-ink-900/[0.02] px-4 py-3 text-center">
-						<p class="text-[24px] font-bold text-emerald-600">{quiz.passingScore ?? 70}%</p>
+					<div
+						class="rounded-lg border border-ink-900/10 bg-ink-900/[0.02] px-4 py-3 text-center"
+					>
+						<p class="text-[24px] font-bold text-emerald-600">
+							{quiz.passingScore ?? 70}%
+						</p>
 						<p class="text-[12px] text-ink-500">Passing score</p>
 					</div>
 				</div>
@@ -163,13 +177,20 @@
 							Previous attempts ({previousAttempts.length})
 						</p>
 						<div class="space-y-1.5">
-							{#each [...previousAttempts].sort((a, b) => {
-								const aTime = a.completedAt?.toDate?.()?.getTime() ?? 0;
-								const bTime = b.completedAt?.toDate?.()?.getTime() ?? 0;
-								return bTime - aTime;
-							}).slice(0, 5) as attempt}
-								{@const pct = attempt.totalPoints > 0 ? Math.round((attempt.score / attempt.totalPoints) * 100) : 0}
-								<div class="flex items-center gap-3 rounded-lg border border-ink-900/10 px-4 py-2.5">
+							{#each [...previousAttempts]
+								.sort((a, b) => {
+									const aTime = a.completedAt?.toDate?.()?.getTime() ?? 0;
+									const bTime = b.completedAt?.toDate?.()?.getTime() ?? 0;
+									return bTime - aTime;
+								})
+								.slice(0, 5) as attempt}
+								{@const pct =
+									attempt.totalPoints > 0
+										? Math.round((attempt.score / attempt.totalPoints) * 100)
+										: 0}
+								<div
+									class="flex items-center gap-3 rounded-lg border border-ink-900/10 px-4 py-2.5"
+								>
 									{#if attempt.passed}
 										<CheckCircle class="h-4 w-4 shrink-0 text-emerald-500" />
 									{:else}
@@ -182,7 +203,9 @@
 									</div>
 									{#if attempt.completedAt}
 										<p class="shrink-0 text-[11px] text-ink-400">
-											{moment(attempt.completedAt.toDate()).format('MMM D, YYYY')}
+											{moment(attempt.completedAt.toDate()).format(
+												'MMM D, YYYY',
+											)}
 										</p>
 									{/if}
 								</div>
@@ -209,7 +232,9 @@
 		<div class="mx-auto w-2xl px-8 py-10">
 			<div class="flex items-center justify-between gap-4">
 				<div>
-					<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">Taking quiz</p>
+					<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">
+						Taking quiz
+					</p>
 					<h1 class="mt-1 text-[18px] font-semibold text-ink-900">{quiz.title}</h1>
 					<p class="mt-0.5 text-[13px] text-ink-500">
 						{answeredCount} of {totalQuestions} answered
@@ -219,7 +244,9 @@
 					<div class="h-2 w-32 rounded-full bg-ink-900/10 overflow-hidden">
 						<div
 							class="h-full rounded-full bg-iris-500 transition-all"
-							style="width: {totalQuestions ? (answeredCount / totalQuestions) * 100 : 0}%"
+							style="width: {totalQuestions
+								? (answeredCount / totalQuestions) * 100
+								: 0}%"
 						></div>
 					</div>
 				</div>
@@ -229,12 +256,16 @@
 				{#each shuffledQuestions as q, i (q.id)}
 					<div class="rounded-xl border border-ink-900/10 bg-white p-5 shadow-soft">
 						<div class="flex items-start gap-3">
-							<span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-iris-50 text-[13px] font-semibold text-iris-600">
+							<span
+								class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-iris-50 text-[13px] font-semibold text-iris-600"
+							>
 								{i + 1}
 							</span>
 							<div class="min-w-0 flex-1">
 								<Markdown value={q.prompt} />
-								<p class="mt-3 text-[12.5px] font-medium text-ink-400 uppercase tracking-wider">
+								<p
+									class="mt-3 text-[12.5px] font-medium text-ink-400 uppercase tracking-wider"
+								>
 									{q.points} pt{q.points !== 1 ? 's' : ''}
 								</p>
 							</div>
@@ -251,7 +282,9 @@
 							{#if q.type === 'multiple-choice'}
 								{#each q.options as opt (opt.id)}
 									<label
-										class="flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-[14px] transition {answers[q.id] === opt.id
+										class="flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-[14px] transition {answers[
+											q.id
+										] === opt.id
 											? 'border-iris-400 bg-iris-50 text-iris-700'
 											: 'border-ink-900/10 text-ink-700 hover:border-ink-900/20'}"
 									>
@@ -277,7 +310,9 @@
 
 							{#if q.type === 'multiple-answer'}
 								{#each q.options as opt (opt.id)}
-									{@const checked = Array.isArray(answers[q.id]) && answers[q.id]!.includes(opt.id)}
+									{@const checked =
+										Array.isArray(answers[q.id]) &&
+										answers[q.id]!.includes(opt.id)}
 									<label
 										class="flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-[14px] transition {checked
 											? 'border-iris-400 bg-iris-50 text-iris-700'
@@ -285,13 +320,18 @@
 									>
 										<input
 											type="checkbox"
-											checked={checked}
+											{checked}
 											onchange={(e) => {
-												const arr = Array.isArray(answers[q.id]) ? [...(answers[q.id] as string[])] : [];
+												const arr = Array.isArray(answers[q.id])
+													? [...(answers[q.id] as string[])]
+													: [];
 												if ((e.target as HTMLInputElement).checked) {
 													setAnswer(q.id, [...arr, opt.id]);
 												} else {
-													setAnswer(q.id, arr.filter((a) => a !== opt.id));
+													setAnswer(
+														q.id,
+														arr.filter((a) => a !== opt.id),
+													);
 												}
 											}}
 											class="h-4 w-4 shrink-0 accent-iris-500"
@@ -305,7 +345,9 @@
 								<div class="flex gap-3">
 									{#each q.options as opt (opt.id)}
 										<label
-											class="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border px-4 py-3 text-[14px] font-medium transition {answers[q.id] === opt.id
+											class="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border px-4 py-3 text-[14px] font-medium transition {answers[
+												q.id
+											] === opt.id
 												? 'border-iris-400 bg-iris-50 text-iris-700'
 												: 'border-ink-900/10 text-ink-600 hover:border-ink-900/20'}"
 										>
@@ -326,7 +368,8 @@
 							{#if q.type === 'short-answer'}
 								<input
 									value={(answers[q.id] as string) || ''}
-									oninput={(e) => setAnswer(q.id, (e.target as HTMLInputElement).value)}
+									oninput={(e) =>
+										setAnswer(q.id, (e.target as HTMLInputElement).value)}
 									class="w-full rounded-md bg-white px-3 py-2 text-[14px] text-ink-900 placeholder:text-ink-300 outline-1 -outline-offset-1 outline-ink-900/15 focus:outline-2 focus:-outline-offset-2 focus:outline-iris-500 transition"
 									placeholder="Type your answer…"
 								/>
@@ -343,7 +386,9 @@
 					class="flex w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-b from-iris-500 to-iris-700 px-3.5 py-2 text-[13px] font-semibold text-white shadow-button transition hover:from-iris-500 hover:to-iris-800 disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					{#if submitting}
-						<div class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
+						<div
+							class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
+						></div>
 						Submitting…
 					{:else if allAnswered}
 						Submit quiz

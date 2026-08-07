@@ -10,6 +10,7 @@
 		ChevronDown,
 		ChevronRight,
 		X,
+		AlertCircle,
 	} from '@lucide/svelte';
 	import Papa from 'papaparse';
 	import type { Student } from '$lib/dashboard/types';
@@ -90,6 +91,59 @@
 
 	let checkedStudents: string[] = $state([]);
 
+	type CsvRow = {
+		rama_id: string;
+		name: string;
+		email: string;
+		role: string;
+		year: string;
+	};
+
+	async function validateCsv(rows: CsvRow[]): Promise<string | null> {
+		const seenRama = new Map<string, number>();
+		const seenEmail = new Map<string, number>();
+		for (let i = 0; i < rows.length; i++) {
+			const r = rows[i];
+			const ramaKey = String(r.rama_id ?? '')
+				.trim()
+				.toLowerCase();
+			const emailKey = String(r.email ?? '')
+				.trim()
+				.toLowerCase();
+			if (ramaKey && seenRama.has(ramaKey)) {
+				return `Duplicate RAMA ID "${r.rama_id}" in row ${i + 2}.`;
+			}
+			if (emailKey && seenEmail.has(emailKey)) {
+				return `Duplicate email "${r.email}" in row ${i + 2}.`;
+			}
+			if (ramaKey) seenRama.set(ramaKey, i);
+			if (emailKey) seenEmail.set(emailKey, i);
+		}
+
+		try {
+			const usersSnap = await getDocs(collection(db, 'users'));
+			const existingRama = new Set<string>();
+			const existingEmail = new Set<string>();
+			usersSnap.docs.forEach((d) => {
+				const data = d.data();
+				if (data.rama_id) existingRama.add(String(data.rama_id).trim().toLowerCase());
+				if (data.email) existingEmail.add(String(data.email).trim().toLowerCase());
+			});
+			for (const r of rows) {
+				if (existingRama.has(String(r.rama_id).trim().toLowerCase())) {
+					return `RAMA ID "${r.rama_id}" is already in use by an existing student.`;
+				}
+				if (existingEmail.has(String(r.email).trim().toLowerCase())) {
+					return `Email "${r.email}" is already in use by an existing student.`;
+				}
+			}
+		} catch (err) {
+			console.error(err);
+			return "Couldn't validate the file against existing students. Try again.";
+		}
+		return null;
+	}
+
 	function isChecked(id: string) {
 		return checkedStudents.includes(id);
 	}
@@ -121,15 +175,8 @@
 		csvParsing = true;
 
 		const reader = new FileReader();
-		reader.onload = (evt) => {
+		reader.onload = async (evt) => {
 			const text = evt.target?.result as string;
-			type CsvRow = {
-				rama_id: string;
-				name: string;
-				email: string;
-				role: string;
-				year: string;
-			};
 
 			const result = Papa.parse<CsvRow>(text, {
 				header: true,
@@ -154,6 +201,13 @@
 			const rows = result.data.filter((r) => r.rama_id || r.name || r.email);
 			if (rows.length === 0) {
 				csvError = 'CSV file contains no data rows.';
+				csvParsing = false;
+				return;
+			}
+
+			const validationError = await validateCsv(rows);
+			if (validationError) {
+				csvError = validationError;
 				csvParsing = false;
 				return;
 			}
@@ -363,12 +417,16 @@
 
 			if (!res.ok) {
 				const body = await res.json().catch(() => null);
-				throw new Error(body?.message || 'Failed to add student');
+				throw new Error(
+					body?.message ||
+						'Failed to add student. Make sure student ID or Email is not duplicate to existing users.',
+				);
 			}
 
 			showAddModal = false;
 			await loadUsers();
 		} catch (err) {
+			console.log(err);
 			newError = err instanceof Error ? err.message : 'Something went wrong';
 		} finally {
 			newSubmitting = false;
@@ -376,7 +434,7 @@
 	}
 </script>
 
-<div>
+<div class="w-full min-w-0">
 	<div class="mb-2 flex items-center justify-between">
 		{#if students !== undefined}
 			<span class="text-xs text-gray-400">
@@ -458,7 +516,9 @@
 						</button>
 					</div>
 
-					<div class="max-h-56 overflow-y-auto rounded-md border border-gray-200">
+					<div
+						class="max-h-56 overflow-x-auto overflow-y-auto rounded-md border border-gray-200"
+					>
 						<table class="min-w-full text-xs">
 							<thead>
 								<tr
@@ -815,7 +875,12 @@
 			</select>
 		</div>
 		{#if newError}
-			<p class="text-[12.5px] text-red-600">{newError}</p>
+			<div
+				class="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2.5 text-[12.5px] text-red-600"
+			>
+				<AlertCircle class="mt-0.5 h-4 w-4 shrink-0" />
+				<span>{newError}</span>
+			</div>
 		{/if}
 	</div>
 	{#snippet footer()}
@@ -847,16 +912,10 @@
 
 {#if confirmingDeleteId !== null}
 	{@const deletingStudent = students?.find((s) => s.id === confirmingDeleteId)}
-	<Modal
-		open
-		title="Delete student?"
-		onclose={() => (confirmingDeleteId = null)}
-	>
+	<Modal open title="Delete student?" onclose={() => (confirmingDeleteId = null)}>
 		<p class="text-[13px] text-ink-500">
 			This will permanently delete
-			<span class="font-medium text-ink-900"
-				>{deletingStudent?.name ?? 'this student'}</span
-			>
+			<span class="font-medium text-ink-900">{deletingStudent?.name ?? 'this student'}</span>
 			({deletingStudent?.rama_id}). This action cannot be undone.
 		</p>
 		{#snippet footer()}

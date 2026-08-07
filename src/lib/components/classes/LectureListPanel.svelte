@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Sun, ClockCheck, ListChecks, Folder } from '@lucide/svelte';
+	import { Sun, ClockCheck, ListChecks, Folder, Lock } from '@lucide/svelte';
 	import formatTimeRange from '$lib/formatTimeRange';
 	import { Tooltip } from '$lib/components/ui';
 	import type { Lecture, ClassItem } from '$lib/dashboard/types';
@@ -78,6 +78,21 @@
 	);
 	const groupedUpcoming = $derived(groupLecturesByDate(upcomingLectures));
 	const groupedPast = $derived(Object.entries(groupLecturesByDate(pastLectures)).reverse());
+
+	let now = $state(new Date());
+
+	$effect(() => {
+		const timer = setInterval(() => {
+			now = new Date();
+		}, 1000);
+		return () => clearInterval(timer);
+	});
+
+	function isAccessible(lec: Lecture): boolean {
+		const t = now.getTime();
+		return t >= new Date(lec.startTime).getTime() && t <= new Date(lec.endTime).getTime();
+	}
+
 </script>
 
 <div
@@ -117,11 +132,14 @@
 							{#each upcomingToday as lec}
 								<button
 									type="button"
-									onclick={() => onSelectLecture(lec)}
+									onclick={() => isAccessible(lec) && onSelectLecture(lec)}
+									disabled={!isAccessible(lec)}
 									class={`block w-full py-2 px-2.5 text-left transition-colors ${
 										selectedLectureId === lec.id
 											? 'bg-white/25'
-											: 'hover:bg-white/15'
+											: isAccessible(lec)
+												? 'hover:bg-white/15'
+												: 'opacity-50 cursor-not-allowed'
 									}`}
 								>
 									<div class="flex items-center gap-2 justify-between">
@@ -261,12 +279,20 @@
 {#snippet lectureRow(lec: Lecture, showAlert = false)}
 	<button
 		type="button"
-		onclick={() => onSelectLecture(lec)}
+		onclick={() => isAccessible(lec) && onSelectLecture(lec)}
+		disabled={!isAccessible(lec)}
 		class={`block w-full py-2 px-2 md:py-1.5 text-left transition-colors ${
-			selectedLectureId === lec.id ? 'bg-iris-600/10' : 'hover:bg-ink-900/5'
+			selectedLectureId === lec.id
+				? 'bg-iris-600/10'
+				: isAccessible(lec)
+					? 'hover:bg-ink-900/5'
+					: 'opacity-50 cursor-not-allowed'
 		}`}
 	>
 		<div class="flex items-center gap-2">
+			{#if !isAccessible(lec)}
+				<Lock class="h-3.5 w-3.5 shrink-0 text-ink-400" />
+			{/if}
 			<p class="text-sm font-medium text-ink-900 flex-1">
 				{lec.title || 'Untitled'}
 			</p>

@@ -67,7 +67,16 @@
 		classesLoading = true;
 		classesError = null;
 		try {
-			const snapshot = await getDocs(collection(db, 'classes'));
+			const isAdmin =
+				authState.profile.role === 'admin' || authState.profile.role === 'teacher';
+			const snapshot = await getDocs(
+				isAdmin
+					? collection(db, 'classes')
+					: query(
+							collection(db, 'classes'),
+							where('enroledStudents', 'array-contains', authState.profile.docId),
+						),
+			);
 			const classesData = snapshot.docs.map((doc) => ({
 				id: doc.id,
 				name: doc.data()['name'],
@@ -75,7 +84,6 @@
 				lectures: [],
 			}));
 			classes = classesData;
-
 			const activitiesSnap = await getDocs(
 				collection(db, 'users', authState.profile.docId, 'activities'),
 			);
@@ -261,7 +269,6 @@
 		const authLoad = authState.loading;
 		const user = authState.user;
 		const profile = authState.profile;
-
 		if (!authLoad && user && profile) {
 			loadClasses();
 		}
@@ -408,7 +415,15 @@
 		<Breadcrumbs
 			crumbs={[
 				{ label: 'All Classes', href: '/classes' },
-				...(currentClass ? [{ label: currentClass.name, active: true }] : []),
+				...(currentClass
+					? [
+							{
+								label: currentClass.name,
+								onclick: () => (selection = null),
+								active: !selectedLecture,
+							},
+						]
+					: []),
 				...(selectedLecture ? [{ label: selectedLecture.title, active: true }] : []),
 			]}
 		/>
@@ -521,10 +536,14 @@
 			<p class="rounded-lg bg-iris-50 px-3 py-2 text-[14px] font-semibold text-iris-700">
 				Starts at {moment(pendingCheckInLecture.startTime).format('ddd, MMM D · hh:mm A')}
 			</p>
-			<div class="flex items-start gap-2 rounded-lg bg-ink-900/[0.03] px-3 py-2.5 text-[12.5px] text-ink-500">
+			<div
+				class="flex items-start gap-2 rounded-lg bg-ink-900/[0.03] px-3 py-2.5 text-[12.5px] text-ink-500"
+			>
 				<ClockCheck class="mt-0.5 h-4 w-4 shrink-0 text-iris-500" />
 				<span>
-					You can check in from <span class="font-medium text-ink-700">15 minutes before</span>
+					You can check in from <span class="font-medium text-ink-700"
+						>15 minutes before</span
+					>
 					the lecture starts until
 					<span class="font-medium text-ink-700">15 minutes after</span>.
 				</span>
@@ -565,9 +584,7 @@
 				<CheckCircle2 class="h-6 w-6" />
 			</div>
 			<p class="text-sm font-semibold text-ink-900">Great job!</p>
-			<p class="text-[13px] text-ink-500">
-				This lecture has been marked as completed.
-			</p>
+			<p class="text-[13px] text-ink-500">This lecture has been marked as completed.</p>
 		</div>
 		{#snippet footer()}
 			<Button onclick={() => (showCompletedModal = false)}>Done</Button>

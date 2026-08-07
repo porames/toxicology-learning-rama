@@ -33,6 +33,7 @@ function createAuthState() {
 			if (!snap.empty) {
 				const userDoc = snap.docs[0];
 				const data = userDoc.data();
+				console.log(data);
 				profile = {
 					name: data.name ?? currentUser.displayName ?? 'User',
 					email: data.email ?? currentUser.email ?? '',

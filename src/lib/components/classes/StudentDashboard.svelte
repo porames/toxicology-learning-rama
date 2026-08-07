@@ -15,9 +15,10 @@
 	import { goto } from '$app/navigation';
 	import { authState } from '$lib/auth.svelte';
 	import moment from 'moment';
-	import type { ClassItem, Lecture, Selection, Activity } from '$lib/dashboard/types';
+	import type { ClassItem, Lecture, Selection, Activity, Assignment } from '$lib/dashboard/types';
 	import LectureListPanel from '$lib/components/classes/LectureListPanel.svelte';
 	import LectureDetailPanel from '$lib/components/classes/LectureDetailPanel.svelte';
+	import AssignmentDetailPanel from '$lib/components/classes/AssignmentDetailPanel.svelte';
 	import DashboardLayout from '$lib/components/DashboardLayout.svelte';
 	import Breadcrumbs from '$lib/components/Breadcrumbs.svelte';
 	import { Button, Modal } from '$lib/components/ui';
@@ -132,6 +133,7 @@
 	async function openLecture(lec: Lecture) {
 		if (!classId) return;
 		selection = { level: 'lecture', classId, lectureId: lec.id };
+		selectedAssignment = null;
 
 		const existing = lectures.find((l) => l.id === lec.id);
 		if (existing && existing.materials.length > 0) return;
@@ -234,6 +236,12 @@
 	const selectedLecture = $derived(
 		lectures.find((l) => selection?.level === 'lecture' && l.id === selection.lectureId),
 	);
+	let selectedAssignment = $state<Assignment | null>(null);
+
+	function handleSelectAssignment(assignment: Assignment) {
+		selectedAssignment = assignment;
+		selection = null;
+	}
 	const completedIds = $derived(
 		new Set(activities.filter((a) => a.completedAt != null).map((a) => a.lectureId)),
 	);
@@ -419,8 +427,19 @@
 					? [
 							{
 								label: currentClass.name,
-								onclick: () => (selection = null),
-								active: !selectedLecture,
+								onclick: () => {
+									selection = null;
+									selectedAssignment = null;
+								},
+								active: !selectedLecture && !selectedAssignment,
+							},
+						]
+					: []),
+				...(selectedAssignment
+					? [
+							{
+								label: selectedAssignment.instructions.split('\n')[0] || 'Assignment',
+								active: true,
 							},
 						]
 					: []),
@@ -479,6 +498,7 @@
 					{lectures}
 					{currentClass}
 					selectedLectureId={selectedLecture?.id}
+					selectedAssignmentId={selectedAssignment?.id}
 					{completedIds}
 					{checkedInIds}
 					{checkedInTimes}
@@ -486,8 +506,12 @@
 					loading={lecturesLoading}
 					error={lecturesError}
 					onSelectLecture={handleLecSelection}
+					onSelectAssignment={handleSelectAssignment}
 				/>
-				<LectureDetailPanel
+				{#if selectedAssignment}
+					<AssignmentDetailPanel classId={classId ?? ''} assignment={selectedAssignment} />
+				{:else}
+					<LectureDetailPanel
 					{selectedLecture}
 					{displayQuiz}
 					{currentClass}
@@ -515,6 +539,7 @@
 						quizViewKey++;
 					}}
 				/>
+				{/if}
 			</div>
 		{/if}
 	{/if}

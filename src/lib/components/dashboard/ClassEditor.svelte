@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { ClassItem } from '$lib/dashboard/types';
 	import { Button, Input, Modal } from '$lib/components/ui';
-	import { Plus, ChevronRight, CalendarCheck } from '@lucide/svelte';
+	import { Plus, ChevronRight, CalendarCheck, ClipboardList } from '@lucide/svelte';
 	import formatTimeRange from '$lib/formatTimeRange';
 	import { db } from '$lib/firebase';
 	import { updateDoc, deleteDoc, doc } from 'firebase/firestore';
@@ -18,6 +18,7 @@
 		onSelectLecture,
 		onEnrolStudents,
 		onViewAttendance,
+		onViewAssignments,
 	}: {
 		selectedClass: ClassItem;
 		onRename: (patch: Partial<Pick<ClassItem, 'name' | 'code'>>) => void;
@@ -26,6 +27,7 @@
 		onSelectLecture: (classId: string, lectureId: string) => void;
 		onEnrolStudents: (classId: string) => void;
 		onViewAttendance: (classId: string) => void;
+		onViewAssignments: (classId: string) => void;
 	} = $props();
 
 	let ceSaving = $state(false);
@@ -163,8 +165,19 @@
 	</div>
 	<div class="mt-8 flex items-center justify-between border-t border-ink-900/10 pt-6">
 		<div>
+			<p class="text-[13.5px] font-medium text-ink-900">Manage class assignments</p>
+		</div>
+		<Button variant="primary" onclick={() => onViewAssignments(selectedClass.id)}>
+			<ClipboardList class="h-3.5 w-3.5" />
+			Assignments
+		</Button>
+	</div>
+	<div class="mt-8 flex items-center justify-between border-t border-ink-900/10 pt-6">
+		<div>
 			<p class="text-[13.5px] font-medium text-ink-900">
-				{selectedClass.lectures?.length ?? 0} lecture{selectedClass.lectures?.length === 1 ? '' : 's'}
+				{selectedClass.lectures?.length ?? 0} lecture{selectedClass.lectures?.length === 1
+					? ''
+					: 's'}
 			</p>
 			<p class="text-[12.5px] text-ink-500">Add a lecture to start scheduling materials.</p>
 		</div>
@@ -228,12 +241,8 @@
 			You have unsaved changes to this class. If you leave now, your changes will be lost.
 		</p>
 		{#snippet footer()}
-			<Button variant="ghost" onclick={() => (showLeaveWarning = false)}>
-				Keep editing
-			</Button>
-			<Button variant="danger-solid" onclick={confirmLeave}>
-				Discard &amp; leave
-			</Button>
+			<Button variant="ghost" onclick={() => (showLeaveWarning = false)}>Keep editing</Button>
+			<Button variant="danger-solid" onclick={confirmLeave}>Discard &amp; leave</Button>
 		{/snippet}
 	</Modal>
 </div>

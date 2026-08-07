@@ -135,7 +135,12 @@
 				ramaId: rows[0].ramaId,
 				email: rows[0].email,
 				rows,
-				latest: rows[0],
+				best: rows.reduce((best, r) =>
+					r.score > best.score ||
+					(r.score === best.score && r.pct > best.pct)
+						? r
+						: best,
+				),
 			}))
 			.sort((a, b) => {
 				if (a.name === 'Unknown' && b.name !== 'Unknown') return 1;
@@ -293,16 +298,16 @@
 									</span>
 									<span
 										class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold {group
-											.latest.passed
+											.best.passed
 											? 'bg-emerald-50 text-emerald-700'
 											: 'bg-red-50 text-red-700'}"
 									>
-										{#if group.latest.passed}
+										{#if group.best.passed}
 											<CheckCircle class="h-3.5 w-3.5" />
 										{:else}
 											<XCircle class="h-3.5 w-3.5" />
 										{/if}
-										{group.latest.passed ? 'Passed' : 'Failed'}
+										{group.best.passed ? 'Passed' : 'Failed'}
 									</span>
 								</div>
 							</button>

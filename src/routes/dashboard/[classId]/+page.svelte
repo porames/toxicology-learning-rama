@@ -49,5 +49,6 @@
 		onSelectLecture={(cid, lid) => goto(`/dashboard/${cid}/${lid}`)}
 		onEnrolStudents={(cid) => goto(`/dashboard/${cid}/students`)}
 		onViewAttendance={(cid) => goto(`/dashboard/${cid}/attendance`)}
+		onViewAssignments={(cid) => goto(`/dashboard/${cid}/assignments`)}
 	/>
 {/if}

@@ -1,8 +1,11 @@
 <script lang="ts">
-	import { Sun, ClockCheck, ListChecks, Folder, Lock } from '@lucide/svelte';
+	import { Sun, ClockCheck, ListChecks, Folder, Lock, ClipboardList } from '@lucide/svelte';
 	import formatTimeRange from '$lib/formatTimeRange';
 	import { Tooltip } from '$lib/components/ui';
-	import type { Lecture, ClassItem } from '$lib/dashboard/types';
+	import type { Lecture, ClassItem, Assignment } from '$lib/dashboard/types';
+	import { db } from '$lib/firebase';
+	import { collection, getDocs, query, where } from 'firebase/firestore';
+	import { authState } from '$lib/auth.svelte';
 	import moment from 'moment';
 
 	function groupLecturesByDate(lectures: Lecture[]): Record<string, Lecture[]> {
@@ -42,6 +45,7 @@
 		lectures: Lecture[];
 		currentClass?: ClassItem;
 		selectedLectureId?: string;
+		selectedAssignmentId?: string;
 		completedIds: Set<string>;
 		checkedInIds: Set<string>;
 		checkedInTimes: Record<string, Date>;
@@ -49,12 +53,14 @@
 		loading: boolean;
 		error: string | null;
 		onSelectLecture: (lec: Lecture) => void;
+		onSelectAssignment?: (assignment: Assignment) => void;
 	}
 
 	let {
 		lectures,
 		currentClass,
 		selectedLectureId,
+		selectedAssignmentId,
 		completedIds,
 		checkedInIds,
 		checkedInTimes,
@@ -62,6 +68,7 @@
 		loading,
 		error,
 		onSelectLecture,
+		onSelectAssignment,
 	}: Props = $props();
 
 	const todayKey = $derived(getDateKey(new Date()));
@@ -88,11 +95,53 @@
 		return () => clearInterval(timer);
 	});
 
+	let assignments = $state<Assignment[]>([]);
+	let assignmentsLoading = $state(false);
+	let assignmentsError = $state<string | null>(null);
+
+	$effect(() => {
+		const classId = currentClass?.id;
+		const docId = authState.profile?.docId;
+		if (!classId || !docId) return;
+		assignmentsLoading = true;
+		assignmentsError = null;
+		(async () => {
+			try {
+				const snapshot = await getDocs(
+					query(
+						collection(db, 'classes', classId, 'assignments'),
+						where('assignedStudentIds', 'array-contains', docId),
+					),
+				);
+
+				const data = snapshot.docs.map(
+					(d) =>
+						({
+							id: d.id,
+							...d.data(),
+							requiredAttachments: d.data()?.requiredAttachments ?? [],
+							assignedStudentIds: d.data()?.assignedStudentIds ?? [],
+						}) as Assignment,
+				);
+				console.log(data);
+				assignments = data.sort(
+					(a, b) =>
+						(a.dueDate?.toDate?.()?.getTime() ?? 0) -
+						(b.dueDate?.toDate?.()?.getTime() ?? 0),
+				);
+			} catch (err) {
+				console.error(err);
+				assignmentsError = "Couldn't load assignments.";
+			} finally {
+				assignmentsLoading = false;
+			}
+		})();
+	});
+
 	function isAccessible(lec: Lecture): boolean {
 		const t = now.getTime();
 		return t >= new Date(lec.startTime).getTime() && t <= new Date(lec.endTime).getTime();
 	}
-
 </script>
 
 <div
@@ -221,6 +270,74 @@
 								day: 'numeric',
 							})}
 						</p>
+					</div>
+				{/if}
+
+				{#if currentClass}
+					<div class="mb-4">
+						<div
+							class="my-2 flex items-center gap-1.5 px-2 text-xs font-semibold uppercase tracking-wide text-iris-600"
+						>
+							<ClipboardList class="h-3.5 w-3.5 shrink-0" />
+							Assignments
+							<span class="h-px flex-1 bg-ink-900/10"></span>
+						</div>
+						{#if assignmentsLoading}
+							<div class="space-y-1.5 px-2">
+								{#each Array(2) as _}
+									<div
+										class="h-14 w-full animate-pulse rounded-lg bg-ink-900/5"
+									></div>
+								{/each}
+							</div>
+						{:else if assignmentsError}
+							<p class="px-2 text-xs text-red-600">{assignmentsError}</p>
+						{:else if assignments.length === 0}
+							<div
+								class="mx-2 rounded-lg border border-dashed border-ink-900/15 bg-ink-900/[0.015] px-3 py-2.5"
+							>
+								<p class="text-[12.5px] text-ink-500">No assignments</p>
+							</div>
+						{:else}
+							<div class="space-y-1.5 px-2">
+								{#each assignments as assignment (assignment.id)}
+									<button
+										type="button"
+										onclick={() => onSelectAssignment?.(assignment)}
+										class={`block w-full rounded-lg border px-3 py-2 text-left shadow-soft transition ${
+											selectedAssignmentId === assignment.id
+												? 'border-iris-400 bg-iris-50/50'
+												: 'border-ink-900/10 bg-white hover:border-iris-300 hover:bg-iris-50/40'
+										}`}
+									>
+										<p class="truncate text-[13px] font-medium text-ink-900">
+											{assignment.instructions.split('\n')[0] || 'Assignment'}
+										</p>
+										<p class="mt-0.5 text-[11.5px] text-ink-500">
+											Opens {assignment.opensAt?.toDate?.()
+												? moment(assignment.opensAt.toDate()).format(
+														'MMM D · hh:mm A',
+													)
+												: '—'}
+										</p>
+										<p class="text-[11.5px] text-ink-500">
+											Due {assignment.dueDate?.toDate?.()
+												? moment(assignment.dueDate.toDate()).format(
+														'MMM D · hh:mm A',
+													)
+												: '—'}
+											{#if (assignment.requiredAttachments ?? []).length > 0}
+												· {(assignment.requiredAttachments ?? []).length} required
+												file
+												{(assignment.requiredAttachments ?? []).length === 1
+													? ''
+													: 's'}
+											{/if}
+										</p>
+									</button>
+								{/each}
+							</div>
+						{/if}
 					</div>
 				{/if}
 

@@ -50,6 +50,35 @@ export interface Student {
 	year: string;
 }
 
+export interface RequiredAttachment {
+	id: string;
+	instruction: string;
+}
+
+export interface Assignment {
+	id: string;
+	instructions: string;
+	dueDate: { toDate: () => Date };
+	opensAt: { toDate: () => Date };
+	requiredAttachments: RequiredAttachment[];
+	assignedStudentIds: string[];
+	createdAt: { toDate: () => Date } | null;
+}
+
+export interface SubmissionAttachment {
+	name: string;
+	refId: string;
+	uploadedAt: { toDate: () => Date } | null;
+}
+
+export interface AssignmentSubmission {
+	id: string;
+	studentUserId: string;
+	submittedAt: { toDate: () => Date } | null;
+	updatedAt: { toDate: () => Date } | null;
+	attachments: SubmissionAttachment[];
+}
+
 export const MATERIAL_LABELS: Record<MaterialType, string> = {
 	youtube: "YouTube video",
 	pdf: "PDF file",

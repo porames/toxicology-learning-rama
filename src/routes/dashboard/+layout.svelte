@@ -6,16 +6,40 @@
 	import Breadcrumbs from '$lib/components/Breadcrumbs.svelte';
 	import TreeView from '$lib/components/dashboard/TreeView.svelte';
 	import { dashboardStore } from '$lib/dashboard/dashboardStore.svelte';
+	import { db } from '$lib/firebase';
+	import { doc, getDoc } from 'firebase/firestore';
 	import { Plus, UserRound } from '@lucide/svelte';
 
 	let { children }: { children: Snippet } = $props();
 
 	const classId = $derived(page.params.classId);
 	const lectureId = $derived(page.params.lectureId);
+	const assignmentId = $derived(page.params.assignmentId);
+	const isAssignmentsPage = $derived(page.url.pathname.includes('/assignments'));
 	const selectedClass = $derived(classId ? dashboardStore.getClass(classId) : null);
 	const selectedLecture = $derived(
 		classId && lectureId ? dashboardStore.getLecture(classId, lectureId) : null,
 	);
+
+	let assignmentTitle = $state<string | null>(null);
+
+	$effect(() => {
+		async function loadAssignmentTitle() {
+			if (!classId || !assignmentId) {
+				assignmentTitle = null;
+				return;
+			}
+			try {
+				const snap = await getDoc(doc(db, 'classes', classId, 'assignments', assignmentId));
+				const instructions: string = snap.exists() ? (snap.data()?.instructions ?? '') : '';
+				assignmentTitle = instructions.split('\n')[0]?.trim() || 'Assignment';
+			} catch (err) {
+				console.error(err);
+				assignmentTitle = null;
+			}
+		}
+		loadAssignmentTitle();
+	});
 
 	$effect(() => {
 		dashboardStore.loadClasses();
@@ -33,6 +57,18 @@
 		{ label: 'All Classes', href: '/dashboard' },
 		...(selectedClass
 			? [{ label: selectedClass.name, href: `/dashboard/${selectedClass.id}` }]
+			: []),
+		...(isAssignmentsPage
+			? [
+					{
+						label: 'Assignments',
+						href: assignmentId ? `/dashboard/${classId}/assignments` : undefined,
+						active: !assignmentId,
+					},
+				]
+			: []),
+		...(assignmentId
+			? [{ label: assignmentTitle ?? 'Assignment', active: true }]
 			: []),
 		...(selectedLecture
 			? [{ label: selectedLecture.title || 'Untitled lecture', active: true }]

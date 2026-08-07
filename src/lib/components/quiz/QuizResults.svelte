@@ -228,7 +228,7 @@
 		></div>
 	</div>
 {:else if !attemptId}
-	<div class="mx-auto w-2xl px-8 py-10">
+	<div class="mx-auto w-4xl px-8 py-10">
 		<div class="flex items-center justify-between gap-3">
 			<div>
 				<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">Results</p>
@@ -398,7 +398,7 @@
 	{@const pct =
 		attempt.totalPoints > 0 ? Math.round((attempt.score / attempt.totalPoints) * 100) : 0}
 
-	<div class="mx-auto max-w-xl px-8 py-10">
+	<div class="mx-auto w-4xl px-8 py-10">
 		<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">Results</p>
 
 		<div class="mt-4 rounded-xl border border-ink-900/10 bg-white p-8 shadow-soft">

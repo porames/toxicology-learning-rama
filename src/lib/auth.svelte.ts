@@ -27,7 +27,10 @@ function createAuthState() {
 			return;
 		}
 		user = currentUser;
+		const userResults = await user.getIdTokenResult();
+		console.log(userResults)
 		try {
+			await currentUser.getIdToken(true);
 			const q = query(collection(db, 'users'), where('authId', '==', currentUser.uid));
 			const snap = await getDocs(q);
 			if (!snap.empty) {

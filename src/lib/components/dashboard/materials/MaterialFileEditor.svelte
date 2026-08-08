@@ -14,12 +14,14 @@
 		classId,
 		lectureId,
 		onValueChange,
+		persistValue,
 	}: {
 		material: Material;
 		state: MaterialState;
 		classId: string;
 		lectureId: string;
 		onValueChange: (value: string) => void;
+		persistValue?: (value: string) => Promise<void>;
 	} = $props();
 
 	async function handleFileUpload(file: File) {
@@ -38,10 +40,14 @@
 			const downloadUrl = await getDownloadURL(storageRef);
 			state.fileUrl = downloadUrl;
 			onValueChange(downloadUrl);
-			await updateDoc(
-				doc(db, 'classes', classId, 'lectures', lectureId, 'materials', material.id),
-				{ value: downloadUrl },
-			);
+			if (persistValue) {
+				await persistValue(downloadUrl);
+			} else {
+				await updateDoc(
+					doc(db, 'classes', classId, 'lectures', lectureId, 'materials', material.id),
+					{ value: downloadUrl },
+				);
+			}
 		} catch (err) {
 			console.error(err);
 		} finally {

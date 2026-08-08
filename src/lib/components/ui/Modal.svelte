@@ -10,6 +10,7 @@
 		footer?: Snippet;
 		onclose?: () => void;
 		class?: string;
+		contentClass?: string;
 	}
 
 	let {
@@ -19,6 +20,7 @@
 		footer,
 		onclose,
 		class: className = '',
+		contentClass = 'px-5 py-4',
 	}: Props = $props();
 
 	function handleKeydown(e: KeyboardEvent) {
@@ -38,7 +40,7 @@
 		onclick={() => onclose?.()}
 	>
 		<div
-			class="mx-4 w-full max-w-sm rounded-xl bg-white shadow-xl {className}"
+			class="mx-4 w-full rounded-xl bg-white shadow-xl {className || 'max-w-sm'}"
 			role="dialog"
 			aria-modal="true"
 			transition:fade={{ duration: 150 }}
@@ -57,11 +59,13 @@
 					</button>
 				</div>
 			{/if}
-			<div class="px-5 py-4">
+			<div class={contentClass}>
 				{@render children()}
 			</div>
 			{#if footer}
-				<div class="flex items-center justify-end gap-2 px-5 pb-5">
+				<div
+					class="flex items-center justify-end gap-2 border-t border-ink-900/10 px-5 pb-5 pt-4"
+				>
 					{@render footer()}
 				</div>
 			{/if}

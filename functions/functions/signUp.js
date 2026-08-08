@@ -1,6 +1,5 @@
 import {onRequest} from "firebase-functions/v2/https";
-import admin from "firebase-admin";
-import {db} from "../lib/admin.js";
+import {admin, db} from "../lib/admin.js";
 import {handleCors} from "../lib/cors.js";
 
 export const signUp = onRequest(async (req, res) => {
@@ -26,6 +25,7 @@ export const signUp = onRequest(async (req, res) => {
     }
 
     const userDoc = snapshot.docs[0];
+    const role = userDoc.data().role || "student";
 
     const userRecord = await admin.auth().createUser({
       email,
@@ -35,13 +35,15 @@ export const signUp = onRequest(async (req, res) => {
       disabled: false,
     });
 
+    await admin.auth().setCustomUserClaims(userRecord.uid, {role});
+
     await userDoc.ref.update({
       authId: userRecord.uid,
       signedUp: true,
       signedUpAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    res.json({success: true, uid: userRecord.uid});
+    res.json({success: true, uid: userRecord.uid, role});
   } catch (err) {
     console.error(err);
     res.status(500).json({error: "Internal server error"});

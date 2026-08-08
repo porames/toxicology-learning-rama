@@ -1,12 +1,8 @@
 <script lang="ts">
 	import { db } from '$lib/firebase';
-	import {
-		doc,
-		updateDoc,
-		deleteDoc,
-		serverTimestamp,
-	} from 'firebase/firestore';
+	import { doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 	import { authState } from '$lib/auth.svelte';
+	import { functionsUrl } from '$lib/functionsUrl';
 	import type { Assignment, RequiredAttachment, Student } from '$lib/dashboard/types';
 	import { Button, Input, Modal, Textarea } from '$lib/components/ui';
 	import { Plus, X, FileIcon, AlertCircle } from '@lucide/svelte';
@@ -35,9 +31,7 @@
 			? moment(assignment.dueDate.toDate()).format('YYYY-MM-DDTHH:mm')
 			: '',
 	);
-	let requiredAttachments = $state<RequiredAttachment[]>(
-		assignment.requiredAttachments ?? [],
-	);
+	let requiredAttachments = $state<RequiredAttachment[]>(assignment.requiredAttachments ?? []);
 	let assignedStudentIds = $state<string[]>(assignment.assignedStudentIds ?? []);
 
 	let students = $state<Student[]>([]);
@@ -54,17 +48,14 @@
 		rosterLoading = true;
 		try {
 			const token = await user.getIdToken();
-			const res = await fetch(
-				'https://us-central1-rama-toxico-edu.cloudfunctions.net/getStudents',
-				{
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${token}`,
-					},
-					body: JSON.stringify({ classId }),
+			const res = await fetch(functionsUrl('getStudents'), {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`,
 				},
-			);
+				body: JSON.stringify({ classId }),
+			});
 			if (!res.ok) return;
 			const data = await res.json();
 			students = (data.students ?? []) as Student[];
@@ -92,7 +83,10 @@
 	}
 
 	function addRequiredAttachment() {
-		requiredAttachments = [...requiredAttachments, { id: crypto.randomUUID(), instruction: '' }];
+		requiredAttachments = [
+			...requiredAttachments,
+			{ id: crypto.randomUUID(), instruction: '' },
+		];
 	}
 
 	function updateRequiredAttachment(id: string, instruction: string) {
@@ -188,11 +182,7 @@
 	</div>
 
 	<div class="mt-4">
-		<Input
-			label="Assignment title"
-			bind:value={title}
-			placeholder="e.g. Lab Report 1"
-		/>
+		<Input label="Assignment title" bind:value={title} placeholder="e.g. Lab Report 1" />
 	</div>
 
 	<div class="mt-4">
@@ -236,7 +226,10 @@
 						<Input
 							value={req.instruction}
 							oninput={(e) =>
-								updateRequiredAttachment(req.id, (e.target as HTMLInputElement).value)}
+								updateRequiredAttachment(
+									req.id,
+									(e.target as HTMLInputElement).value,
+								)}
 							placeholder="e.g. Upload your lab report (PDF)"
 							class="flex-1"
 						/>

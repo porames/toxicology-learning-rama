@@ -7,11 +7,6 @@
 	const classId = $derived(page.params.classId ?? '');
 	const selectedClass = $derived(dashboardStore.getClass(classId));
 
-	async function handleAddLecture() {
-		const lectureId = await dashboardStore.addLecture(classId);
-		goto(`/dashboard/${classId}/${lectureId}`);
-	}
-
 	function handleDeleteClass(cid: string) {
 		dashboardStore.deleteClass(cid);
 		goto('/dashboard');
@@ -44,9 +39,7 @@
 	<ClassEditor
 		{selectedClass}
 		onRename={(patch) => dashboardStore.renameClass(classId, patch)}
-		onAddLecture={handleAddLecture}
 		onDeleteClass={handleDeleteClass}
-		onSelectLecture={(cid, lid) => goto(`/dashboard/${cid}/${lid}`)}
 		onEnrolStudents={(cid) => goto(`/dashboard/${cid}/students`)}
 		onViewAttendance={(cid) => goto(`/dashboard/${cid}/attendance`)}
 		onViewAssignments={(cid) => goto(`/dashboard/${cid}/assignments`)}

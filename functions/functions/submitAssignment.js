@@ -1,6 +1,5 @@
 import { onRequest } from "firebase-functions/v2/https";
-import admin from "firebase-admin";
-import { db } from "../lib/admin.js";
+import { admin, db } from "../lib/admin.js";
 import { handleCors } from "../lib/cors.js";
 import { verifyUser } from "../lib/auth.js";
 

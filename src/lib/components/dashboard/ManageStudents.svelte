@@ -15,6 +15,7 @@
 	import Papa from 'papaparse';
 	import type { Student } from '$lib/dashboard/types';
 	import { authState } from '$lib/auth.svelte';
+	import { functionsUrl } from '$lib/functionsUrl';
 	import { Modal } from '$lib/components/ui';
 
 	const ROLE_LABELS: Record<string, string> = {
@@ -240,17 +241,14 @@
 			if (!user) throw new Error('Not logged in');
 			const token = await user.getIdToken();
 
-			const res = await fetch(
-				'https://us-central1-rama-toxico-edu.cloudfunctions.net/createUsers',
-				{
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${token}`,
-					},
-					body: JSON.stringify({ students: csvData }),
+			const res = await fetch(functionsUrl('createUsers'), {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`,
 				},
-			);
+				body: JSON.stringify({ students: csvData }),
+			});
 
 			if (!res.ok) {
 				const body = await res.json().catch(() => null);
@@ -345,17 +343,14 @@
 			if (!user) throw new Error('Not logged in');
 			const token = await user.getIdToken();
 
-			const res = await fetch(
-				'https://us-central1-rama-toxico-edu.cloudfunctions.net/deleteUser',
-				{
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${token}`,
-					},
-					body: JSON.stringify({ id: student.id }),
+			const res = await fetch(functionsUrl('deleteUser'), {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`,
 				},
-			);
+				body: JSON.stringify({ id: student.id }),
+			});
 
 			if (!res.ok) {
 				const body = await res.json().catch(() => null);
@@ -397,23 +392,20 @@
 			if (!user) throw new Error('Not logged in');
 			const token = await user.getIdToken();
 
-			const res = await fetch(
-				'https://us-central1-rama-toxico-edu.cloudfunctions.net/createUser',
-				{
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${token}`,
-					},
-					body: JSON.stringify({
-						email: newEmail,
-						name: newFullName,
-						year: newYear,
-						role: newRole,
-						rama_id: newUserId,
-					}),
+			const res = await fetch(functionsUrl('createUser'), {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`,
 				},
-			);
+				body: JSON.stringify({
+					email: newEmail,
+					name: newFullName,
+					year: newYear,
+					role: newRole,
+					rama_id: newUserId,
+				}),
+			});
 
 			if (!res.ok) {
 				const body = await res.json().catch(() => null);

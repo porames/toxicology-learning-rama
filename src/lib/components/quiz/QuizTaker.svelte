@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 	import { db, auth } from '$lib/firebase';
+	import { functionsUrl } from '$lib/functionsUrl';
 	import { Play, CheckCircle, XCircle } from '@lucide/svelte';
 	import type { Quiz, Question, QuizAttempt } from '$lib/quiz-types';
 	import moment from 'moment';
@@ -105,17 +106,14 @@
 			const token = await auth.currentUser?.getIdToken();
 			const body: Record<string, unknown> = { quizId, answers };
 			if (lectureId) body.lectureId = lectureId;
-			const res = await fetch(
-				'https://us-central1-rama-toxico-edu.cloudfunctions.net/submitQuiz',
-				{
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${token}`,
-					},
-					body: JSON.stringify(body),
+			const res = await fetch(functionsUrl('submitQuiz'), {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`,
 				},
-			);
+				body: JSON.stringify(body),
+			});
 
 			if (!res.ok) {
 				const err = await res.json();

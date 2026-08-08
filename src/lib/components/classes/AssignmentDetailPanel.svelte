@@ -3,6 +3,7 @@
 	import { doc, getDoc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 	import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 	import { authState } from '$lib/auth.svelte';
+	import { functionsUrl } from '$lib/functionsUrl';
 	import type {
 		Assignment,
 		AssignmentSubmission,
@@ -219,17 +220,14 @@
 		saved = false;
 		try {
 			const token = await user.getIdToken();
-			const res = await fetch(
-				'https://us-central1-rama-toxico-edu.cloudfunctions.net/submitAssignment',
-				{
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${token}`,
-					},
-					body: JSON.stringify({ classId, assignmentId: assignment.id }),
+			const res = await fetch(functionsUrl('submitAssignment'), {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`,
 				},
-			);
+				body: JSON.stringify({ classId, assignmentId: assignment.id }),
+			});
 			if (!res.ok) {
 				const err = await res.json();
 				throw new Error(err.error || 'Failed to submit assignment');

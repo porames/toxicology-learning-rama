@@ -14,6 +14,7 @@
 	} from 'firebase/firestore';
 	import { goto } from '$app/navigation';
 	import { authState } from '$lib/auth.svelte';
+	import { functionsUrl } from '$lib/functionsUrl';
 	import moment from 'moment';
 	import type { ClassItem, Lecture, Selection, Activity, Assignment } from '$lib/dashboard/types';
 	import LectureListPanel from '$lib/components/classes/LectureListPanel.svelte';
@@ -298,17 +299,14 @@
 			if (mat.type === 'video' && !videoUrls[mat.id] && mat.value) {
 				try {
 					const token = await user.getIdToken();
-					const res = await fetch(
-						'https://us-central1-rama-toxico-edu.cloudfunctions.net/getVideoPlaybackUrl',
-						{
-							method: 'POST',
-							headers: {
-								'Content-Type': 'application/json',
-								Authorization: `Bearer ${token}`,
-							},
-							body: JSON.stringify({ videoId: mat.value }),
+					const res = await fetch(functionsUrl('getVideoPlaybackUrl'), {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							Authorization: `Bearer ${token}`,
 						},
-					);
+						body: JSON.stringify({ videoId: mat.value }),
+					});
 					if (res.ok) {
 						const { embedUrl } = await res.json();
 						const url = embedUrl.includes('?')

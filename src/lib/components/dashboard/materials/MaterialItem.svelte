@@ -21,6 +21,7 @@
 		onValueChange,
 		onDelete,
 		onTogglePostTest,
+		persistValue,
 	}: {
 		material: Material;
 		state: MaterialState;
@@ -32,6 +33,7 @@
 		onValueChange: (value: string) => void;
 		onDelete: () => void;
 		onTogglePostTest: (checked: boolean) => Promise<void>;
+		persistValue?: (value: string) => Promise<void>;
 	} = $props();
 </script>
 
@@ -52,10 +54,24 @@
 	{:else if material.type === 'pdf'}
 		<MaterialPdfEditor {material} {state} {onValueChange} />
 	{:else if material.type === 'file'}
-		<MaterialFileEditor {material} {state} {classId} {lectureId} {onValueChange} />
+		<MaterialFileEditor
+			{material}
+			{state}
+			{classId}
+			{lectureId}
+			{onValueChange}
+			{persistValue}
+		/>
 	{:else if material.type === 'quiz'}
 		<MaterialQuizEditor {material} {state} {onTogglePostTest} />
 	{:else if material.type === 'video'}
-		<MaterialVideoEditor {material} {state} {classId} {lectureId} {onValueChange} />
+		<MaterialVideoEditor
+			{material}
+			{state}
+			{classId}
+			{lectureId}
+			{onValueChange}
+			{persistValue}
+		/>
 	{/if}
 </MaterialCard>

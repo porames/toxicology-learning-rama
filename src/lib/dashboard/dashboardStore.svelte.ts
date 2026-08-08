@@ -77,10 +77,7 @@ function createDashboardStore() {
 		return snapshot.id;
 	}
 
-	function renameClass(
-		classId: string,
-		patch: Partial<Pick<ClassItem, 'name' | 'code'>>,
-	) {
+	function renameClass(classId: string, patch: Partial<Pick<ClassItem, 'name' | 'code'>>) {
 		classes = classes.map((c) => (c.id === classId ? { ...c, ...patch } : c));
 	}
 
@@ -108,6 +105,12 @@ function createDashboardStore() {
 		);
 		expandIds([classId, snapshot.id]);
 		return snapshot.id;
+	}
+
+	function insertLecture(classId: string, lecture: Lecture) {
+		classes = classes.map((c) =>
+			c.id === classId ? { ...c, lectures: [...(c.lectures ?? []), lecture] } : c,
+		);
 	}
 
 	function updateLecture(
@@ -161,6 +164,7 @@ function createDashboardStore() {
 		renameClass,
 		deleteClass,
 		addLecture,
+		insertLecture,
 		updateLecture,
 		deleteLecture,
 		getClass,

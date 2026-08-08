@@ -1,16 +1,43 @@
 import {onRequest} from "firebase-functions/v2/https";
 import jwt from "jsonwebtoken";
-import admin from "firebase-admin";
+import {admin} from "../lib/admin.js";
 import {handleCors} from "../lib/cors.js";
-import {verifyAdmin} from "../lib/auth.js";
+import {verifyAdmin, verifyStaff} from "../lib/auth.js";
 
-const BUNNY_LIBRARY_ID = process.env.BUNNY_LIBRARY_ID;
+const BUNNY_LIBRARY_ID = process.env.BUNNY_LIBRARY_ID ?? "707430";
 const BUNNY_API_KEY = process.env.BUNNY_API_KEY;
+
+export const videoList = onRequest(async (req, res) => {
+  try {
+    if (handleCors(req, res)) return;
+    await verifyStaff(req);
+
+    const bunnyRes = await fetch(
+        `https://video.bunnycdn.com/library/${BUNNY_LIBRARY_ID}/videos?page=1&itemsPerPage=100`,
+        {
+          method: "GET",
+          headers: {"AccessKey": BUNNY_API_KEY},
+        },
+    );
+    if (!bunnyRes.ok) {
+      const text = await bunnyRes.text();
+      throw new Error(`Bunny API error: ${text}`);
+    }
+    const data = await bunnyRes.json();
+
+    res.status(200).json(data);
+  } catch (err) {
+    console.error("videoList error:", err);
+    res.status(err.status || 500).json({error: err.message || "Internal server error"});
+  }
+});
 
 export const getVideoUploadUrl = onRequest(async (req, res) => {
   try {
     if (handleCors(req, res)) return;
     await verifyAdmin(req);
+
+    const title = req.body?.title?.trim?.() || crypto.randomUUID();
 
     const bunnyRes = await fetch(
         `https://video.bunnycdn.com/library/${BUNNY_LIBRARY_ID}/videos`,
@@ -20,7 +47,7 @@ export const getVideoUploadUrl = onRequest(async (req, res) => {
             "AccessKey": BUNNY_API_KEY,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({title: crypto.randomUUID()}),
+          body: JSON.stringify({title}),
         },
     );
     if (!bunnyRes.ok) {

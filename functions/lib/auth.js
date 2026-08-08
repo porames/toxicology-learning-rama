@@ -48,3 +48,25 @@ export async function verifyUser(req) {
 
   return { uid: decodedToken.uid, ...snap.docs[0].data(), id: snap.docs[0].id };
 }
+
+export async function verifyStaff(req) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) {
+    throw new HttpError(401, "Unauthorized");
+  }
+
+  const idToken = authHeader.split("Bearer ")[1];
+  const decodedToken = await admin.auth().verifyIdToken(idToken);
+
+  const snap = await db
+    .collection("users")
+    .where("authId", "==", decodedToken.uid)
+    .get();
+
+  const role = snap.empty ? null : snap.docs[0].data().role;
+  if (role !== "admin" && role !== "teacher") {
+    throw new HttpError(403, "Forbidden");
+  }
+
+  return { id: snap.docs[0].id, uid: decodedToken.uid, ...snap.docs[0].data() };
+}

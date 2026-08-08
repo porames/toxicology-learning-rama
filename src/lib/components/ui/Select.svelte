@@ -17,6 +17,7 @@
 		id?: string;
 		name?: string;
 		class?: string;
+		onchange?: (e: Event) => void;
 	}
 
 	let {
@@ -30,6 +31,7 @@
 		id = undefined,
 		name = undefined,
 		class: className = '',
+		onchange,
 	}: Props = $props();
 
 	const selectId = $derived(id ?? crypto.randomUUID());
@@ -47,6 +49,7 @@
 			{id}
 			{name}
 			{disabled}
+			{onchange}
 			bind:value
 			class="w-full appearance-none rounded-lg border bg-white px-3.5 py-2.5 pr-9 text-[14.5px] text-ink-900 transition {hasError
 				? 'border-red-300 focus:border-red-400 focus:ring-4 focus:ring-red-500/15'

@@ -1,4 +1,4 @@
-import { LayoutDashboard, BookOpen, Beaker, ClipboardList } from '@lucide/svelte';
+import { LayoutDashboard, BookOpen, Beaker, ClipboardList, Library } from '@lucide/svelte';
 
 export interface NavItem {
 	label: string;
@@ -9,6 +9,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
 	{ label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
 	{ label: 'Classes', href: '/classes', icon: BookOpen },
+	{ label: 'Templates', href: '/dashboard/templates', icon: Library },
 	//{ label: 'Simulator', href: '/simulator', icon: Beaker },
 	{ label: 'Quizzes', href: '/quiz', icon: ClipboardList },
 ];

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { authState } from '$lib/auth.svelte';
+	import { functionsUrl } from '$lib/functionsUrl';
 	import type { Student } from '$lib/dashboard/types';
 	import ManageStudents from '$lib/components/dashboard/ManageStudents.svelte';
 	import {
@@ -28,17 +29,14 @@
 			if (!user) throw new Error('Not logged in');
 			const token = await user.getIdToken();
 
-			const res = await fetch(
-				'https://us-central1-rama-toxico-edu.cloudfunctions.net/getStudents',
-				{
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${token}`,
-					},
-					body: JSON.stringify({ classId }),
+			const res = await fetch(functionsUrl('getStudents'), {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`,
 				},
-			);
+				body: JSON.stringify({ classId }),
+			});
 
 			if (!res.ok) {
 				const body = await res.json().catch(() => null);
@@ -74,20 +72,17 @@
 			if (!user) throw new Error('Not logged in');
 			const token = await user.getIdToken();
 
-			const res = await fetch(
-				'https://us-central1-rama-toxico-edu.cloudfunctions.net/enrolStudents',
-				{
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${token}`,
-					},
-					body: JSON.stringify({
-						classId,
-						studentIds: selectedStudents.map((s) => s.id),
-					}),
+			const res = await fetch(functionsUrl('enrolStudents'), {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`,
 				},
-			);
+				body: JSON.stringify({
+					classId,
+					studentIds: selectedStudents.map((s) => s.id),
+				}),
+			});
 
 			if (!res.ok) {
 				const body = await res.json().catch(() => null);

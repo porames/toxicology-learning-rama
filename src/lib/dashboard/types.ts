@@ -1,4 +1,4 @@
-export type MaterialType = "youtube" | "pdf" | "link" | "text" | "file" | "video" | "quiz";
+export type MaterialType = 'youtube' | 'pdf' | 'link' | 'text' | 'file' | 'video' | 'quiz';
 
 export interface Material {
 	id: string;
@@ -26,11 +26,11 @@ export interface ClassItem {
 }
 
 export type Selection =
-	| { level: "class"; classId: string }
-	| { level: "manage_students" }
-	| { level: "enrol_student"; classId: string }
-	| { level: "lecture"; classId: string; lectureId: string }
-	| { level: "material"; classId: string; lectureId: string; materialId: string }
+	| { level: 'class'; classId: string }
+	| { level: 'manage_students' }
+	| { level: 'enrol_student'; classId: string }
+	| { level: 'lecture'; classId: string; lectureId: string }
+	| { level: 'material'; classId: string; lectureId: string; materialId: string }
 	| null;
 
 export interface Activity {
@@ -83,12 +83,46 @@ export interface AssignmentSubmission {
 	missingAttachmentIds?: string[];
 }
 
+export interface TemplateTime {
+	week: number;
+	day: number;
+	time: Date;
+}
+
+export interface TemplateLecture {
+	id: string;
+	title: string;
+	startTime: TemplateTime;
+	endTime: TemplateTime;
+	materials: Material[];
+	materialsOrder?: string[];
+}
+
+export interface CourseTemplate {
+	id: string;
+	name: string;
+	code?: string;
+	description?: string;
+	lectures?: TemplateLecture[];
+	createdAt?: { toDate: () => Date } | null;
+}
+
+export interface ScheduleEvent {
+	id: string;
+	date: Date;
+	startTime: Date;
+	endTime: Date;
+	title?: string;
+	lectureTemplateId?: string;
+	color?: string;
+}
+
 export const MATERIAL_LABELS: Record<MaterialType, string> = {
-	youtube: "YouTube video",
-	pdf: "PDF file",
-	link: "Link",
-	text: "Note",
-	file: "Attached file",
-	video: "Video",
-	quiz: "Quiz"
+	youtube: 'YouTube video',
+	pdf: 'PDF file',
+	link: 'Link',
+	text: 'Note',
+	file: 'Attached file',
+	video: 'Video',
+	quiz: 'Quiz',
 };

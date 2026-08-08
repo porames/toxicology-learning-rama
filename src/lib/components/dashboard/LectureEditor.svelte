@@ -1,13 +1,9 @@
 <script lang="ts">
-	import type {
-		ClassItem,
-		Lecture,
-		Material,
-		MaterialType,
-	} from '$lib/dashboard/types';
+	import type { ClassItem, Lecture, Material, MaterialType } from '$lib/dashboard/types';
 	import { MATERIAL_LABELS } from '$lib/dashboard/types';
 	import { MATERIAL_ICON, MATERIAL_COLOR } from '$lib/dashboard/icons';
 	import { authState } from '$lib/auth.svelte';
+	import { functionsUrl } from '$lib/functionsUrl';
 	import { db } from '$lib/firebase';
 	import {
 		collection,
@@ -36,6 +32,14 @@
 		onBackToClasses,
 		onBackToClass,
 		onDeleteLecture,
+		embedded = false,
+		isNew = false,
+		onCreated,
+		saveRequested = $bindable(false),
+		deleteRequested = $bindable(false),
+		saveDisabled = $bindable(false),
+		dirty: dirtyOut = $bindable(false),
+		discardRequested = $bindable(false),
 	}: {
 		selectedClass: ClassItem;
 		selectedLecture: Lecture;
@@ -44,6 +48,14 @@
 		onBackToClasses: () => void;
 		onBackToClass: () => void;
 		onDeleteLecture: (classId: string, lectureId: string) => void;
+		embedded?: boolean;
+		isNew?: boolean;
+		onCreated?: (lecture: Lecture) => void;
+		saveRequested?: boolean;
+		deleteRequested?: boolean;
+		saveDisabled?: boolean;
+		dirty?: boolean;
+		discardRequested?: boolean;
 	} = $props();
 
 	let lectureMaterials: Material[] = $state([]);
@@ -105,10 +117,12 @@
 					);
 				})),
 	);
-	const dirty = $derived(lectureChanged || materialsChanged);
+	const isDirty = $derived(lectureChanged || materialsChanged);
 	const timeInvalid = $derived(
-		new Date(selectedLecture.startTime).getTime() >= new Date(selectedLecture.endTime).getTime(),
+		new Date(selectedLecture.startTime).getTime() >=
+			new Date(selectedLecture.endTime).getTime(),
 	);
+	const createInvalid = $derived(isNew && selectedLecture.title.trim() === '');
 	const startTimeError = $derived(
 		Utils.validateDateTimeInput(Utils.dateToStringInput(selectedLecture.startTime)),
 	);
@@ -124,25 +138,63 @@
 		}
 	});
 
-	beforeNavigate((navigation) => {
-		if (allowLeave || !dirty) return;
-		const url = navigation.to?.url;
-		if (!url) return;
-		navigation.cancel();
-		pendingUrl = url.pathname + url.search;
-		showLeaveWarning = true;
+	$effect(() => {
+		dirtyOut = isDirty;
 	});
 
-	onMount(() => {
-		const handler = (e: BeforeUnloadEvent) => {
-			if (dirty) {
-				e.preventDefault();
-				e.returnValue = '';
-			}
-		};
-		window.addEventListener('beforeunload', handler);
-		return () => window.removeEventListener('beforeunload', handler);
+	$effect(() => {
+		if (discardRequested) {
+			discardRequested = false;
+			allowLeave = true;
+			onUpdateLecture({
+				title: baselineLecture.title,
+				startTime: new Date(baselineLecture.startTime),
+				endTime: new Date(baselineLecture.endTime),
+			});
+		}
 	});
+
+	$effect(() => {
+		saveDisabled = leSaving || timeInvalid || createInvalid || (!isNew && !isDirty);
+	});
+
+	$effect(() => {
+		if (saveRequested) {
+			saveRequested = false;
+			saveLectureChanges();
+		}
+	});
+
+	$effect(() => {
+		if (deleteRequested) {
+			deleteRequested = false;
+			leShowConfirm = true;
+		}
+	});
+
+	if (!embedded) {
+		beforeNavigate((navigation) => {
+			if (allowLeave || !isDirty) return;
+			const url = navigation.to?.url;
+			if (!url) return;
+			navigation.cancel();
+			pendingUrl = url.pathname + url.search;
+			showLeaveWarning = true;
+		});
+	}
+
+	if (!embedded) {
+		onMount(() => {
+			const handler = (e: BeforeUnloadEvent) => {
+				if (isDirty) {
+					e.preventDefault();
+					e.returnValue = '';
+				}
+			};
+			window.addEventListener('beforeunload', handler);
+			return () => window.removeEventListener('beforeunload', handler);
+		});
+	}
 
 	function confirmLeave() {
 		allowLeave = true;
@@ -204,7 +256,22 @@
 	const lectureId = $derived(selectedLecture.id);
 
 	$effect(() => {
-		loadMaterialsForLecture(classId, lectureId);
+		if (isNew) {
+			lectureMaterials = [];
+			materialsOrder = [];
+			materialsLoading = false;
+			baselineReady = false;
+			baselineLecture = {
+				title: selectedLecture.title,
+				startTime: new Date(selectedLecture.startTime).getTime(),
+				endTime: new Date(selectedLecture.endTime).getTime(),
+			};
+			baselineMaterials = [];
+			baselineOrder = [];
+			baselineReady = true;
+		} else {
+			loadMaterialsForLecture(classId, lectureId);
+		}
 	});
 
 	function updateMaterialLocal(
@@ -217,6 +284,7 @@
 	}
 
 	function persistMaterialsOrder(classId: string, lectureId: string, order: string[]) {
+		if (isNew) return Promise.resolve();
 		return updateDoc(doc(db, 'classes', classId, 'lectures', lectureId), {
 			materialsOrder: order,
 		});
@@ -225,15 +293,20 @@
 	async function addMaterialOp(type: MaterialType) {
 		const classId = selectedClass.id;
 		const lectureId = selectedLecture.id;
-		const docRef = await addDoc(
-			collection(db, 'classes', classId, 'lectures', lectureId, 'materials'),
-			{
-				type,
-				title: Utils.defaultMaterialTitle(type),
-				value: '',
-				createdAt: serverTimestamp(),
-			},
-		);
+		let docRef: { id: string };
+		if (isNew) {
+			docRef = { id: `mat-${Utils.makeId()}` };
+		} else {
+			docRef = await addDoc(
+				collection(db, 'classes', classId, 'lectures', lectureId, 'materials'),
+				{
+					type,
+					title: Utils.defaultMaterialTitle(type),
+					value: '',
+					createdAt: serverTimestamp(),
+				},
+			);
+		}
 		const newMat: Material = {
 			id: docRef.id,
 			type,
@@ -250,15 +323,20 @@
 	async function addMaterialWithQuiz(quizId: string, quizTitle: string) {
 		const classId = selectedClass.id;
 		const lectureId = selectedLecture.id;
-		const docRef = await addDoc(
-			collection(db, 'classes', classId, 'lectures', lectureId, 'materials'),
-			{
-				type: 'quiz',
-				title: quizTitle,
-				value: quizId,
-				createdAt: serverTimestamp(),
-			},
-		);
+		let docRef: { id: string };
+		if (isNew) {
+			docRef = { id: `mat-${Utils.makeId()}` };
+		} else {
+			docRef = await addDoc(
+				collection(db, 'classes', classId, 'lectures', lectureId, 'materials'),
+				{
+					type: 'quiz',
+					title: quizTitle,
+					value: quizId,
+					createdAt: serverTimestamp(),
+				},
+			);
+		}
 		const newMat: Material = { id: docRef.id, type: 'quiz', title: quizTitle, value: quizId };
 		const newOrder = [...materialsOrder, docRef.id];
 		materialsOrder = newOrder;
@@ -317,11 +395,11 @@
 
 		const mat = lectureMaterials.find((m) => m.id === materialId);
 		const state = materialStates[materialId];
-		if (mat?.type === 'video' && state?.videoId) {
+		if (!isNew && mat?.type === 'video' && state?.videoId) {
 			try {
 				const user = authState.user;
 				const token = await user?.getIdToken();
-				await fetch('https://us-central1-rama-toxico-edu.cloudfunctions.net/deleteVideo', {
+				await fetch(functionsUrl('deleteVideo'), {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json',
@@ -339,15 +417,18 @@
 		lectureMaterials = lectureMaterials.filter((m) => m.id !== materialId);
 
 		await persistMaterialsOrder(classId, lectureId, newOrder);
-		deleteDoc(
-			doc(db, 'classes', classId, 'lectures', lectureId, 'materials', materialId),
-		).catch(console.error);
+		if (!isNew) {
+			deleteDoc(
+				doc(db, 'classes', classId, 'lectures', lectureId, 'materials', materialId),
+			).catch(console.error);
+		}
 	}
 
 	async function toggleRequiredPostTest(mat: Material, checked: boolean) {
 		lectureMaterials = lectureMaterials.map((m) =>
 			m.id === mat.id ? { ...m, requiredPostTest: checked } : m,
 		);
+		if (isNew) return;
 		await updateDoc(
 			doc(
 				db,
@@ -370,25 +451,63 @@
 		try {
 			const lec = selectedLecture;
 			if (!lec) return;
-			await updateDoc(doc(db, 'classes', classId, 'lectures', lectureId), {
-				title: lec.title,
-				startTime: lec.startTime,
-				endTime: lec.endTime,
-			});
-			await Promise.all(
-				lectureMaterials.map((mat) => {
-					const patch: Record<string, unknown> = {};
-					if (mat.type !== undefined) patch.type = mat.type;
-					if (mat.title !== undefined) patch.title = mat.title;
-					if (mat.value !== undefined) patch.value = mat.value;
-					if (mat.requiredPostTest !== undefined)
-						patch.requiredPostTest = mat.requiredPostTest;
-					return updateDoc(
-						doc(db, 'classes', classId, 'lectures', lectureId, 'materials', mat.id),
-						patch,
+			if (isNew) {
+				const ref = await addDoc(collection(db, 'classes', classId, 'lectures'), {
+					title: lec.title,
+					startTime: lec.startTime,
+					endTime: lec.endTime,
+					createdAt: serverTimestamp(),
+				});
+				const order: string[] = [];
+				for (const mat of lectureMaterials) {
+					const mRef = await addDoc(
+						collection(db, 'classes', classId, 'lectures', ref.id, 'materials'),
+						{
+							type: mat.type,
+							title: mat.title,
+							value: mat.value,
+							...(mat.requiredPostTest !== undefined
+								? { requiredPostTest: mat.requiredPostTest }
+								: {}),
+							createdAt: serverTimestamp(),
+						},
 					);
-				}),
-			);
+					order.push(mRef.id);
+				}
+				if (order.length > 0) {
+					await updateDoc(doc(db, 'classes', classId, 'lectures', ref.id), {
+						materialsOrder: order,
+					});
+				}
+				onCreated?.({
+					id: ref.id,
+					title: lec.title,
+					startTime: lec.startTime,
+					endTime: lec.endTime,
+					materials: lectureMaterials,
+					materialsOrder: order,
+				});
+			} else {
+				await updateDoc(doc(db, 'classes', classId, 'lectures', lectureId), {
+					title: lec.title,
+					startTime: lec.startTime,
+					endTime: lec.endTime,
+				});
+				await Promise.all(
+					lectureMaterials.map((mat) => {
+						const patch: Record<string, unknown> = {};
+						if (mat.type !== undefined) patch.type = mat.type;
+						if (mat.title !== undefined) patch.title = mat.title;
+						if (mat.value !== undefined) patch.value = mat.value;
+						if (mat.requiredPostTest !== undefined)
+							patch.requiredPostTest = mat.requiredPostTest;
+						return updateDoc(
+							doc(db, 'classes', classId, 'lectures', lectureId, 'materials', mat.id),
+							patch,
+						);
+					}),
+				);
+			}
 			syncBaseline();
 		} catch (err) {
 			console.error(err);
@@ -415,20 +534,26 @@
 	const materialTypes: MaterialType[] = ['video', 'file', 'link', 'text', 'quiz'];
 </script>
 
-<div class="mx-auto max-w-xl px-8 py-10">
-	<div class="flex item-center justify-between">
-		<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">Lecture</p>
-		<Button variant="accent" disabled={leSaving || !dirty || timeInvalid} onclick={saveLectureChanges}>
-			{#if leSaving}
-				<div
-					class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
-				></div>
-				Saving…
-			{:else}
-				Save changes
-			{/if}
-		</Button>
-	</div>
+<div class={embedded ? '' : 'mx-auto max-w-xl px-8 py-10'}>
+	{#if !embedded}
+		<div class="flex item-center justify-between">
+			<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">Lecture</p>
+			<Button
+				variant="accent"
+				disabled={leSaving || timeInvalid || createInvalid || (!isNew && !isDirty)}
+				onclick={saveLectureChanges}
+			>
+				{#if leSaving}
+					<div
+						class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
+					></div>
+					Saving…
+				{:else}
+					{isNew ? 'Create' : 'Save changes'}
+				{/if}
+			</Button>
+		</div>
+	{/if}
 	<div class="mt-4">
 		<Input
 			label="Lecture title"
@@ -469,9 +594,7 @@
 	</div>
 
 	{#if timeInvalid}
-		<p
-			class="mt-2 rounded-md bg-red-50 px-3 py-2 text-[12.5px] font-medium text-red-600"
-		>
+		<p class="mt-2 rounded-md bg-red-50 px-3 py-2 text-[12.5px] font-medium text-red-600">
 			End time must be after the start time.
 		</p>
 	{/if}
@@ -509,6 +632,9 @@
 								onValueChange={(value) => updateMaterialLocal(mat.id, { value })}
 								onDelete={() => deleteMaterialOp(mat.id)}
 								onTogglePostTest={(checked) => toggleRequiredPostTest(mat, checked)}
+								persistValue={isNew
+									? async (value) => updateMaterialLocal(mat.id, { value })
+									: undefined}
 							/>
 						{/if}
 					{/each}
@@ -572,18 +698,20 @@
 		/>
 	{/if}
 
-	<button
-		type="button"
-		onclick={() => (leShowConfirm = true)}
-		disabled={leDeleteLecture}
-		class="mt-12 mb-4 text-[13px] font-medium text-red-500 hover:text-red-600 disabled:opacity-50"
-	>
-		{#if leDeleteLecture}
-			Deleting...
-		{:else}
-			Delete this lecture
-		{/if}
-	</button>
+	{#if !embedded}
+		<button
+			type="button"
+			onclick={() => (leShowConfirm = true)}
+			disabled={leDeleteLecture}
+			class="mt-12 mb-4 text-[13px] font-medium text-red-500 hover:text-red-600 disabled:opacity-50"
+		>
+			{#if leDeleteLecture}
+				Deleting...
+			{:else}
+				Delete this lecture
+			{/if}
+		</button>
+	{/if}
 
 	<Modal open={leShowConfirm} title="Delete lecture?" onclose={() => (leShowConfirm = false)}>
 		<p class="text-[13px] text-ink-500">
@@ -607,12 +735,8 @@
 			You have unsaved changes to this lecture. If you leave now, your changes will be lost.
 		</p>
 		{#snippet footer()}
-			<Button variant="ghost" onclick={() => (showLeaveWarning = false)}>
-				Keep editing
-			</Button>
-			<Button variant="danger-solid" onclick={confirmLeave}>
-				Discard &amp; leave
-			</Button>
+			<Button variant="ghost" onclick={() => (showLeaveWarning = false)}>Keep editing</Button>
+			<Button variant="danger-solid" onclick={confirmLeave}>Discard &amp; leave</Button>
 		{/snippet}
 	</Modal>
 </div>

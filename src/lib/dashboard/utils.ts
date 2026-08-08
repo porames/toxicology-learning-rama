@@ -1,4 +1,4 @@
-import type { MaterialType, Lecture } from './types';
+import type { MaterialType, Lecture, TemplateTime } from './types';
 import moment from 'moment';
 
 export function makeId() {
@@ -66,6 +66,19 @@ export function defaultTimes() {
 	start.setHours(start.getHours() + 1);
 	const end = new Date(start.getTime() + 90 * 60 * 1000);
 	return { startTime: start, endTime: end };
+}
+
+export function timeOfDay(date: Date): Date {
+	const d = new Date(date);
+	return new Date(1970, 0, 1, d.getHours(), d.getMinutes(), d.getSeconds(), 0);
+}
+
+export function templateTimeToMs(t: TemplateTime): number {
+	return (
+		((t.week - 1) * 7 + (t.day - 1)) * 86400000 +
+		t.time.getHours() * 3600000 +
+		t.time.getMinutes() * 60000
+	);
 }
 
 export function groupedLectures(lects: Lecture[]): [string, Lecture[]][] {

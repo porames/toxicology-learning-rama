@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 	import { auth } from '$lib/firebase';
+	import { functionsUrl } from '$lib/functionsUrl';
 	import { getAuthErrorMessage } from '$lib/authErrors';
 	import { goto } from '$app/navigation';
 	import { Eye, EyeOff, LoaderCircle } from '@lucide/svelte';
@@ -25,13 +26,13 @@
 		loading = 'email';
 		try {
 			if (isSignUp) {
-				const res = await fetch('https://us-central1-rama-toxico-edu.cloudfunctions.net/signUp', {
+				const res = await fetch(functionsUrl('signUp'), {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({
 						email: email,
 						rama_id: ramaId,
-						pw: password
+						pw: password,
 					}),
 				});
 				if (!res.ok) {
@@ -137,7 +138,7 @@
 				/>
 				<button
 					type="button"
-					onclick={() => showPassword = !showPassword}
+					onclick={() => (showPassword = !showPassword)}
 					class="absolute right-3 top-1/2 -translate-y-1/2 text-ink-300 hover:text-ink-500"
 					aria-label={showPassword ? 'Hide password' : 'Show password'}
 				>
@@ -151,12 +152,16 @@
 		</div>
 
 		{#if error}
-			<div class="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13.5px] text-red-700">
+			<div
+				class="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13.5px] text-red-700"
+			>
 				{error}
 			</div>
 		{/if}
 		{#if notice}
-			<div class="rounded-lg border border-mesh-teal/30 bg-mesh-teal/10 px-3.5 py-2.5 text-[13.5px] text-emerald-700">
+			<div
+				class="rounded-lg border border-mesh-teal/30 bg-mesh-teal/10 px-3.5 py-2.5 text-[13.5px] text-emerald-700"
+			>
 				{notice}
 			</div>
 		{/if}

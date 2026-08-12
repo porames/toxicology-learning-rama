@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { X } from '@lucide/svelte';
-	import { fade } from 'svelte/transition';
+	import { fade, fly } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import type { Snippet } from 'svelte';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		open?: boolean;
@@ -43,7 +45,7 @@
 			class="mx-4 w-full rounded-xl bg-white shadow-xl {className || 'max-w-sm'}"
 			role="dialog"
 			aria-modal="true"
-			transition:fade={{ duration: 150 }}
+			transition:fly={{ duration: 200, y: 16, easing: cubicOut }}
 			onclick={(e) => e.stopPropagation()}
 		>
 			{#if title}
@@ -52,7 +54,7 @@
 					<button
 						type="button"
 						onclick={() => onclose?.()}
-						aria-label="Close"
+						aria-label={t('common.close')}
 						class="flex h-7 w-7 items-center justify-center rounded text-ink-400 hover:bg-ink-900/5 hover:text-ink-700"
 					>
 						<X class="h-4 w-4" />

@@ -20,6 +20,7 @@
 		SubmissionAttachment,
 	} from '$lib/dashboard/types';
 	import { Button } from '$lib/components/ui';
+	import { t, tn } from '$lib/i18n';
 	import moment from 'moment';
 
 	let { classId, assignmentId }: { classId: string; assignmentId: string } = $props();
@@ -42,13 +43,14 @@
 				doc(db, 'classes', classId, 'assignments', assignmentId),
 			);
 			if (!assignmentSnap.exists()) {
-				error = 'Assignment not found.';
+				error = t('common.assignmentNotFound');
 				return;
 			}
 			assignment = {
 				id: assignmentSnap.id,
 				...assignmentSnap.data(),
-				requiredAttachments: (assignmentSnap.data()?.requiredAttachments ?? []) as RequiredAttachment[],
+				requiredAttachments: (assignmentSnap.data()?.requiredAttachments ??
+					[]) as RequiredAttachment[],
 				assignedStudentIds: (assignmentSnap.data()?.assignedStudentIds ?? []) as string[],
 			} as Assignment;
 
@@ -64,12 +66,7 @@
 				}
 				const snaps = await Promise.all(
 					chunks.map((chunk) =>
-						getDocs(
-							query(
-								collection(db, 'users'),
-								where(documentId(), 'in', chunk),
-							),
-						),
+						getDocs(query(collection(db, 'users'), where(documentId(), 'in', chunk))),
 					),
 				);
 				students = snaps
@@ -97,7 +94,7 @@
 			);
 		} catch (err) {
 			console.error(err);
-			error = "Couldn't load submissions. Try refreshing the page.";
+			error = t('common.somethingWentWrong');
 		} finally {
 			loading = false;
 		}
@@ -152,14 +149,14 @@
 		exporting = true;
 		try {
 			const header = [
-				'Student ID',
-				'Full Name',
-				'Email',
-				'Status',
-				'Submitted At',
-				'Last Saved',
-				'File Count',
-				'Files',
+				t('export.studentId'),
+				t('export.fullName'),
+				t('export.email'),
+				t('export.status'),
+				t('export.submittedAt'),
+				t('export.lastSaved'),
+				t('export.fileCount'),
+				t('export.files'),
 			];
 			const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
 			const lines: string[] = [];
@@ -173,14 +170,14 @@
 				}
 				lines.push(
 					[
-						student.rama_id,
+						student.rama_id ?? '',
 						student.name,
 						student.email,
 						submission
 							? submission.requirementsMet === false
-								? 'Incomplete'
-								: 'Submitted'
-							: 'No submission',
+								? t('export.incomplete')
+								: t('export.submitted')
+							: t('export.noSubmission'),
 						submission?.submittedAt ? fmtDate(submission.submittedAt) : '',
 						submission?.updatedAt ? fmtDate(submission.updatedAt) : '',
 						files.length,
@@ -195,12 +192,11 @@
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement('a');
 			a.href = url;
-			a.download = `${
-				(assignment?.title || assignment?.instructions.split('\n')[0] || 'assignment').replace(
-					/[^a-z0-9]+/gi,
-					'_',
-				)
-			}_submissions.csv`;
+			a.download = `${(
+				assignment?.title ||
+				assignment?.instructions.split('\n')[0] ||
+				'assignment'
+			).replace(/[^a-z0-9]+/gi, '_')}_submissions.csv`;
 			a.click();
 			URL.revokeObjectURL(url);
 		} finally {
@@ -217,14 +213,16 @@
 	<div class="flex flex-wrap items-center justify-between gap-3">
 		<div class="min-w-0 flex-1">
 			<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">
-				Submissions
+				{t('dashboard.submissions')}
 			</p>
-			<h1 class="mt-1 flex items-center gap-2 truncate text-[18px] font-semibold text-ink-900">
+			<h1
+				class="mt-1 flex items-center gap-2 truncate text-[18px] font-semibold text-ink-900"
+			>
 				<ClipboardList class="h-4 w-4 shrink-0 text-iris-600" />
 				<span class="truncate">
 					{assignment?.title ||
 						assignment?.instructions.split('\n')[0] ||
-						'Untitled assignment'}
+						t('common.untitledAssignment')}
 				</span>
 			</h1>
 			{#if className}
@@ -241,10 +239,10 @@
 				<div
 					class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-ink-900/20 border-t-ink-700"
 				></div>
-				Exporting…
+				{t('common.saving')}
 			{:else}
 				<Download class="h-3.5 w-3.5" />
-				Export CSV
+				{t('quiz.exportCsv')}
 			{/if}
 		</button>
 	</div>
@@ -259,7 +257,9 @@
 		<p class="mt-8 rounded-lg bg-red-50 px-3 py-2 text-[13px] text-red-600">{error}</p>
 	{:else if students.length === 0}
 		<div class="mt-16 flex flex-col items-center justify-center px-8 text-center">
-			<div class="flex h-12 w-12 items-center justify-center rounded-xl bg-iris-50 text-iris-600">
+			<div
+				class="flex h-12 w-12 items-center justify-center rounded-xl bg-iris-50 text-iris-600"
+			>
 				<Users class="h-6 w-6" />
 			</div>
 			<p class="mt-4 text-[15px] font-medium text-ink-900">No students assigned</p>
@@ -272,7 +272,9 @@
 			{#each students as student (student.id)}
 				{@const submission = submissions[student.id]}
 				{@const isExpanded = expanded.has(student.id)}
-				<div class="overflow-hidden rounded-xl border border-ink-900/10 bg-white shadow-soft">
+				<div
+					class="overflow-hidden rounded-xl border border-ink-900/10 bg-white shadow-soft"
+				>
 					<button
 						type="button"
 						onclick={() => toggleExpand(student.id)}
@@ -295,22 +297,25 @@
 						<div class="flex shrink-0 flex-wrap items-center gap-3">
 							{#if submission}
 								<span class="text-[12px] text-ink-400">
-									{submission.attachments.length} file
-									{submission.attachments.length === 1 ? '' : 's'}
+									{tn(
+										submission.attachments.length,
+										'export.fileCount',
+										'export.fileCount',
+									)}
 								</span>
 								<span
 									class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11.5px] font-semibold text-emerald-700"
 								>
 									{submission.requirementsMet === false
-										? 'Incomplete'
-										: 'Submitted'}
+										? t('export.incomplete')
+										: t('export.submitted')}
 								</span>
 							{:else}
 								<span
 									class="inline-flex items-center gap-1 rounded-full bg-ink-900/[0.05] px-2.5 py-0.5 text-[11.5px] font-semibold text-ink-500"
 								>
 									<Inbox class="h-3.5 w-3.5" />
-									No submission
+									{t('export.noSubmission')}
 								</span>
 							{/if}
 						</div>
@@ -319,17 +324,25 @@
 					{#if isExpanded}
 						<div class="border-t border-ink-900/5 px-4 py-3">
 							{#if submission}
-								<div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-ink-500">
+								<div
+									class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-ink-500"
+								>
 									<span>
-										Submitted {fmtDate(submission.submittedAt)}
+										{t('assignmentDetail.lastSubmitted', {
+											time: fmtDate(submission.submittedAt),
+										})}
 									</span>
 									{#if submission.updatedAt}
-										<span>Last saved {fmtDate(submission.updatedAt)}</span>
+										<span
+											>{t('assignmentDetail.lastSaved', {
+												time: fmtDate(submission.updatedAt),
+											})}</span
+										>
 									{/if}
 								</div>
 								{#if submission.attachments.length === 0}
 									<p class="mt-3 text-[12.5px] text-ink-500">
-										No files uploaded.
+										{t('assignmentDetail.noRequiredFiles')}
 									</p>
 								{:else}
 									<div class="mt-3 space-y-1.5">
@@ -338,7 +351,9 @@
 											{@const fileUrl = fileUrls[key]}
 											<div class="rounded-lg bg-ink-900/[0.03] px-3 py-2">
 												<div class="flex items-center gap-2">
-													<FileIcon class="h-4 w-4 shrink-0 text-ink-400" />
+													<FileIcon
+														class="h-4 w-4 shrink-0 text-ink-400"
+													/>
 													<span
 														class="min-w-0 flex-1 truncate text-[13px] text-ink-700"
 													>
@@ -349,14 +364,18 @@
 														onclick={() => getUrl(submission.id, att)}
 														class="shrink-0 text-[12.5px] font-medium text-iris-600 underline hover:text-iris-700"
 													>
-														{fileUrl ? 'Hide' : 'View'}
+														{fileUrl
+															? t('common.hide')
+															: t('common.view')}
 													</button>
 												</div>
 												{#if att.uploadedAt?.toDate?.()}
 													<p class="mt-1 text-[11.5px] text-ink-400">
-														Uploaded {moment(
-															att.uploadedAt.toDate(),
-														).format('MMM D, YYYY · hh:mm A')}
+														{t('assignmentDetail.uploadedAt', {
+															time: moment(
+																att.uploadedAt.toDate(),
+															).format('MMM D, YYYY · hh:mm A'),
+														})}
 													</p>
 												{/if}
 												{#if fileUrl}
@@ -374,7 +393,7 @@
 								{/if}
 							{:else}
 								<p class="text-[12.5px] text-ink-500">
-									This student hasn't submitted anything yet.
+									{t('students.thisStudent')} hasn't submitted anything yet.
 								</p>
 							{/if}
 						</div>

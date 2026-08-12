@@ -23,6 +23,7 @@
 	import DashboardLayout from '$lib/components/DashboardLayout.svelte';
 	import Breadcrumbs from '$lib/components/Breadcrumbs.svelte';
 	import { Button, Modal } from '$lib/components/ui';
+	import { t } from '$lib/i18n';
 	import ClassesList from './ClassesList.svelte';
 
 	let { classId }: { classId?: string } = $props();
@@ -97,7 +98,7 @@
 			})) as Activity[];
 		} catch (err) {
 			console.error(err);
-			classesError = "Couldn't load classes. Try refreshing the page.";
+			classesError = t('classes.couldNotLoadClasses');
 		} finally {
 			classesLoading = false;
 		}
@@ -125,7 +126,7 @@
 			lectures = lecturesData;
 		} catch (err) {
 			console.error(err);
-			lecturesError = "Couldn't load lectures. Try refreshing the page.";
+			lecturesError = t('classes.couldNotLoadLectures');
 		} finally {
 			lecturesLoading = false;
 		}
@@ -165,7 +166,7 @@
 			lectures = lectures.map((l) => (l.id === lec.id ? { ...l, materials } : l));
 		} catch (err) {
 			console.error(err);
-			materialsError = "Couldn't load materials for this lecture.";
+			materialsError = t('classes.couldNotLoadMaterials');
 		} finally {
 			materialsLoading = false;
 		}
@@ -216,7 +217,7 @@
 			console.log(activities);
 		} catch (err) {
 			console.error(err);
-			checkInError = "Couldn't check in. Please try again.";
+			checkInError = t('classes.couldNotCheckIn');
 			checkingIn = false;
 			return;
 		}
@@ -420,7 +421,7 @@
 	{#snippet headerLeft()}
 		<Breadcrumbs
 			crumbs={[
-				{ label: 'All Classes', href: '/classes' },
+				{ label: t('nav.allClasses'), href: '/classes' },
 				...(currentClass
 					? [
 							{
@@ -439,7 +440,7 @@
 								label:
 									selectedAssignment.title ||
 									selectedAssignment.instructions.split('\n')[0] ||
-									'Assignment',
+									t('classes.assignment'),
 								active: true,
 							},
 						]
@@ -454,7 +455,7 @@
 			<p
 				class="px-2 pb-1 pt-1 text-[11px] font-semibold uppercase tracking-wider text-ink-300"
 			>
-				Classes
+				{t('nav.classes')}
 			</p>
 			{#if classesLoading}
 				<div class="space-y-1.5 px-2">
@@ -487,7 +488,7 @@
 				<div
 					class="h-8 w-8 animate-spin rounded-full border-4 border-ink-900/10 border-t-iris-600"
 				></div>
-				<span class="text-[13px] text-ink-500">Loading classes…</span>
+				<span class="text-[13px] text-ink-500">{t('common.loading')}</span>
 			</div>
 		</div>
 	{:else}
@@ -554,31 +555,32 @@
 </DashboardLayout>
 
 {#if showCheckInModal && pendingCheckInLecture}
-	<Modal open onclose={cancelCheckIn} title="Check in to this lecture?">
+	<Modal open onclose={cancelCheckIn} title={t('classes.checkInTitle')}>
 		<div class="space-y-3">
 			<p class="text-ink-500">
-				Lecture name: <span class="font-bold text-ink-700"
-					>{pendingCheckInLecture.title || 'Untitled lecture'}</span
+				{t('classes.lectureName')}
+				<span class="font-bold text-ink-700"
+					>{pendingCheckInLecture.title || t('common.untitledLecture')}</span
 				>
 			</p>
 			<p class="text-[13px] text-ink-500">
-				Current device time: <span class="font-medium text-ink-700"
-					>{moment(now).format('hh:mm:ss A')}</span
-				>
+				{t('classes.currentDeviceTime')}
+				<span class="font-medium text-ink-700">{moment(now).format('hh:mm:ss A')}</span>
 			</p>
 			<p class="rounded-lg bg-iris-50 px-3 py-2 text-[14px] font-semibold text-iris-700">
-				Starts at {moment(pendingCheckInLecture.startTime).format('ddd, MMM D · hh:mm A')}
+				{t('classes.startsAt', {
+					time: moment(pendingCheckInLecture.startTime).format('ddd, MMM D · hh:mm A'),
+				})}
 			</p>
 			<div
 				class="flex items-start gap-2 rounded-lg bg-ink-900/[0.03] px-3 py-2.5 text-[12.5px] text-ink-500"
 			>
 				<ClockCheck class="mt-0.5 h-4 w-4 shrink-0 text-iris-500" />
 				<span>
-					You can check in from <span class="font-medium text-ink-700"
-						>15 minutes before</span
-					>
-					the lecture starts until
-					<span class="font-medium text-ink-700">15 minutes after</span>.
+					{t('classes.checkInWindow', {
+						before: t('classes.minutesBefore'),
+						after: t('classes.minutesAfter'),
+					})}
 				</span>
 			</div>
 			{#if checkInError}
@@ -587,21 +589,22 @@
 				</p>
 			{:else if !canCheckIn}
 				<p class="rounded-lg bg-red-50 px-3 py-2.5 text-[12.5px] text-red-600">
-					You're outside the check-in window for this lecture. If this is a mistake,
-					please contact your admin.
+					{t('classes.outsideCheckInWindow')}
 				</p>
 			{/if}
 		</div>
 		{#snippet footer()}
-			<Button variant="ghost" onclick={cancelCheckIn} disabled={checkingIn}>Cancel</Button>
+			<Button variant="ghost" onclick={cancelCheckIn} disabled={checkingIn}
+				>{t('common.cancel')}</Button
+			>
 			<Button onclick={confirmCheckIn} disabled={checkingIn || !canCheckIn}>
 				{#if checkingIn}
 					<div
 						class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
 					></div>
-					Checking in…
+					{t('classes.checkingIn')}
 				{:else}
-					Check in
+					{t('classes.checkIn')}
 				{/if}
 			</Button>
 		{/snippet}
@@ -609,18 +612,18 @@
 {/if}
 
 {#if showCompletedModal}
-	<Modal open onclose={() => (showCompletedModal = false)} title="Lecture completed">
+	<Modal open onclose={() => (showCompletedModal = false)} title={t('classes.lectureCompleted')}>
 		<div class="flex flex-col items-center gap-2 py-2 text-center">
 			<div
 				class="flex h-12 w-12 items-center justify-center rounded-full bg-teal-50 text-teal-600"
 			>
 				<CheckCircle2 class="h-6 w-6" />
 			</div>
-			<p class="text-sm font-semibold text-ink-900">Great job!</p>
-			<p class="text-[13px] text-ink-500">This lecture has been marked as completed.</p>
+			<p class="text-sm font-semibold text-ink-900">{t('classes.greatJob')}</p>
+			<p class="text-[13px] text-ink-500">{t('classes.markedAsCompleted')}</p>
 		</div>
 		{#snippet footer()}
-			<Button onclick={() => (showCompletedModal = false)}>Done</Button>
+			<Button onclick={() => (showCompletedModal = false)}>{t('common.done')}</Button>
 		{/snippet}
 	</Modal>
 {/if}

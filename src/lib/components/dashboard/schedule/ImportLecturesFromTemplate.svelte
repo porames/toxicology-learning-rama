@@ -10,8 +10,10 @@
 	} from 'firebase/firestore';
 	import type { CourseTemplate, Lecture, TemplateLecture } from '$lib/dashboard/types';
 	import { Button, Input, Modal, Select } from '$lib/components/ui';
-	import { Library, Loader2, AlertCircle } from '@lucide/svelte';
+	import { Library, Plus, Loader2, AlertCircle } from '@lucide/svelte';
+	import { goto } from '$app/navigation';
 	import moment from 'moment';
+	import { t, tn } from '$lib/i18n';
 
 	let {
 		classId,
@@ -24,7 +26,15 @@
 	} = $props();
 
 	const DAY_MS = 86400000;
-	const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+	const DAY_LABELS = $derived([
+		t('templates.daySun'),
+		t('templates.dayMon'),
+		t('templates.dayTue'),
+		t('templates.dayWed'),
+		t('templates.dayThu'),
+		t('templates.dayFri'),
+		t('templates.daySat'),
+	]);
 
 	let templates = $state<CourseTemplate[]>([]);
 	let loading = $state(true);
@@ -37,7 +47,10 @@
 	let error = $state<string | null>(null);
 
 	const templateOptions = $derived(
-		templates.map((t) => ({ value: t.id, label: t.name || 'Untitled template' })),
+		templates.map((tpl) => ({
+			value: tpl.id,
+			label: tpl.name || t('common.untitledTemplate'),
+		})),
 	);
 
 	function toDate(value: unknown): Date {
@@ -66,7 +79,7 @@
 			templates.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 		} catch (err) {
 			console.error(err);
-			error = "Couldn't load templates.";
+			error = t('templates.couldNotLoadTemplates');
 		} finally {
 			loading = false;
 		}
@@ -92,7 +105,7 @@
 
 	async function handleImport() {
 		if (!selectedTemplateId || !startDate) {
-			error = 'Pick a template and a start date.';
+			error = t('templates.pickTemplateAndDate');
 			return;
 		}
 		importing = true;
@@ -126,7 +139,7 @@
 					data: m,
 				}));
 				batch.set(lectureRef, {
-					title: tl.title || 'Untitled lecture',
+					title: tl.title || t('common.untitledLecture'),
 					startTime,
 					endTime,
 					materialsOrder: materialRefs.map((x) => x.ref.id),
@@ -149,7 +162,7 @@
 
 				created.push({
 					id: lectureRef.id,
-					title: tl.title || 'Untitled lecture',
+					title: tl.title || t('common.untitledLecture'),
 					startTime,
 					endTime,
 					materials: [],
@@ -167,7 +180,7 @@
 			onImported(created);
 		} catch (err) {
 			console.error(err);
-			error = err instanceof Error ? err.message : "Couldn't import the lectures.";
+			error = err instanceof Error ? err.message : t('templates.couldNotImportLectures');
 		} finally {
 			importing = false;
 		}
@@ -178,7 +191,7 @@
 	});
 </script>
 
-<Modal open title="Import lectures from template" onclose={onClose} class="max-w-lg">
+<Modal open title={t('templates.importLecturesFromTemplate')} onclose={onClose} class="max-w-lg">
 	<div class="space-y-4">
 		{#if loading}
 			<div class="flex items-center justify-center py-8">
@@ -186,27 +199,39 @@
 			</div>
 		{:else if templates.length === 0}
 			<p class="py-6 text-center text-[13px] text-ink-400">
-				No templates yet. Create one from the Templates page first.
+				{t('templates.noTemplatesYetCreate')}
 			</p>
 		{:else}
 			<Select
-				label="Template"
+				class="mb-0"
+				label={t('templates.template')}
 				options={templateOptions}
 				value={selectedTemplateId}
 				onchange={handleTemplateChange}
-				placeholder="Choose a template"
+				placeholder={t('templates.chooseTemplate')}
 			/>
+			<button
+				type="button"
+				onclick={() => goto('/dashboard')}
+				class="text-[12.5px] font-medium text-iris-600 hover:text-iris-700"
+			>
+				{t('templates.createNewClassTemplate')}
+			</button>
 			<Input
 				type="date"
-				label="Start date"
+				label={t('templates.startDate')}
 				bind:value={startDate}
-				hint="This date is the template's first week (Week 1, day 1). Lectures are placed from it by week and day."
+				hint={t('templates.startDateHint')}
 			/>
 			{#if countLoading}
-				<p class="text-[12.5px] text-ink-500">Loading lecture count…</p>
+				<p class="text-[12.5px] text-ink-500">{t('templates.loadingLectureCount')}</p>
 			{:else if selectedTemplateId}
 				<p class="text-[12.5px] text-ink-500">
-					{lectureCount} lecture template{lectureCount === 1 ? '' : 's'} will be imported.
+					{tn(
+						lectureCount,
+						'templates.lecturesWillBeImported',
+						'templates.lecturesWillBeImportedPlural',
+					)}{t('templates.lecturesWillBeImportedSuffix')}
 				</p>
 			{/if}
 
@@ -215,7 +240,7 @@
 					<p
 						class="border-b border-ink-900/5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-ink-400"
 					>
-						Lectures ({lectureCount})
+						{t('templates.lecturesLabel', { count: lectureCount })}
 					</p>
 					<div class="max-h-56 divide-y divide-ink-900/5 overflow-y-auto">
 						{#each previewLectures as l (l.id)}
@@ -223,7 +248,7 @@
 								<p
 									class="min-w-0 flex-1 truncate text-[13px] font-medium text-ink-900"
 								>
-									{l.title || 'Untitled lecture'}
+									{l.title || t('common.untitledLecture')}
 								</p>
 								<p class="shrink-0 text-[12px] text-ink-500">
 									{DAY_LABELS[l.startTime.day - 1]} ·{' '}
@@ -248,7 +273,7 @@
 	</div>
 
 	{#snippet footer()}
-		<Button variant="ghost" onclick={onClose}>Cancel</Button>
+		<Button variant="ghost" onclick={onClose}>{t('common.cancel')}</Button>
 		<Button
 			variant="accent"
 			disabled={importing || !selectedTemplateId || !startDate}
@@ -256,10 +281,10 @@
 		>
 			{#if importing}
 				<Loader2 class="h-4 w-4 animate-spin" />
-				Importing…
+				{t('templates.importing')}
 			{:else}
 				<Library class="h-4 w-4" />
-				Import
+				{t('templates.import')}
 			{/if}
 		</Button>
 	{/snippet}

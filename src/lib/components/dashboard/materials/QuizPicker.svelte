@@ -2,6 +2,7 @@
 	import { collection, getDocs } from 'firebase/firestore';
 	import { db } from '$lib/firebase';
 	import { FileQuestion, Plus, X } from '@lucide/svelte';
+	import { t } from '$lib/i18n';
 
 	let {
 		onSelect,
@@ -21,7 +22,7 @@
 				const snap = await getDocs(collection(db, 'quizzes'));
 				quizzes = snap.docs.map((d) => ({
 					id: d.id,
-					title: d.data().title || 'Untitled',
+					title: d.data().title || t('common.untitled'),
 					questions: d.data().questions || [],
 				}));
 			} catch (err) {
@@ -45,7 +46,7 @@
 		role="none"
 	>
 		<div class="flex items-center justify-between border-b border-ink-900/10 px-5 py-4">
-			<p class="text-[15px] font-semibold text-ink-900">Link a quiz</p>
+			<p class="text-[15px] font-semibold text-ink-900">{t('materials.linkAQuiz')}</p>
 			<button
 				onclick={onClose}
 				class="flex h-7 w-7 items-center justify-center rounded text-ink-400 hover:bg-ink-900/5 hover:text-ink-700"
@@ -62,7 +63,7 @@
 				</div>
 			{:else if quizzes.length === 0}
 				<p class="py-8 text-center text-[13px] text-ink-400">
-					No quizzes yet.&nbsp;
+					{t('materials.noQuizzesYetCreate')}&nbsp;
 					<button
 						onclick={() => {
 							onClose();
@@ -70,7 +71,7 @@
 						}}
 						class="text-iris-600 underline hover:text-iris-700"
 					>
-						Create one
+						{t('materials.createOne')}
 					</button>
 				</p>
 			{:else}
@@ -86,7 +87,7 @@
 									{q.title}
 								</p>
 								<p class="text-[12px] text-ink-400">
-									{q.questions.length} questions
+									{t('materials.questionsCount', { count: q.questions.length })}
 								</p>
 							</div>
 						</button>
@@ -102,7 +103,7 @@
 					class="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-ink-900/15 px-3 py-2 text-[13px] font-medium text-iris-600 transition hover:border-iris-400 hover:bg-iris-50"
 				>
 					<Plus class="h-3.5 w-3.5" />
-					Create new quiz
+					{t('materials.createNewQuiz')}
 				</button>
 			</div>
 		</div>

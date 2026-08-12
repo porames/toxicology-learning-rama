@@ -4,9 +4,10 @@
 	import { db } from '$lib/firebase';
 	import { Check, Pencil, ArrowLeft } from '@lucide/svelte';
 	import type { Quiz, Question } from '$lib/quiz-types';
-	import { getOptionLabel, QUESTION_TYPE_LABELS } from '$lib/quiz-types';
+	import { getOptionLabel, getQuestionTypeLabel } from '$lib/quiz-types';
 	import Markdown from '$lib/components/ui/Markdown.svelte';
 	import ImageContainer from '$lib/components/ui/ImageContainer.svelte';
+	import { t, tn } from '$lib/i18n';
 
 	let { quizId }: { quizId: string } = $props();
 
@@ -59,15 +60,19 @@
 	<div class="mx-auto w-2xl px-8 py-10">
 		<div class="flex items-center justify-between gap-3">
 			<div>
-				<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">Preview</p>
+				<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">
+					{t('quiz.preview')}
+				</p>
 				<h1 class="mt-1 text-[18px] font-semibold text-ink-900">
-					{quiz.title || 'Untitled quiz'}
+					{quiz.title || t('common.untitledQuiz')}
 				</h1>
 				<p class="mt-0.5 text-[13px] text-ink-500">
-					{quiz.questions?.length || 0} question{(quiz.questions?.length || 0) !== 1
-						? 's'
-						: ''} · Pass: {quiz.passingScore ?? 70}%{#if quiz.shuffleQuestions}
-						· Shuffled{/if}
+					{tn(
+						quiz.questions?.length || 0,
+						'quiz.questionsCount',
+						'quiz.questionsCountPlural',
+					)} · {t('quiz.pass')}: {quiz.passingScore ?? 70}%{#if quiz.shuffleQuestions}
+						· {t('quiz.shuffled')}{/if}
 				</p>
 			</div>
 			<button
@@ -75,19 +80,19 @@
 				class="flex shrink-0 items-center gap-1.5 rounded-lg bg-gradient-to-b from-iris-500 to-iris-700 px-3.5 py-2 text-[13px] font-semibold text-white shadow-button transition hover:from-iris-500 hover:to-iris-800"
 			>
 				<Pencil class="h-3.5 w-3.5" />
-				Edit quiz
+				{t('quiz.editQuiz')}
 			</button>
 		</div>
 
 		{#if quiz.questions?.length === 0}
 			<div class="mt-8 rounded-xl border border-dashed border-ink-900/15 py-12 text-center">
-				<p class="text-[14px] text-ink-500">No questions in this quiz yet.</p>
+				<p class="text-[14px] text-ink-500">{t('quiz.noQuestionsInQuiz')}</p>
 				<button
 					onclick={() => goto(`/quiz/${quizId}/edit`)}
 					class="mt-3 inline-flex items-center gap-1.5 text-[13.5px] font-medium text-iris-600 hover:text-iris-700"
 				>
 					<ArrowLeft class="h-3.5 w-3.5" />
-					Add questions
+					{t('quiz.addQuestions')}
 				</button>
 			</div>
 		{:else}
@@ -105,9 +110,11 @@
 								<p
 									class="mt-1 text-[12.5px] font-medium uppercase tracking-wider text-ink-400"
 								>
-									{QUESTION_TYPE_LABELS[q.type]} · {q.points} pt{q.points !== 1
-										? 's'
-										: ''}
+									{getQuestionTypeLabel(q.type)} · {tn(
+										q.points,
+										'quiz.pointsCount',
+										'quiz.pointsCountPlural',
+									)}
 								</p>
 							</div>
 						</div>
@@ -142,7 +149,7 @@
 									<p
 										class="text-[12px] font-medium uppercase tracking-wider text-ink-300"
 									>
-										Expected answer
+										{t('quiz.expectedAnswer')}
 									</p>
 									<p
 										class="mt-1 flex items-center gap-1.5 text-[14px] font-medium text-emerald-700"
@@ -171,7 +178,7 @@
 											{/if}
 										</span>
 										<span class="min-w-0 flex-1"
-											>{opt.value || `Option ${oi + 1}`}</span
+											>{opt.value || t('quiz.optionN', { n: oi + 1 })}</span
 										>
 									</div>
 								{/each}
@@ -182,7 +189,9 @@
 							<div
 								class="mt-4 rounded-lg border border-ink-900/5 bg-ink-900/[0.03] px-4 py-3 text-[13px] text-ink-500"
 							>
-								<span class="font-medium text-ink-700">Explanation: </span>
+								<span class="font-medium text-ink-700"
+									>{t('quiz.explanation')}:
+								</span>
 								{q.explanation}
 							</div>
 						{/if}
@@ -191,7 +200,7 @@
 			</div>
 
 			<div class="mt-6 text-center text-[12.5px] text-ink-400">
-				Correct answers are highlighted in green
+				{t('quiz.correctAnswersHighlighted')}
 			</div>
 		{/if}
 	</div>

@@ -14,6 +14,7 @@
 	import { getOptionLabel } from '$lib/quiz-types';
 	import Markdown from '$lib/components/ui/Markdown.svelte';
 	import moment from 'moment';
+	import { t, tn } from '$lib/i18n';
 
 	let { quizId, attemptId }: { quizId: string; attemptId?: string } = $props();
 
@@ -93,7 +94,7 @@
 							const score = a.score ?? 0;
 							return {
 								attempt: a,
-								name: user?.name ?? 'Unknown',
+								name: user?.name ?? t('quiz.unknown'),
 								ramaId: user?.rama_id ?? '',
 								email: user?.email ?? '',
 								completedAt,
@@ -136,15 +137,12 @@
 				email: rows[0].email,
 				rows,
 				best: rows.reduce((best, r) =>
-					r.score > best.score ||
-					(r.score === best.score && r.pct > best.pct)
-						? r
-						: best,
+					r.score > best.score || (r.score === best.score && r.pct > best.pct) ? r : best,
 				),
 			}))
 			.sort((a, b) => {
-				if (a.name === 'Unknown' && b.name !== 'Unknown') return 1;
-				if (b.name === 'Unknown' && a.name !== 'Unknown') return -1;
+				if (a.name === t('quiz.unknown') && b.name !== t('quiz.unknown')) return 1;
+				if (b.name === t('quiz.unknown') && a.name !== t('quiz.unknown')) return -1;
 				return a.name.localeCompare(b.name) || a.ramaId.localeCompare(b.ramaId);
 			});
 	});
@@ -169,14 +167,14 @@
 
 	function exportCsv() {
 		const header = [
-			'Timestamp',
-			'Student ID',
-			'Full Name',
-			'Email',
-			'Score',
-			'Total Points',
-			'Percentage',
-			'Status',
+			t('export.timestamp'),
+			t('export.studentId'),
+			t('export.fullName'),
+			t('export.email'),
+			t('export.score'),
+			t('export.totalPoints'),
+			t('export.percentage'),
+			t('export.status'),
 		];
 		const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
 		const lines = attemptRows.map((r) =>
@@ -188,7 +186,7 @@
 				r.score,
 				r.totalPoints,
 				`${r.pct}%`,
-				r.passed ? 'Passed' : 'Failed',
+				r.passed ? t('export.submitted') : t('export.incomplete'),
 			]
 				.map(escape)
 				.join(','),
@@ -207,7 +205,7 @@
 		answer: string | string[] | undefined,
 		question: Question,
 	): string {
-		if (!answer || (Array.isArray(answer) && answer.length === 0)) return '(no answer)';
+		if (!answer || (Array.isArray(answer) && answer.length === 0)) return t('quiz.noAnswer');
 		if (Array.isArray(answer)) {
 			return answer.map((id) => getOptionLabel(question.options, id)).join(', ');
 		}
@@ -236,10 +234,14 @@
 	<div class="mx-auto w-full max-w-4xl px-4 py-10 md:px-8">
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<div class="min-w-0 flex-1">
-				<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">Results</p>
-				<h1 class="mt-1 flex items-center gap-2 truncate text-[18px] font-semibold text-ink-900">
+				<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">
+					{t('quiz.results')}
+				</p>
+				<h1
+					class="mt-1 flex items-center gap-2 truncate text-[18px] font-semibold text-ink-900"
+				>
 					<BarChart3 class="h-4 w-4 shrink-0 text-amber-500" />
-					<span class="truncate">{quiz?.title || 'Untitled quiz'}</span>
+					<span class="truncate">{quiz?.title || t('common.untitledQuiz')}</span>
 				</h1>
 			</div>
 			<button
@@ -248,7 +250,7 @@
 				class="flex shrink-0 items-center gap-1.5 rounded-lg border border-ink-900/10 bg-white px-3.5 py-2 text-[13px] font-semibold text-ink-700 shadow-soft transition hover:border-iris-400 hover:bg-iris-50 hover:text-iris-600 disabled:cursor-not-allowed disabled:opacity-50"
 			>
 				<Download class="h-3.5 w-3.5" />
-				Export CSV
+				{t('quiz.exportCsv')}
 			</button>
 		</div>
 
@@ -259,9 +261,9 @@
 				>
 					<BarChart3 class="h-6 w-6" />
 				</div>
-				<p class="mt-4 text-[15px] font-medium text-ink-900">No attempts yet</p>
+				<p class="mt-4 text-[15px] font-medium text-ink-900">{t('quiz.noAttemptsYet')}</p>
 				<p class="mt-1 max-w-xs text-[13.5px] text-ink-500">
-					Once students take this quiz, their attempts will show up here.
+					{t('quiz.attemptsWillShowHere')}
 				</p>
 			</div>
 		{:else}
@@ -292,9 +294,11 @@
 								</div>
 								<div class="flex shrink-0 flex-wrap items-center gap-3">
 									<span class="text-[12px] text-ink-400">
-										{group.rows.length} attempt{group.rows.length === 1
-											? ''
-											: 's'}
+										{tn(
+											group.rows.length,
+											'quiz.attemptsCount',
+											'quiz.attemptsCountPlural',
+										)}
 									</span>
 									<span
 										class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold {group
@@ -307,7 +311,9 @@
 										{:else}
 											<XCircle class="h-3.5 w-3.5" />
 										{/if}
-										{group.best.passed ? 'Passed' : 'Failed'}
+										{group.best.passed
+											? t('common.passed')
+											: t('common.failed')}
 									</span>
 								</div>
 							</button>
@@ -319,14 +325,30 @@
 											<tr
 												class="border-b border-ink-900/5 bg-ink-900/[0.02] text-left text-[11px] uppercase tracking-wide text-ink-400"
 											>
-												<th class="px-4 py-2 font-medium">Timestamp</th>
-												<th class="px-4 py-2 font-medium">Student ID</th>
-												<th class="px-4 py-2 font-medium">Full Name</th>
-												<th class="px-4 py-2 font-medium">Email</th>
-												<th class="px-4 py-2 font-medium">Score</th>
-												<th class="px-4 py-2 font-medium">Total Points</th>
-												<th class="px-4 py-2 font-medium">Percentage</th>
-												<th class="px-4 py-2 font-medium">Status</th>
+												<th class="px-4 py-2 font-medium"
+													>{t('export.timestamp')}</th
+												>
+												<th class="px-4 py-2 font-medium"
+													>{t('export.studentId')}</th
+												>
+												<th class="px-4 py-2 font-medium"
+													>{t('export.fullName')}</th
+												>
+												<th class="px-4 py-2 font-medium"
+													>{t('export.email')}</th
+												>
+												<th class="px-4 py-2 font-medium"
+													>{t('export.score')}</th
+												>
+												<th class="px-4 py-2 font-medium"
+													>{t('export.totalPoints')}</th
+												>
+												<th class="px-4 py-2 font-medium"
+													>{t('export.percentage')}</th
+												>
+												<th class="px-4 py-2 font-medium"
+													>{t('export.status')}</th
+												>
 											</tr>
 										</thead>
 										<tbody class="divide-y divide-ink-900/5">
@@ -384,7 +406,9 @@
 															{:else}
 																<XCircle class="h-3.5 w-3.5" />
 															{/if}
-															{row.passed ? 'Passed' : 'Failed'}
+															{row.passed
+																? t('common.passed')
+																: t('common.failed')}
 														</span>
 													</td>
 												</tr>
@@ -404,7 +428,9 @@
 		attempt.totalPoints > 0 ? Math.round((attempt.score / attempt.totalPoints) * 100) : 0}
 
 	<div class="mx-auto w-full max-w-4xl px-4 py-10 md:px-8">
-		<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">Results</p>
+		<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">
+			{t('quiz.results')}
+		</p>
 
 		<div class="mt-4 rounded-xl border border-ink-900/10 bg-white p-8 shadow-soft">
 			<div class="text-center">
@@ -419,7 +445,10 @@
 					</span>
 					<div class="text-left">
 						<p class="text-[14px] text-ink-500">
-							{attempt.score} / {attempt.totalPoints} points
+							{t('quiz.pointsTotal', {
+								score: attempt.score,
+								totalPoints: attempt.totalPoints,
+							})}
 						</p>
 						<span
 							class="mt-0.5 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-semibold {attempt.passed
@@ -428,10 +457,10 @@
 						>
 							{#if attempt.passed}
 								<CheckCircle class="h-3.5 w-3.5" />
-								Passed
+								{t('common.passed')}
 							{:else}
 								<XCircle class="h-3.5 w-3.5" />
-								Failed
+								{t('common.failed')}
 							{/if}
 						</span>
 					</div>
@@ -451,9 +480,9 @@
 
 		<div class="mt-9 border-t border-ink-900/10 pt-6">
 			<p class="text-[15px] font-semibold text-ink-900">
-				Review
+				{t('quiz.review')}
 				<span class="ml-1.5 font-normal text-ink-300">
-					({quiz.questions.length} questions)
+					({t('quiz.questionsCount', { count: quiz.questions.length })})
 				</span>
 			</p>
 
@@ -484,19 +513,20 @@
 								<p
 									class="mt-1 text-[12.5px] font-medium text-ink-400 uppercase tracking-wider"
 								>
-									{q.points} pt{q.points !== 1 ? 's' : ''}
+									{tn(q.points, 'quiz.pointsCount', 'quiz.pointsCountPlural')}
 								</p>
 							</div>
 						</div>
 
 						<div class="mt-3 space-y-1.5 pl-0 sm:pl-10">
 							<p class="text-[13px] text-ink-500">
-								<span class="font-medium text-ink-700">Your answer:</span>
+								<span class="font-medium text-ink-700">{t('quiz.yourAnswer')}</span>
 								{formatAnswerDisplay(attemptAnswer?.answer, q)}
 							</p>
 							{#if !correct}
 								<p class="text-[13px] text-ink-500">
-									<span class="font-medium text-emerald-600">Correct answer:</span
+									<span class="font-medium text-emerald-600"
+										>{t('quiz.correctAnswerLabel')}</span
 									>
 									{formatCorrectAnswerDisplay(q)}
 								</p>

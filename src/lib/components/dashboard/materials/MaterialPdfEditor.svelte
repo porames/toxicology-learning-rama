@@ -2,6 +2,7 @@
 	import { Check } from '@lucide/svelte';
 	import type { Material } from '$lib/dashboard/types';
 	import type { MaterialState } from '$lib/dashboard/materialState';
+	import { t } from '$lib/i18n';
 
 	let {
 		material,
@@ -23,7 +24,7 @@
 			rel="noopener noreferrer"
 			class="underline hover:text-emerald-700 truncate max-w-[200px]"
 		>
-			View PDF
+			{t('materials.viewPdf')}
 		</a>
 		<button
 			type="button"
@@ -33,7 +34,7 @@
 			}}
 			class="text-[12px] text-ink-400 hover:text-red-500 underline ml-auto"
 		>
-			Remove
+			{t('materials.remove')}
 		</button>
 	</div>
 {/if}

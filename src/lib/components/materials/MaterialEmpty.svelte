@@ -3,7 +3,13 @@
 	import { materialTypeLabel } from './utils';
 	import type { Component } from 'svelte';
 
-	let { icon: IconComponent, title, type, bg, text: textColor }: {
+	let {
+		icon: IconComponent,
+		title,
+		type,
+		bg,
+		text: textColor,
+	}: {
 		icon: Component;
 		title: string;
 		type: string;

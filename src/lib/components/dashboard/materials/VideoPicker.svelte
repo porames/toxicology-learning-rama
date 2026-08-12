@@ -3,6 +3,7 @@
 	import { authState } from '$lib/auth.svelte';
 	import { Modal } from '$lib/components/ui';
 	import { Video, AlertCircle, Loader2 } from '@lucide/svelte';
+	import { t } from '$lib/i18n';
 
 	interface BunnyVideo {
 		guid: string;
@@ -44,7 +45,7 @@
 				method: 'GET',
 				headers: { Authorization: `Bearer ${token}` },
 			});
-			if (!res.ok) throw new Error('Failed to load videos');
+			if (!res.ok) throw new Error(t('materials.failedToLoadVideos'));
 			const data = await res.json();
 			videos = (data?.items ?? []).map((v: Record<string, unknown>) => ({
 				guid: String(v.guid ?? ''),
@@ -54,7 +55,7 @@
 			}));
 		} catch (err) {
 			console.error(err);
-			error = err instanceof Error ? err.message : "Couldn't load videos.";
+			error = err instanceof Error ? err.message : t('materials.couldNotLoadVideos');
 		} finally {
 			loading = false;
 		}
@@ -65,7 +66,7 @@
 	});
 </script>
 
-<Modal open title="Choose uploaded video" onclose={onClose} class="max-w-lg">
+<Modal open title={t('materials.chooseUploadedVideo')} onclose={onClose} class="max-w-lg">
 	{#if loading}
 		<div class="flex items-center justify-center py-10">
 			<Loader2 class="h-5 w-5 animate-spin text-iris-600" />
@@ -78,7 +79,7 @@
 			{error}
 		</div>
 	{:else if videos.length === 0}
-		<p class="py-10 text-center text-[13px] text-ink-400">No uploaded videos yet.</p>
+		<p class="py-10 text-center text-[13px] text-ink-400">{t('materials.noUploadedVideos')}</p>
 	{:else}
 		<div class="max-h-96 space-y-2 overflow-y-auto">
 			{#each videos as v (v.guid)}
@@ -102,7 +103,7 @@
 					{/if}
 					<div class="min-w-0 flex-1">
 						<p class="truncate text-[14px] font-medium text-ink-900">
-							{v.title || 'Untitled'}
+							{v.title || t('common.untitled')}
 						</p>
 						{#if formatDuration(v.length)}
 							<p class="text-[12px] text-ink-400">{formatDuration(v.length)}</p>

@@ -7,6 +7,8 @@
 	import { Button, Input, Modal } from '$lib/components/ui';
 	import { AlertCircle, Loader2, CalendarCheck } from '@lucide/svelte';
 	import moment from 'moment';
+	import { t } from '$lib/i18n';
+	import { translateApiError } from '$lib/i18n/apiErrors';
 
 	let {
 		template,
@@ -37,7 +39,7 @@
 			students.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 		} catch (err) {
 			console.error(err);
-			error = "Couldn't load the student list.";
+			error = t('templates.couldNotLoadStudents');
 		} finally {
 			studentsLoading = false;
 		}
@@ -55,7 +57,7 @@
 		const user = authState.user;
 		if (!user) return;
 		if (!name.trim()) {
-			error = 'Class name is required.';
+			error = t('templates.classRequired');
 			return;
 		}
 		building = true;
@@ -78,14 +80,13 @@
 			});
 			if (!res.ok) {
 				const body = await res.json();
-				throw new Error(body?.error || 'Failed to build class');
+				throw new Error(translateApiError(body?.error));
 			}
 			const data = await res.json();
 			onBuilt(data.classId);
 		} catch (err) {
 			console.error(err);
-			error =
-				err instanceof Error ? err.message : "Couldn't build the class. Please try again.";
+			error = err instanceof Error ? err.message : t('templates.couldNotBuildClass');
 		} finally {
 			building = false;
 		}
@@ -96,25 +97,32 @@
 	});
 </script>
 
-<Modal open title="Build class from template" onclose={onClose}>
+<Modal open title={t('templates.buildClassFromTemplate')} onclose={onClose}>
 	<div class="space-y-4">
 		<div class="rounded-lg bg-iris-50 px-3 py-2.5 text-[13px] text-iris-700">
-			Building from "{template.name || 'Untitled template'}" ({template.lectures?.length ??
-				0}{' '}
-			lecture templates).
+			{t('templates.buildingFrom', {
+				name: template.name || t('common.untitledTemplate'),
+				count: template.lectures?.length ?? 0,
+			})}
 		</div>
 
-		<Input label="Class name" bind:value={name} placeholder="e.g. Toxicology Rotation" />
-		<Input label="Code" bind:value={code} placeholder="TOX 101" />
+		<Input
+			label={t('dashboard.className')}
+			bind:value={name}
+			placeholder="e.g. Toxicology Rotation"
+		/>
+		<Input label={t('dashboard.code')} bind:value={code} placeholder="TOX 101" />
 		<Input
 			type="date"
-			label="Start date"
+			label={t('templates.startDate')}
 			bind:value={startDate}
-			hint="This date is the template's first week (Week 1, day 1). Lectures are placed from it by week and day."
+			hint={t('templates.startDateHint')}
 		/>
 
 		<div>
-			<p class="mb-1.5 text-[13px] font-medium text-ink-700">Enrol students</p>
+			<p class="mb-1.5 text-[13px] font-medium text-ink-700">
+				{t('dashboard.enrolStudents')}
+			</p>
 			{#if studentsLoading}
 				<div class="space-y-1.5">
 					{#each Array(3) as _}
@@ -123,7 +131,7 @@
 				</div>
 			{:else if students.length === 0}
 				<p class="rounded-lg bg-ink-900/[0.03] px-3 py-2 text-[12.5px] text-ink-500">
-					No students found.
+					{t('templates.noStudentsFound')}
 				</p>
 			{:else}
 				<div
@@ -162,14 +170,14 @@
 	</div>
 
 	{#snippet footer()}
-		<Button variant="ghost" onclick={onClose}>Cancel</Button>
+		<Button variant="ghost" onclick={onClose}>{t('common.cancel')}</Button>
 		<Button variant="accent" disabled={building} onclick={handleBuild}>
 			{#if building}
 				<Loader2 class="h-4 w-4 animate-spin" />
-				Building…
+				{t('templates.building')}
 			{:else}
 				<CalendarCheck class="h-4 w-4" />
-				Build class
+				{t('templates.buildClass')}
 			{/if}
 		</Button>
 	{/snippet}

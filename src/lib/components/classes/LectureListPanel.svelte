@@ -6,6 +6,7 @@
 	import { db } from '$lib/firebase';
 	import { collection, getDocs, query, where } from 'firebase/firestore';
 	import { authState } from '$lib/auth.svelte';
+	import { t, i18n } from '$lib/i18n';
 	import moment from 'moment';
 
 	function groupLecturesByDate(lectures: Lecture[]): Record<string, Lecture[]> {
@@ -24,7 +25,7 @@
 	function formatDateHeader(dateKey: string): string {
 		const [year, month, day] = dateKey.split('-').map(Number);
 		const date = new Date(year, month - 1, day);
-		return date.toLocaleDateString(undefined, {
+		return date.toLocaleDateString(i18n.locale === 'th' ? 'th-TH' : 'en-US', {
 			weekday: 'long',
 			month: 'short',
 			day: 'numeric',
@@ -36,7 +37,7 @@
 	}
 
 	function statusLabel(status: 'checkedIn' | 'completed', time?: Date): string {
-		const label = status === 'checkedIn' ? 'Checked in' : 'Completed';
+		const label = status === 'checkedIn' ? t('classes.checkedIn') : t('classes.completed');
 		if (!time) return label;
 		return `${label} · ${moment(time).format('ddd, MMM D · hh:mm A')}`;
 	}
@@ -131,7 +132,7 @@
 				);
 			} catch (err) {
 				console.error(err);
-				assignmentsError = "Couldn't load assignments.";
+				assignmentsError = t('classes.couldNotLoadAssignments');
 			} finally {
 				assignmentsLoading = false;
 			}
@@ -158,7 +159,7 @@
 		{:else if error}
 			<p class="text-xs text-red-600">{error}</p>
 		{:else if lectures.length === 0}
-			<p class="text-xs text-ink-900/40">No lectures yet for this class.</p>
+			<p class="text-xs text-ink-900/40">{t('classes.noLecturesForClass')}</p>
 		{:else}
 			<div>
 				{#if upcomingToday.length > 0}
@@ -172,7 +173,9 @@
 								>
 									<Sun class="h-3.5 w-3.5" />
 								</span>
-								<p class="text-[12.5px] font-semibold">Today's lectures</p>
+								<p class="text-[12.5px] font-semibold">
+									{t('classes.todayLectures')}
+								</p>
 							</div>
 							<p class="text-[12px] font-medium text-white/80">
 								{moment().format('Do MMM')}
@@ -195,7 +198,7 @@
 									<div class="flex items-center gap-2 justify-between">
 										<div>
 											<p class="text-[13.5px] font-medium text-white flex-1">
-												{lec.title || 'Untitled'}
+												{lec.title || t('common.untitled')}
 											</p>
 											<p class="text-[12px] text-white/70">
 												{formatTimeRange(lec.startTime, lec.endTime)}
@@ -216,7 +219,7 @@
 													</div>
 												</Tooltip>
 											{:else}
-												<Tooltip text="Hasn't checked in">
+												<Tooltip text={t('classes.hasntCheckedIn')}>
 													<div
 														class="bg-yellow-300/20 px-1.5 py-1 rounded-full text-yellow-200 flex flex-row items-center gap-1 font-semibold"
 													>
@@ -238,7 +241,7 @@
 													</div>
 												</Tooltip>
 											{:else}
-												<Tooltip text="Hasn't completed lecture">
+												<Tooltip text={t('classes.hasntCompleted')}>
 													<div
 														class="bg-yellow-300/20 px-1.5 py-1 rounded-full text-yellow-200 flex flex-row items-center gap-1 font-semibold"
 													>
@@ -262,14 +265,19 @@
 							>
 								<Sun class="h-3.5 w-3.5 text-ink-400" />
 							</span>
-							<p class="text-[12.5px] text-ink-500">No lectures for today</p>
+							<p class="text-[12.5px] text-ink-500">
+								{t('classes.noLecturesForToday')}
+							</p>
 						</div>
 						<p class="text-[12px] font-medium text-ink-400">
-							{new Date().toLocaleDateString(undefined, {
-								weekday: 'short',
-								month: 'short',
-								day: 'numeric',
-							})}
+							{new Date().toLocaleDateString(
+								i18n.locale === 'th' ? 'th-TH' : 'en-US',
+								{
+									weekday: 'short',
+									month: 'short',
+									day: 'numeric',
+								},
+							)}
 						</p>
 					</div>
 				{/if}
@@ -280,7 +288,7 @@
 							class="my-2 flex items-center gap-1.5 px-2 text-xs font-semibold uppercase tracking-wide text-iris-600"
 						>
 							<ClipboardList class="h-3.5 w-3.5 shrink-0" />
-							Assignments
+							{t('classes.assignments')}
 							<span class="h-px flex-1 bg-ink-900/10"></span>
 						</div>
 						{#if assignmentsLoading}
@@ -297,7 +305,9 @@
 							<div
 								class="mx-2 rounded-lg border border-dashed border-ink-900/15 bg-ink-900/[0.015] px-3 py-2.5"
 							>
-								<p class="text-[12.5px] text-ink-500">No assignments</p>
+								<p class="text-[12.5px] text-ink-500">
+									{t('classes.noAssignments')}
+								</p>
 							</div>
 						{:else}
 							<div class="space-y-1.5 px-2">
@@ -314,21 +324,25 @@
 										<p class="truncate text-[13px] font-medium text-ink-900">
 											{assignment.title ||
 												assignment.instructions.split('\n')[0] ||
-												'Assignment'}
+												t('classes.assignment')}
 										</p>
 										<p class="mt-0.5 text-[11.5px] text-ink-500">
-											Opens {assignment.opensAt?.toDate?.()
-												? moment(assignment.opensAt.toDate()).format(
-														'MMM D · hh:mm A',
-													)
-												: '—'}
+											{t('classes.opens', {
+												time: assignment.opensAt?.toDate?.()
+													? moment(assignment.opensAt.toDate()).format(
+															'MMM D · hh:mm A',
+														)
+													: '—',
+											})}
 										</p>
 										<p class="text-[11.5px] text-ink-500">
-											Due {assignment.dueDate?.toDate?.()
-												? moment(assignment.dueDate.toDate()).format(
-														'MMM D · hh:mm A',
-													)
-												: '—'}
+											{t('classes.due', {
+												time: assignment.dueDate?.toDate?.()
+													? moment(assignment.dueDate.toDate()).format(
+															'MMM D · hh:mm A',
+														)
+													: '—',
+											})}
 										</p>
 									</button>
 								{/each}
@@ -342,7 +356,7 @@
 						class="my-2 flex items-center gap-1.5 px-2 text-xs font-semibold uppercase tracking-wide text-iris-600"
 					>
 						<Folder class="h-3.5 w-3.5 shrink-0" />
-						Upcoming
+						{t('classes.upcoming')}
 						<span class="h-px flex-1 bg-ink-900/10"></span>
 					</div>
 					{#each Object.entries(groupedUpcoming) as [dateKey, lecsForDay]}
@@ -366,7 +380,7 @@
 						class="my-2 mt-5 flex items-center gap-1.5 px-2 text-xs font-semibold uppercase tracking-wide text-iris-600"
 					>
 						<Folder class="h-3.5 w-3.5 shrink-0" />
-						Past lectures
+						{t('classes.pastLectures')}
 						<span class="h-px flex-1 bg-ink-900/10"></span>
 					</div>
 					{#each groupedPast as [dateKey, lecsForDay]}
@@ -407,7 +421,7 @@
 				<Lock class="h-3.5 w-3.5 shrink-0 text-ink-400" />
 			{/if}
 			<p class="text-sm font-medium text-ink-900 flex-1">
-				{lec.title || 'Untitled'}
+				{lec.title || t('common.untitled')}
 			</p>
 			{#if checkedInIds.has(lec.id)}
 				<Tooltip text={statusLabel('checkedIn', checkedInTimes[lec.id])}>
@@ -418,7 +432,7 @@
 					</div>
 				</Tooltip>
 			{:else}
-				<Tooltip text="Hasn't checked in">
+				<Tooltip text={t('classes.hasntCheckedIn')}>
 					<div
 						class="bg-yellow-300/20 px-1.5 py-1 rounded-full text-yellow-600 flex flex-row items-center gap-1 font-semibold"
 					>
@@ -436,7 +450,7 @@
 					</div>
 				</Tooltip>
 			{:else}
-				<Tooltip text="Hasn't completed lecture">
+				<Tooltip text={t('classes.hasntCompleted')}>
 					<div
 						class="bg-yellow-300/20 px-1.5 py-1 rounded-full text-yellow-600 flex flex-row items-center gap-1 font-semibold"
 					>
@@ -450,7 +464,7 @@
 		</p>
 		{#if showAlert && !checkedInIds.has(lec.id) && !completedIds.has(lec.id)}
 			<p class="mt-1.5 rounded-md bg-red-50 px-2 py-1 text-[11.5px] font-medium text-red-600">
-				Not checked in or completed
+				{t('classes.notCheckedInOrCompleted')}
 			</p>
 		{/if}
 	</button>

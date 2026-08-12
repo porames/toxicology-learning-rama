@@ -7,10 +7,7 @@
 	const html = $derived(DOMPurify.sanitize(marked.parse(value) as string));
 </script>
 
-<div
-	class={`markdown-body text-[14px] leading-relaxed text-ink-900 {className}`}
-	>{@html html}</div
->
+<div class={`markdown-body text-[14px] leading-relaxed text-ink-900 {className}`}>{@html html}</div>
 
 <style>
 	.markdown-body :global(p) {

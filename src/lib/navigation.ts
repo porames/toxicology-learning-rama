@@ -1,23 +1,24 @@
-import { LayoutDashboard, BookOpen, Beaker, ClipboardList, Library } from '@lucide/svelte';
+import { LayoutDashboard, BookOpen, ClipboardList, Wrench } from '@lucide/svelte';
 
 export interface NavItem {
-	label: string;
+	labelKey: string;
 	href: string;
 	icon: typeof LayoutDashboard;
+	visibleForAll?: boolean;
 }
 
 export const NAV_ITEMS: NavItem[] = [
-	{ label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-	{ label: 'Classes', href: '/classes', icon: BookOpen },
-	{ label: 'Templates', href: '/dashboard/templates', icon: Library },
-	//{ label: 'Simulator', href: '/simulator', icon: Beaker },
-	{ label: 'Quizzes', href: '/quiz', icon: ClipboardList },
+	{ labelKey: 'nav.dashboard', href: '/dashboard', icon: LayoutDashboard },
+	{ labelKey: 'nav.classes', href: '/classes', icon: BookOpen },
+	{ labelKey: 'nav.quizzes', href: '/quiz', icon: ClipboardList },
+	{ labelKey: 'nav.settings', href: '/settings', icon: Wrench, visibleForAll: true },
 ];
 
 export function visibleNavItems(isAdmin: boolean): NavItem[] {
 	return NAV_ITEMS.filter((item) => {
+		if (item.visibleForAll) return true;
 		if (isAdmin) return true;
-		return item.label === 'Classes' || item.label === 'Simulator';
+		return item.labelKey === 'nav.classes';
 	});
 }
 

@@ -3,6 +3,7 @@
 	import type { Component } from 'svelte';
 	import MaterialBadge from './MaterialBadge.svelte';
 	import { materialTypeLabel } from './utils';
+	import { t } from '$lib/i18n';
 
 	let {
 		icon: IconComponent,
@@ -46,21 +47,21 @@
 				<span
 					class="shrink-0 rounded-full bg-red-500/10 px-1.5 py-0.5 text-[10px] font-medium text-red-600 uppercase tracking-wide"
 				>
-					Required
+					{t('common.required')}
 				</span>
 			{/if}
 			{#if attempt?.passed}
 				<span
 					class="shrink-0 rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-600 uppercase tracking-wide"
 				>
-					Passed
+					{t('common.passed')}
 				</span>
 			{/if}
 			{#if attempt && !attempt.passed}
 				<span
 					class="shrink-0 rounded-full bg-red-500/10 px-1.5 py-0.5 text-[10px] font-medium text-red-600 uppercase tracking-wide"
 				>
-					Failed
+					{t('common.failed')}
 				</span>
 			{/if}
 		</div>
@@ -71,15 +72,20 @@
 		>
 			{#if attempt}
 				{#if attempt.passed}
-					&check; Passed at {#if attempt.completedAt}
-						{moment(attempt.completedAt).format('MMM D, YYYY')}{/if}
+					&check; {t('materials.passedAt', {
+						date: attempt.completedAt
+							? moment(attempt.completedAt).format('MMM D, YYYY')
+							: '',
+					})}
 				{:else}
-					Failed &middot; {attempt.completedAt
-						? moment(attempt.completedAt).format('MMM D, YYYY')
-						: ''}
+					{t('materials.failedAt', {
+						date: attempt.completedAt
+							? moment(attempt.completedAt).format('MMM D, YYYY')
+							: '',
+					})}
 				{/if}
 			{:else}
-				Click to take quiz
+				{t('materials.clickToTakeQuiz')}
 			{/if}
 		</p>
 	</div>

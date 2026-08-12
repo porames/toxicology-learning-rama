@@ -17,18 +17,24 @@ function createAuthState() {
 	let user = $state<User | null>(null);
 	let profile = $state<UserProfile | null>(null);
 	let loading = $state(true);
+	let wasSignedIn = false;
 
 	onAuthStateChanged(auth, async (currentUser) => {
 		if (!currentUser) {
+			const redirectToLogin = wasSignedIn;
 			user = null;
 			profile = null;
 			loading = false;
-			goto('/');
+			wasSignedIn = false;
+			if (redirectToLogin) {
+				goto('/');
+			}
 			return;
 		}
+		wasSignedIn = true;
 		user = currentUser;
 		const userResults = await user.getIdTokenResult();
-		console.log(userResults)
+		console.log(userResults);
 		try {
 			await currentUser.getIdToken(true);
 			const q = query(collection(db, 'users'), where('authId', '==', currentUser.uid));
@@ -55,9 +61,15 @@ function createAuthState() {
 	});
 
 	return {
-		get user() { return user; },
-		get profile() { return profile; },
-		get loading() { return loading; },
+		get user() {
+			return user;
+		},
+		get profile() {
+			return profile;
+		},
+		get loading() {
+			return loading;
+		},
 	};
 }
 

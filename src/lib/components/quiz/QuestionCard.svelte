@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { Plus, Trash2, ChevronDown, X, Bold, Italic, Underline } from '@lucide/svelte';
 	import type { Option, Question, QuestionType } from '$lib/quiz-types';
-	import { QUESTION_TYPE_LABELS } from '$lib/quiz-types';
+	import { getQuestionTypeLabel } from '$lib/quiz-types';
 	import { storage } from '$lib/firebase';
 	import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 	import FileUpload from '$lib/components/ui/FileUpload.svelte';
 	import Markdown from '$lib/components/ui/Markdown.svelte';
 	import ImageContainer from '$lib/components/ui/ImageContainer.svelte';
+	import { t, tn } from '$lib/i18n';
 
 	const fieldClass =
 		'w-full rounded-md bg-white px-3 py-2 text-[14px] text-ink-900 placeholder:text-ink-300 outline-1 -outline-offset-1 outline-ink-900/15 focus:outline-2 focus:-outline-offset-2 focus:outline-iris-500 transition';
@@ -151,12 +152,14 @@
 					<Markdown value={question.prompt} />
 				</div>
 			{:else}
-				<p class="truncate text-[14px] font-medium text-ink-900">New question</p>
+				<p class="truncate text-[14px] font-medium text-ink-900">{t('quiz.newQuestion')}</p>
 			{/if}
 			<p class="text-[12.5px] text-ink-400">
-				{QUESTION_TYPE_LABELS[question.type]} · {question.points} pt{question.points !== 1
-					? 's'
-					: ''}
+				{getQuestionTypeLabel(question.type)} · {tn(
+					question.points,
+					'quiz.pointsCount',
+					'quiz.pointsCountPlural',
+				)}
 			</p>
 		</div>
 		<ChevronDown
@@ -168,7 +171,7 @@
 		<div class="border-t border-ink-900/10 px-5 pb-5 pt-4 space-y-4">
 			<div class="flex gap-3">
 				<div class="flex-1">
-					<label class={labelClass}>Type</label>
+					<label class={labelClass}>{t('quiz.type')}</label>
 					<div class="relative">
 						<select
 							value={question.type}
@@ -178,9 +181,9 @@
 								)}
 							class="{fieldClass} appearance-none pr-8"
 						>
-							{#each Object.keys(QUESTION_TYPE_LABELS) as type}
+							{#each ['multiple-choice', 'multiple-answer', 'true-false', 'short-answer'] as type}
 								<option value={type}
-									>{QUESTION_TYPE_LABELS[type as QuestionType]}</option
+									>{getQuestionTypeLabel(type as QuestionType)}</option
 								>
 							{/each}
 						</select>
@@ -190,7 +193,7 @@
 					</div>
 				</div>
 				<div class="w-24">
-					<label class={labelClass}>Points</label>
+					<label class={labelClass}>{t('quiz.pointsCount')}</label>
 					<input
 						type="number"
 						min={1}
@@ -206,7 +209,7 @@
 
 			<div>
 				<div class="mb-1.5 flex items-center justify-between">
-					<label class={labelClass}>Question</label>
+					<label class={labelClass}>{t('quiz.question')}</label>
 					<div class="flex gap-1 rounded-md bg-ink-900/5 p-0.5">
 						<button
 							type="button"
@@ -217,7 +220,7 @@
 									: 'text-ink-500 hover:text-ink-700'
 							}`}
 						>
-							Write
+							{t('quiz.write')}
 						</button>
 						<button
 							type="button"
@@ -228,7 +231,7 @@
 									: 'text-ink-500 hover:text-ink-700'
 							}`}
 						>
-							Preview
+							{t('quiz.preview')}
 						</button>
 					</div>
 				</div>
@@ -239,7 +242,7 @@
 						<button
 							type="button"
 							onclick={() => applyFormat('bold')}
-							title="Bold"
+							title={t('quiz.bold')}
 							class="flex h-7 w-7 items-center justify-center rounded text-ink-500 transition hover:bg-ink-900/5 hover:text-ink-900"
 						>
 							<Bold class="h-3.5 w-3.5" />
@@ -247,7 +250,7 @@
 						<button
 							type="button"
 							onclick={() => applyFormat('italic')}
-							title="Italic"
+							title={t('quiz.italic')}
 							class="flex h-7 w-7 items-center justify-center rounded text-ink-500 transition hover:bg-ink-900/5 hover:text-ink-900"
 						>
 							<Italic class="h-3.5 w-3.5" />
@@ -255,7 +258,7 @@
 						<button
 							type="button"
 							onclick={() => applyFormat('underline')}
-							title="Underline"
+							title={t('quiz.underline')}
 							class="flex h-7 w-7 items-center justify-center rounded text-ink-500 transition hover:bg-ink-900/5 hover:text-ink-900"
 						>
 							<Underline class="h-3.5 w-3.5" />
@@ -268,7 +271,7 @@
 							onupdate({ prompt: (e.target as HTMLTextAreaElement).value })}
 						rows={2}
 						class="{fieldClass} resize-none"
-						placeholder="Type your question here…"></textarea>
+						placeholder={t('quiz.typeYourQuestion')}></textarea>
 				{:else}
 					<div
 						class="min-h-[56px] rounded-md border border-ink-900/12 bg-white px-3 py-2"
@@ -276,14 +279,14 @@
 						{#if question.prompt}
 							<Markdown value={question.prompt} />
 						{:else}
-							<p class="text-[13px] text-ink-300">Nothing to preview yet.</p>
+							<p class="text-[13px] text-ink-300">{t('quiz.nothingToPreview')}</p>
 						{/if}
 					</div>
 				{/if}
 			</div>
 
 			<div>
-				<label class={labelClass}>Image (optional)</label>
+				<label class={labelClass}>{t('quiz.imageOptional')}</label>
 				{#if question.imageUrl}
 					<div class="relative overflow-hidden rounded-lg border border-ink-900/10">
 						<ImageContainer imageUrl={question.imageUrl} height="h-56" />
@@ -292,14 +295,14 @@
 							onclick={removeImage}
 							disabled={uploadingImage}
 							class="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-black/80"
-							title="Remove image"
+							title={t('quiz.removeImage')}
 						>
 							<X class="h-4 w-4" />
 						</button>
 					</div>
 				{:else}
 					<FileUpload
-						label={uploadingImage ? 'Uploading…' : 'Upload image'}
+						label={uploadingImage ? t('common.loading') : t('quiz.uploadImage')}
 						accept="image/*"
 						disabled={uploadingImage}
 						onupload={(file) => handleImageUpload(file as File)}
@@ -310,11 +313,11 @@
 			{#if question.type === 'multiple-choice' || question.type === 'multiple-answer'}
 				<div>
 					<label class={labelClass}>
-						Options
+						{t('quiz.options')}
 						{#if question.type === 'multiple-choice'}
-							(select one correct answer)
+							{t('quiz.selectOneCorrect')}
 						{:else}
-							(select all correct answers)
+							{t('quiz.selectAllCorrect')}
 						{/if}
 					</label>
 					<div class="space-y-2">
@@ -353,7 +356,7 @@
 									oninput={(e) =>
 										updateOption(i, (e.target as HTMLInputElement).value)}
 									class="{fieldClass} !py-1.5"
-									placeholder="Option {i + 1}"
+									placeholder={t('quiz.optionN', { n: i + 1 })}
 								/>
 								<button
 									onclick={() => removeOption(i)}
@@ -369,14 +372,14 @@
 						class="mt-2 flex items-center gap-1 text-[13px] font-medium text-iris-600 hover:text-iris-700"
 					>
 						<Plus class="h-3.5 w-3.5" />
-						Add option
+						{t('quiz.addOption')}
 					</button>
 				</div>
 			{/if}
 
 			{#if question.type === 'true-false'}
 				<div>
-					<label class={labelClass}>Correct answer</label>
+					<label class={labelClass}>{t('quiz.correctAnswer')}</label>
 					<div class="flex gap-3">
 						{#each question.options as opt (opt.id)}
 							<label
@@ -402,7 +405,7 @@
 
 			{#if question.type === 'short-answer'}
 				<div>
-					<label class={labelClass}>Correct answer (keyword match)</label>
+					<label class={labelClass}>{t('quiz.correctAnswerKeyword')}</label>
 					<input
 						value={(question.correctAnswer as string) || ''}
 						oninput={(e) =>
@@ -411,15 +414,15 @@
 						placeholder="e.g. Hypertension"
 					/>
 					<p class="mt-1 text-[12px] text-ink-400">
-						Grading is case-insensitive; the student's answer must contain this keyword.
+						{t('quiz.gradingNote')}
 					</p>
 				</div>
 			{/if}
 
 			<div>
 				<label class={labelClass}>
-					Explanation
-					<span class="font-normal text-ink-300"> (shown after student answers)</span>
+					{t('quiz.explanation')}
+					<span class="font-normal text-ink-300">{t('quiz.explanationShown')}</span>
 				</label>
 				<textarea
 					value={question.explanation || ''}
@@ -427,7 +430,7 @@
 						onupdate({ explanation: (e.target as HTMLTextAreaElement).value })}
 					rows={2}
 					class="{fieldClass} resize-none"
-					placeholder="Explain why the correct answer is right…"></textarea>
+					placeholder={t('quiz.explanation')}></textarea>
 			</div>
 
 			<div class="flex justify-end border-t border-ink-900/10 pt-3">
@@ -436,7 +439,7 @@
 					class="flex items-center gap-1.5 text-[13px] font-medium text-red-500 hover:text-red-600"
 				>
 					<Trash2 class="h-3.5 w-3.5" />
-					Delete question
+					{t('quiz.deleteQuestion')}
 				</button>
 			</div>
 		</div>

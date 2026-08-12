@@ -2,15 +2,16 @@
 	import type { ClassItem } from '$lib/dashboard/types';
 	import { ChevronRight, Folder } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
+	import { t } from '$lib/i18n';
 	let { classes }: { classes: ClassItem[] } = $props();
 </script>
 
 <div class="block overflow-y-auto px-6 py-5 w-xl">
 	<h2 class="mb-3 px-2 text-[11px] font-semibold uppercase tracking-wider text-ink-300">
-		All Classes
+		{t('nav.allClasses')}
 	</h2>
 	{#if classes.length === 0}
-		<p class="px-2 text-sm text-ink-900/40">No classes yet.</p>
+		<p class="px-2 text-sm text-ink-900/40">{t('dashboard.noClassesYet')}</p>
 	{:else}
 		<div class="space-y-2">
 			{#each classes as cls}

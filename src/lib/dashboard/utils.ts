@@ -1,4 +1,5 @@
 import type { MaterialType, Lecture, TemplateTime } from './types';
+import { t } from '$lib/i18n';
 import moment from 'moment';
 
 export function makeId() {
@@ -10,19 +11,19 @@ export function makeId() {
 export function defaultMaterialTitle(type: MaterialType) {
 	switch (type) {
 		case 'youtube':
-			return 'New video';
+			return t('materials.newVideo');
 		case 'pdf':
-			return 'New file';
+			return t('materials.newFile');
 		case 'file':
-			return 'New file';
+			return t('materials.newFile');
 		case 'link':
-			return 'New link';
+			return t('materials.newLink');
 		case 'text':
-			return 'New note';
+			return t('materials.newNote');
 		case 'video':
-			return 'New video';
+			return t('materials.newVideo');
 		case 'quiz':
-			return 'New quiz';
+			return t('materials.newQuiz');
 	}
 }
 
@@ -52,11 +53,11 @@ export function stringInputToDate(strDate: string) {
 }
 
 export function validateDateTimeInput(value: string): string | null {
-	if (!value) return 'Required';
+	if (!value) return t('utils.requiredField');
 	const date = new Date(value);
-	if (isNaN(date.getTime())) return 'Invalid date';
+	if (isNaN(date.getTime())) return t('utils.invalidDate');
 	const year = date.getFullYear();
-	if (year > 2050) return 'Year looks like พ.ศ. — please use ค.ศ. (e.g. 2025)';
+	if (year > 2050) return t('utils.buddhistYearNote');
 	return null;
 }
 
@@ -89,4 +90,13 @@ export function groupedLectures(lects: Lecture[]): [string, Lecture[]][] {
 		groups.get(key)!.push(lec);
 	}
 	return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
+}
+
+export function fmtDate(d?: { toDate?: () => Date } | Date | null): string {
+	if (!d) return '—';
+	const date =
+		typeof d === 'object' && 'toDate' in d && typeof d.toDate === 'function'
+			? d.toDate()
+			: (d as Date);
+	return moment(date).format('ddd, MMM D, YYYY · hh:mm A');
 }

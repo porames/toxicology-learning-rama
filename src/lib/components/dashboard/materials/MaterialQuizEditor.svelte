@@ -2,6 +2,7 @@
 	import { FileQuestion } from '@lucide/svelte';
 	import type { Material } from '$lib/dashboard/types';
 	import type { MaterialState } from '$lib/dashboard/materialState';
+	import { t } from '$lib/i18n';
 
 	let {
 		material,
@@ -17,7 +18,7 @@
 <div class="space-y-2">
 	<div class="flex items-center gap-2">
 		<FileQuestion class="h-5 w-5 shrink-0 text-iris-500" />
-		<span class="text-[13px] text-ink-700">{material.title || 'Untitled quiz'}</span>
+		<span class="text-[13px] text-ink-700">{material.title || t('common.untitledQuiz')}</span>
 		{#if material.value}
 			<button
 				type="button"
@@ -26,7 +27,7 @@
 				}}
 				class="ml-auto text-[12px] font-medium text-iris-600 underline hover:text-iris-700"
 			>
-				Edit quiz
+				{t('quiz.editQuiz')}
 			</button>
 		{/if}
 	</div>
@@ -46,6 +47,6 @@
 			}}
 			class="h-3.5 w-3.5 rounded border-ink-900/20 text-iris-500"
 		/>
-		Required post-test
+		{t('common.required')}
 	</label>
 </div>

@@ -58,7 +58,7 @@
 			{material}
 			{state}
 			classId={templateId}
-			lectureId={lectureId}
+			{lectureId}
 			{onValueChange}
 			{persistValue}
 		/>
@@ -67,7 +67,7 @@
 			{material}
 			{state}
 			classId={templateId}
-			lectureId={lectureId}
+			{lectureId}
 			{onValueChange}
 			{persistValue}
 		/>

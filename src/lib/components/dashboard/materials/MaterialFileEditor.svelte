@@ -7,6 +7,7 @@
 	import { db } from '$lib/firebase';
 	import type { Material } from '$lib/dashboard/types';
 	import type { MaterialState } from '$lib/dashboard/materialState';
+	import { t } from '$lib/i18n';
 
 	let {
 		material,
@@ -62,7 +63,9 @@
 			<FileUpload
 				accept="image/*,.ppt,.pptx,.docx,.pdf"
 				disabled={state.fileUploading}
-				label={state.fileUploading ? `Uploading ${state.fileProgress}%` : 'Choose file'}
+				label={state.fileUploading
+					? t('assignmentDetail.uploadingPercent', { percent: state.fileProgress })
+					: t('assignmentDetail.chooseFile')}
 				onupload={(file) => {
 					if (file instanceof File) handleFileUpload(file);
 				}}
@@ -85,7 +88,7 @@
 				rel="noopener noreferrer"
 				class="underline hover:text-emerald-700 truncate max-w-[200px]"
 			>
-				View file
+				{t('materials.viewFile')}
 			</a>
 			<button
 				type="button"
@@ -95,7 +98,7 @@
 				}}
 				class="text-[12px] text-ink-400 hover:text-red-500 underline ml-auto"
 			>
-				Remove
+				{t('materials.remove')}
 			</button>
 		</div>
 	{/if}

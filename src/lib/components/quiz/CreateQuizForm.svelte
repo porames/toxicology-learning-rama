@@ -4,6 +4,7 @@
 	import { db } from '$lib/firebase';
 	import { ArrowLeft, Plus } from '@lucide/svelte';
 	import { Button, Input } from '$lib/components/ui';
+	import { t } from '$lib/i18n';
 
 	let title = $state('');
 	let passingScore = $state(70);
@@ -19,7 +20,7 @@
 				questions: [],
 				passingScore,
 				shuffleQuestions: shuffle,
-				createdAt: serverTimestamp()
+				createdAt: serverTimestamp(),
 			});
 			goto(`/quiz/${docRef.id}`);
 		} catch (err) {
@@ -35,20 +36,22 @@
 		class="flex items-center gap-1.5 text-[13.5px] font-medium text-ink-500 hover:text-ink-900 transition"
 	>
 		<ArrowLeft class="h-4 w-4" />
-		Back
+		{t('common.back')}
 	</button>
 
-	<p class="mt-6 text-[12px] font-medium uppercase tracking-wider text-ink-300">New quiz</p>
+	<p class="mt-6 text-[12px] font-medium uppercase tracking-wider text-ink-300">
+		{t('quiz.newQuiz')}
+	</p>
 
 	<div class="mt-4 space-y-6">
 		<Input
-			label="Quiz title"
+			label={t('quiz.quizTitle')}
 			bind:value={title}
-			placeholder="e.g. Cardiology Quiz 1"
+			placeholder={t('quiz.quizTitlePlaceholder')}
 		/>
 
 		<div>
-			<p class="mb-1.5 text-[13px] font-medium text-ink-700">Passing score (%)</p>
+			<p class="mb-1.5 text-[13px] font-medium text-ink-700">{t('quiz.passingScore')} (%)</p>
 			<div class="flex items-center gap-4">
 				<input
 					type="range"
@@ -71,21 +74,19 @@
 				class="h-4 w-4 rounded border-ink-900/20 text-iris-500 focus:ring-iris-500"
 			/>
 			<label for="shuffle" class="text-[14px] text-ink-700">
-				Shuffle questions for students
+				{t('quiz.shuffleForStudents')}
 			</label>
 		</div>
 
-		<Button
-			onclick={handleCreate}
-			disabled={saving || !title.trim()}
-			class="w-full"
-		>
+		<Button onclick={handleCreate} disabled={saving || !title.trim()} class="w-full">
 			{#if saving}
-				<div class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
-				Creating…
+				<div
+					class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
+				></div>
+				{t('common.creating')}
 			{:else}
 				<Plus class="h-3.5 w-3.5" />
-				Create quiz
+				{t('quiz.createQuiz')}
 			{/if}
 		</Button>
 	</div>

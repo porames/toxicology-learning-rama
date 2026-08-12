@@ -18,6 +18,8 @@ function createDashboardStore() {
 				code: d.data()['code'],
 				lectures: undefined,
 				students: d.data()['enroledStudents'],
+				classStart: d.data()['classStart']?.toDate?.() ?? null,
+				classEnd: d.data()['classEnd']?.toDate?.() ?? null,
 			}));
 			classes = classesData;
 		} catch (err) {
@@ -77,8 +79,12 @@ function createDashboardStore() {
 		return snapshot.id;
 	}
 
-	function renameClass(classId: string, patch: Partial<Pick<ClassItem, 'name' | 'code'>>) {
-		classes = classes.map((c) => (c.id === classId ? { ...c, ...patch } : c));
+	function renameClass(
+		classId: string,
+		patch: Partial<Pick<ClassItem, 'name' | 'code' | 'classStart' | 'classEnd'>>,
+	) {
+		const cls = classes.find((c) => c.id === classId);
+		if (cls) Object.assign(cls, patch);
 	}
 
 	function deleteClass(classId: string) {

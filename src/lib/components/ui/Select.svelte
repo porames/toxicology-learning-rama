@@ -14,6 +14,7 @@
 		error?: string;
 		hint?: string;
 		disabled?: boolean;
+		compact?: boolean;
 		id?: string;
 		name?: string;
 		class?: string;
@@ -28,6 +29,7 @@
 		error = '',
 		hint = '',
 		disabled = false,
+		compact = false,
 		id = undefined,
 		name = undefined,
 		class: className = '',
@@ -51,7 +53,9 @@
 			{disabled}
 			{onchange}
 			bind:value
-			class="w-full appearance-none rounded-lg border bg-white px-3.5 py-2.5 pr-9 text-[14.5px] text-ink-900 transition {hasError
+			class="w-full appearance-none rounded-lg border bg-white text-ink-900 transition {compact
+				? 'px-2.5 py-1.5 pr-8 text-[13px]'
+				: 'px-3.5 py-2.5 pr-9 text-[14.5px]'} {hasError
 				? 'border-red-300 focus:border-red-400 focus:ring-4 focus:ring-red-500/15'
 				: 'border-ink-900/12 focus:border-iris-500 focus:ring-4 focus:ring-iris-500/15'} disabled:cursor-not-allowed disabled:bg-ink-900/[0.02] disabled:text-ink-500"
 		>

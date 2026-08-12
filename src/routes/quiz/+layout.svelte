@@ -8,9 +8,9 @@
 	import Breadcrumbs from '$lib/components/Breadcrumbs.svelte';
 	import type { Quiz } from '$lib/quiz-types';
 	import type { Snippet } from 'svelte';
+	import { t } from '$lib/i18n';
 
 	let { children }: { children: Snippet } = $props();
-
 	const isAdmin = $derived(
 		authState.profile?.role === 'admin' || authState.profile?.role === 'teacher',
 	);
@@ -44,25 +44,25 @@
 		const crumbs: { label: string; href: string | null }[] = [];
 
 		if (segments.length === 1) {
-			crumbs.push({ label: 'All quizzes', href: null });
+			crumbs.push({ label: t('nav.quizzes'), href: null });
 		} else {
-			crumbs.push({ label: 'All quizzes', href: '/quiz' });
+			crumbs.push({ label: t('nav.quizzes'), href: '/quiz' });
 
 			if (segments[1] === 'new') {
-				crumbs.push({ label: 'New quiz', href: null });
+				crumbs.push({ label: t('quiz.newQuiz'), href: null });
 			} else if (currentQuiz) {
 				crumbs.push({
-					label: currentQuiz.title || 'Untitled',
+					label: currentQuiz.title || t('common.untitledQuiz'),
 					href: segments.length > 2 ? `/quiz/${quizId}` : null,
 				});
 				if (segments[2] === 'edit') {
-					crumbs.push({ label: 'Edit', href: null });
+					crumbs.push({ label: t('quiz.edit'), href: null });
 				} else if (segments[2] === 'take') {
-					crumbs.push({ label: 'Take', href: null });
+					crumbs.push({ label: t('quiz.takeQuiz'), href: null });
 				} else if (segments[2] === 'preview') {
-					crumbs.push({ label: 'Preview', href: null });
+					crumbs.push({ label: t('quiz.preview'), href: null });
 				} else if (segments[2] === 'results') {
-					crumbs.push({ label: 'Results', href: null });
+					crumbs.push({ label: t('quiz.results'), href: null });
 				}
 			}
 		}

@@ -8,6 +8,8 @@
 	import moment from 'moment';
 	import Markdown from '$lib/components/ui/Markdown.svelte';
 	import ImageContainer from '$lib/components/ui/ImageContainer.svelte';
+	import { t, tn } from '$lib/i18n';
+	import { translateApiError } from '$lib/i18n/apiErrors';
 
 	let {
 		quizId,
@@ -117,7 +119,7 @@
 
 			if (!res.ok) {
 				const err = await res.json();
-				throw new Error(err.error || 'Failed to submit quiz');
+				throw new Error(translateApiError(err.error));
 			}
 
 			const data = await res.json();
@@ -143,12 +145,16 @@
 {:else if quiz}
 	{#if !started}
 		<!-- StartPage -->
-		<div class="mx-auto max-w-2xl px-8 py-10">
+		<div class="mx-auto max-w-4xl w-4xl px-8 py-10" style="height: max-content">
 			<div class="rounded-xl border border-ink-900/10 bg-white p-8 shadow-soft">
 				<div class="text-center">
 					<h1 class="text-2xl font-bold text-ink-900">{quiz.title}</h1>
 					<p class="mt-1 text-[14px] text-ink-500">
-						{quiz.questions.length} question{quiz.questions.length !== 1 ? 's' : ''}
+						{tn(
+							quiz.questions.length,
+							'quiz.questionsCount',
+							'quiz.questionsCountPlural',
+						)}
 					</p>
 				</div>
 
@@ -157,7 +163,7 @@
 						class="rounded-lg border border-ink-900/10 bg-ink-900/[0.02] px-4 py-3 text-center"
 					>
 						<p class="text-[24px] font-bold text-ink-900">{quiz.questions.length}</p>
-						<p class="text-[12px] text-ink-500">Questions</p>
+						<p class="text-[12px] text-ink-500">{t('quiz.questions')}</p>
 					</div>
 					<div
 						class="rounded-lg border border-ink-900/10 bg-ink-900/[0.02] px-4 py-3 text-center"
@@ -165,14 +171,14 @@
 						<p class="text-[24px] font-bold text-emerald-600">
 							{quiz.passingScore ?? 70}%
 						</p>
-						<p class="text-[12px] text-ink-500">Passing score</p>
+						<p class="text-[12px] text-ink-500">{t('quiz.passingScore')}</p>
 					</div>
 				</div>
 
 				{#if previousAttempts.length > 0}
 					<div class="mt-6">
 						<p class="text-[13px] font-semibold text-ink-900 mb-2">
-							Previous attempts ({previousAttempts.length})
+							{t('quiz.previousAttempts', { count: previousAttempts.length })}
 						</p>
 						<div class="space-y-1.5">
 							{#each [...previousAttempts]
@@ -217,7 +223,7 @@
 					class="mt-8 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-b from-iris-500 to-iris-700 px-4 py-3 text-[15px] font-semibold text-white shadow-button transition hover:from-iris-500 hover:to-iris-800"
 				>
 					<Play class="h-5 w-5" />
-					{latestAttempt ? 'Retake quiz' : 'Start quiz'}
+					{latestAttempt ? t('quiz.retakeQuiz') : t('quiz.startQuiz')}
 				</button>
 			</div>
 		</div>
@@ -227,15 +233,15 @@
 		{@const totalQuestions = quiz.questions.length}
 		{@const allAnswered = answeredCount >= totalQuestions}
 
-		<div class="mx-auto w-2xl px-8 py-10">
+		<div class="mx-auto max-w-4xl w-4xl px-8 py-10" style="height: max-content">
 			<div class="flex items-center justify-between gap-4">
 				<div>
 					<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">
-						Taking quiz
+						{t('quiz.takingQuiz')}
 					</p>
 					<h1 class="mt-1 text-[18px] font-semibold text-ink-900">{quiz.title}</h1>
 					<p class="mt-0.5 text-[13px] text-ink-500">
-						{answeredCount} of {totalQuestions} answered
+						{t('quiz.answeredOf', { answered: answeredCount, total: totalQuestions })}
 					</p>
 				</div>
 				<div class="flex items-center gap-2">
@@ -264,7 +270,7 @@
 								<p
 									class="mt-3 text-[12.5px] font-medium text-ink-400 uppercase tracking-wider"
 								>
-									{q.points} pt{q.points !== 1 ? 's' : ''}
+									{tn(q.points, 'quiz.pointsCount', 'quiz.pointsCountPlural')}
 								</p>
 							</div>
 						</div>
@@ -369,7 +375,7 @@
 									oninput={(e) =>
 										setAnswer(q.id, (e.target as HTMLInputElement).value)}
 									class="w-full rounded-md bg-white px-3 py-2 text-[14px] text-ink-900 placeholder:text-ink-300 outline-1 -outline-offset-1 outline-ink-900/15 focus:outline-2 focus:-outline-offset-2 focus:outline-iris-500 transition"
-									placeholder="Type your answer…"
+									placeholder={t('quiz.typeYourAnswer')}
 								/>
 							{/if}
 						</div>
@@ -387,11 +393,14 @@
 						<div
 							class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
 						></div>
-						Submitting…
+						{t('common.submitting')}
 					{:else if allAnswered}
-						Submit quiz
+						{t('quiz.submitQuiz')}
 					{:else}
-						Answer all questions to submit ({answeredCount}/{totalQuestions})
+						{t('quiz.answerAllToSubmit', {
+							answered: answeredCount,
+							total: totalQuestions,
+						})}
 					{/if}
 				</button>
 			</div>

@@ -19,6 +19,8 @@
 		Upload,
 	} from '@lucide/svelte';
 	import moment from 'moment';
+	import { t } from '$lib/i18n';
+	import { translateApiError } from '$lib/i18n/apiErrors';
 
 	let {
 		classId,
@@ -129,7 +131,7 @@
 			await loadSubmission();
 		} catch (err) {
 			console.error(err);
-			saveError = "Couldn't save your assignment. Please try again.";
+			saveError = t('assignmentDetail.couldNotSave');
 		} finally {
 			savingDraft = false;
 		}
@@ -174,7 +176,7 @@
 			await saveAttachments();
 		} catch (err) {
 			console.error(err);
-			saveError = "Couldn't upload file. Please try again.";
+			saveError = t('assignmentDetail.couldNotUpload');
 		} finally {
 			const { [attachmentId]: _removed, ...restUploading } = uploading;
 			const { [attachmentId]: _removedProgress, ...restProgress } = uploadProgress;
@@ -230,14 +232,14 @@
 			});
 			if (!res.ok) {
 				const err = await res.json();
-				throw new Error(err.error || 'Failed to submit assignment');
+				throw new Error(translateApiError(err.error));
 			}
 			saved = true;
 			window.setTimeout(() => (saved = false), 2000);
 			await loadSubmission();
 		} catch (err) {
 			console.error(err);
-			saveError = "Couldn't submit your assignment. Please try again.";
+			saveError = t('assignmentDetail.couldNotSubmit');
 		} finally {
 			saving = false;
 		}
@@ -259,13 +261,15 @@
 		<div class="flex items-start justify-between gap-3 p-5 md:p-6">
 			<div class="min-w-0">
 				<h1 class="text-[18px] font-semibold text-ink-900">
-					{assignment.title || assignment.instructions.split('\n')[0] || 'Assignment'}
+					{assignment.title ||
+						assignment.instructions.split('\n')[0] ||
+						t('classes.assignment')}
 				</h1>
 				<div
 					class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-ink-500"
 				>
-					<span>Opens {fmtDate(assignment.opensAt)}</span>
-					<span>Due {fmtDate(assignment.dueDate)}</span>
+					<span>{t('classes.opens', { time: fmtDate(assignment.opensAt) })}</span>
+					<span>{t('classes.due', { time: fmtDate(assignment.dueDate) })}</span>
 				</div>
 			</div>
 			{#if submission?.submittedAt}
@@ -273,7 +277,7 @@
 					class="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11.5px] font-semibold text-emerald-700"
 				>
 					<CheckCircle2 class="h-3.5 w-3.5" />
-					Submitted
+					{t('assignmentDetail.saved')}
 				</span>
 			{/if}
 		</div>
@@ -285,10 +289,12 @@
 	<div class="mt-5 rounded-xl border border-ink-900/10 bg-white p-5 shadow-soft md:p-6">
 		<div class="flex items-center gap-2">
 			<Upload class="h-4 w-4 text-iris-600" />
-			<p class="text-[14px] font-semibold text-ink-900">Your submission</p>
+			<p class="text-[14px] font-semibold text-ink-900">
+				{t('assignmentDetail.yourSubmission')}
+			</p>
 		</div>
 		{#if assignment.requiredAttachments.length === 0}
-			<p class="text-[13px] text-ink-500">No required files.</p>
+			<p class="text-[13px] text-ink-500">{t('assignmentDetail.noRequiredFiles')}</p>
 		{:else}
 			<ul class="space-y-1">
 				{#each assignment.requiredAttachments as req}
@@ -299,14 +305,14 @@
 						>
 							<div class="flex flex-row items-center gap-2">
 								<FileIcon size={16} class={`shrink-0 'text-ink-400'}`} />
-								<span>{req.instruction || 'Untitled required file'}</span>
+								<span>{req.instruction || t('common.untitledRequiredFile')}</span>
 							</div>
 							{#if reqFiles.length > 0}
 								<span
 									class="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700"
 								>
 									<CheckCircle2 class="h-3 w-3" />
-									Saved
+									{t('assignmentDetail.saved')}
 								</span>
 							{/if}
 						</div>
@@ -330,13 +336,15 @@
 														}}
 														class="shrink-0 text-[12.5px] font-medium text-iris-600 underline hover:text-iris-700"
 													>
-														View
+														{t('assignmentDetail.view')}
 													</button>
 													{#if canSubmit}
 														<button
 															type="button"
 															onclick={() => removeAttachment(att)}
-															aria-label="Remove file"
+															aria-label={t(
+																'assignmentDetail.removeFile',
+															)}
 															class="shrink-0 rounded p-1 text-ink-400 transition hover:bg-red-50 hover:text-red-600"
 														>
 															<Trash2 class="h-3.5 w-3.5" />
@@ -345,9 +353,11 @@
 												</div>
 												{#if att.uploadedAt?.toDate?.()}
 													<p class="mt-1 text-[11.5px] text-ink-400">
-														Uploaded {moment(
-															att.uploadedAt.toDate(),
-														).format('MMM D, YYYY · hh:mm A')}
+														{t('assignmentDetail.uploadedAt', {
+															time: moment(
+																att.uploadedAt.toDate(),
+															).format('MMM D, YYYY · hh:mm A'),
+														})}
 													</p>
 												{/if}
 											</div>
@@ -359,8 +369,10 @@
 								<FileUpload
 									disabled={isUploading(req.id)}
 									label={isUploading(req.id)
-										? `Uploading ${progressFor(req.id)}%`
-										: 'Choose file'}
+										? t('assignmentDetail.uploadingPercent', {
+												percent: progressFor(req.id),
+											})
+										: t('assignmentDetail.chooseFile')}
 									onupload={(file) => {
 										if (file instanceof File) handleFileUpload(file, req.id);
 									}}
@@ -388,15 +400,15 @@
 			<p
 				class="mt-4 rounded-lg bg-amber-50 px-3 py-2.5 text-[13px] font-medium text-amber-700"
 			>
-				Submissions open {fmtDate(assignment.opensAt)}.
+				{t('assignmentDetail.submissionsOpen', { time: fmtDate(assignment.opensAt) })}
 			</p>
 		{:else if isPastDue}
 			<p class="mt-4 rounded-lg bg-red-50 px-3 py-2.5 text-[13px] font-medium text-red-600">
-				This assignment is past due. Submissions are closed.
+				{t('assignmentDetail.pastDue')}
 			</p>
 		{:else}
 			<p class="mt-2 text-[12.5px] text-ink-500">
-				Upload the required files. You can update them any time before the due date.
+				{t('assignmentDetail.uploadFilesHint')}
 			</p>
 
 			{#if saveError}
@@ -418,11 +430,11 @@
 						<div
 							class="h-4 w-4 animate-spin rounded-full border-2 border-ink-900/20 border-t-ink-700"
 						></div>
-						Saving…
+						{t('common.saving')}
 					{:else if draftSaved}
-						Saved
+						{t('assignmentDetail.saved')}
 					{:else}
-						Save
+						{t('common.save')}
 					{/if}
 				</Button>
 				<Button
@@ -434,26 +446,30 @@
 						<div
 							class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
 						></div>
-						Submitting…
+						{t('common.submitting')}
 					{:else if saved}
-						Submitted
+						{t('assignmentDetail.saved')}
 					{:else}
-						Submit
+						{t('common.submit')}
 					{/if}
 				</Button>
 				<div class="flex flex-col">
 					{#if submission?.submittedAt}
 						<div class="text-[12.5px] text-ink-500">
-							Last submitted {moment(submission.submittedAt.toDate()).format(
-								'MMM D, YYYY · hh:mm A',
-							)}
+							{t('assignmentDetail.lastSubmitted', {
+								time: moment(submission.submittedAt.toDate()).format(
+									'MMM D, YYYY · hh:mm A',
+								),
+							})}
 						</div>
 					{/if}
 					{#if submission?.updatedAt}
 						<div class="text-[12.5px] text-ink-500">
-							Last saved {moment(submission.updatedAt.toDate()).format(
-								'MMM D, YYYY · hh:mm A',
-							)}
+							{t('assignmentDetail.lastSaved', {
+								time: moment(submission.updatedAt.toDate()).format(
+									'MMM D, YYYY · hh:mm A',
+								),
+							})}
 						</div>
 					{/if}
 				</div>

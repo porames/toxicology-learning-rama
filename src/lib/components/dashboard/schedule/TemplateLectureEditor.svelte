@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Material, MaterialType, TemplateLecture } from '$lib/dashboard/types';
-	import { MATERIAL_LABELS } from '$lib/dashboard/types';
+	import { getMaterialLabel } from '$lib/dashboard/types';
 	import { MATERIAL_ICON, MATERIAL_COLOR } from '$lib/dashboard/icons';
 	import { DragDropProvider, DragOverlay } from '@dnd-kit/svelte';
 	import { Button, Input, Modal, Select } from '$lib/components/ui';
@@ -9,6 +9,7 @@
 	import TemplateMaterialEditor from './TemplateMaterialEditor.svelte';
 	import QuizPicker from '../materials/QuizPicker.svelte';
 	import moment from 'moment';
+	import { t } from '$lib/i18n';
 
 	let {
 		templateId,
@@ -30,15 +31,15 @@
 
 	const materialTypes: MaterialType[] = ['video', 'file', 'link', 'text', 'quiz'];
 
-	const DAY_OPTIONS = [
-		{ value: '1', label: 'Sunday' },
-		{ value: '2', label: 'Monday' },
-		{ value: '3', label: 'Tuesday' },
-		{ value: '4', label: 'Wednesday' },
-		{ value: '5', label: 'Thursday' },
-		{ value: '6', label: 'Friday' },
-		{ value: '7', label: 'Saturday' },
-	];
+	const DAY_OPTIONS = $derived([
+		{ value: '1', label: t('templates.daySunday') },
+		{ value: '2', label: t('templates.dayMonday') },
+		{ value: '3', label: t('templates.dayTuesday') },
+		{ value: '4', label: t('templates.dayWednesday') },
+		{ value: '5', label: t('templates.dayThursday') },
+		{ value: '6', label: t('templates.dayFriday') },
+		{ value: '7', label: t('templates.daySaturday') },
+	]);
 
 	let lectureMaterials = $state<Material[]>([...(lecture.materials ?? [])]);
 	let materialsOrder = $state<string[]>([...(lecture.materialsOrder ?? [])]);
@@ -175,7 +176,7 @@
 	<div class="flex items-start justify-between gap-3 border-b border-ink-900/5 p-4">
 		<div class="min-w-0 flex-1">
 			<Input
-				label="Lecture template title"
+				label={t('templates.lectureTemplateTitle')}
 				value={lecture.title}
 				oninput={(e) =>
 					updateLectureFields({ title: (e.target as HTMLInputElement).value })}
@@ -183,16 +184,16 @@
 			/>
 			<div class="mt-3 grid grid-cols-3 gap-3">
 				<Select
-					label="Day of week"
+					label={t('templates.dayOfWeek')}
 					options={DAY_OPTIONS}
 					value={String(lecture.startTime.day ?? 1)}
 					onchange={handleDayChange}
 				/>
 				<Input
 					type="time"
-					label="Start time"
+					label={t('lectureEditor.startTime')}
 					value={moment(lecture.startTime.time).format('HH:mm')}
-					error={timeInvalid ? 'End time must be after the start time.' : ''}
+					error={timeInvalid ? t('lectureEditor.endAfterStart') : ''}
 					oninput={(e) =>
 						updateLectureFields({
 							startTime: {
@@ -207,7 +208,7 @@
 				/>
 				<Input
 					type="time"
-					label="End time"
+					label={t('lectureEditor.endTime')}
 					value={moment(lecture.endTime.time).format('HH:mm')}
 					oninput={(e) =>
 						updateLectureFields({
@@ -227,7 +228,9 @@
 
 	<div class="p-4">
 		{#if lectureMaterials.length === 0}
-			<p class="py-4 text-center text-[13px] text-ink-400">No materials yet.</p>
+			<p class="py-4 text-center text-[13px] text-ink-400">
+				{t('lectureEditor.noMaterialsYet')}
+			</p>
 		{:else}
 			<DragDropProvider onDragEnd={handleDragEnd}>
 				<div class="space-y-3">
@@ -262,7 +265,7 @@
 								/>
 							</span>
 							<span class="text-[13px] font-medium text-ink-900">
-								{data.title || 'Material'}
+								{data.title || t('lectureEditor.material')}
 							</span>
 						</div>
 					{/snippet}
@@ -271,7 +274,9 @@
 		{/if}
 
 		<div class="mt-4">
-			<p class="mb-2 text-[12.5px] font-medium text-ink-500">Add material</p>
+			<p class="mb-2 text-[12.5px] font-medium text-ink-500">
+				{t('lectureEditor.addMaterial')}
+			</p>
 			<div class="flex flex-wrap gap-2">
 				{#each materialTypes as type}
 					{@const Icon = MATERIAL_ICON[type]}
@@ -287,7 +292,7 @@
 						>
 							<Icon class="h-2.5 w-2.5" />
 						</span>
-						{MATERIAL_LABELS[type]}
+						{getMaterialLabel(type)}
 					</button>
 				{/each}
 			</div>
@@ -306,15 +311,20 @@
 {/if}
 
 {#if deleteConfirmOpen}
-	<Modal open title="Delete lecture template?" onclose={() => (deleteConfirmOpen = false)}>
+	<Modal
+		open
+		title={t('templates.deleteLectureTemplateTitle')}
+		onclose={() => (deleteConfirmOpen = false)}
+	>
 		<p class="text-[13px] text-ink-500">
-			This will permanently delete "{lecture.title}" and all its materials from the template.
-			This action cannot be undone.
+			{t('templates.deleteLectureTemplateConfirm', { title: lecture.title })}
 		</p>
 		{#snippet footer()}
-			<Button variant="ghost" onclick={() => (deleteConfirmOpen = false)}>Cancel</Button>
+			<Button variant="ghost" onclick={() => (deleteConfirmOpen = false)}
+				>{t('common.cancel')}</Button
+			>
 			<Button variant="danger-solid" disabled={deleting} onclick={handleDelete}>
-				{deleting ? 'Deleting...' : 'Delete'}
+				{deleting ? t('common.deletingEllipsis') : t('common.delete')}
 			</Button>
 		{/snippet}
 	</Modal>

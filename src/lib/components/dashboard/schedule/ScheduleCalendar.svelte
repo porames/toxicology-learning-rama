@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { ScheduleEvent } from '$lib/dashboard/types';
+	import { onMount } from 'svelte';
 	import moment from 'moment';
+	import { t } from '$lib/i18n';
 
 	interface DragState {
 		day: Date;
@@ -31,6 +33,7 @@
 		events: ScheduleEvent[];
 		pxPerHour?: number;
 		snapMinutes?: number;
+		showDate?: boolean;
 		onCreate?: (event: { date: Date; startTime: Date; endTime: Date }) => void;
 		onEventClick?: (event: ScheduleEvent) => void;
 		onEventChange?: (event: ScheduleEvent, startTime: Date, endTime: Date) => void;
@@ -41,13 +44,22 @@
 		events,
 		pxPerHour = 60,
 		snapMinutes = 15,
+		showDate = true,
 		onCreate,
 		onEventClick,
 		onEventChange,
 	}: Props = $props();
 
 	const HOURS = 24;
-	const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+	const DAY_LABELS = $derived([
+		t('templates.daySun'),
+		t('templates.dayMon'),
+		t('templates.dayTue'),
+		t('templates.dayWed'),
+		t('templates.dayThu'),
+		t('templates.dayFri'),
+		t('templates.daySat'),
+	]);
 
 	const days = $derived(
 		Array.from({ length: 7 }, (_, i) => {
@@ -57,6 +69,15 @@
 	);
 
 	const columnHeight = $derived(HOURS * pxPerHour);
+
+	let scrollContainer = $state<HTMLDivElement | null>(null);
+	let headerRow = $state<HTMLDivElement | null>(null);
+
+	onMount(() => {
+		const el = scrollContainer;
+		if (!el) return;
+		el.scrollTop = Math.max(0, 8 * pxPerHour - (headerRow?.offsetHeight ?? 0));
+	});
 
 	function minutesSinceMidnight(date: Date): number {
 		return date.getHours() * 60 + date.getMinutes();
@@ -314,11 +335,13 @@
 <div
 	class="overflow-auto rounded-xl border border-ink-900/10 bg-white shadow-soft"
 	style="max-height: 600px;"
+	bind:this={scrollContainer}
 >
 	<div class="min-w-[720px]">
 		<div
 			class="sticky top-0 z-20 grid border-b border-ink-900/10 bg-white"
 			style="grid-template-columns: 56px repeat(7, minmax(0, 1fr));"
+			bind:this={headerRow}
 		>
 			<div class="sticky left-0 z-30 border-r border-ink-900/10 bg-white"></div>
 			{#each days as day}
@@ -326,6 +349,11 @@
 					<p class="text-[13px] font-semibold uppercase tracking-wide text-ink-900">
 						{DAY_LABELS[moment(day).day()]}
 					</p>
+					{#if showDate}
+						<p class="text-[10.5px] text-ink-400">
+							{moment(day).format('MMM D')}
+						</p>
+					{/if}
 				</div>
 			{/each}
 		</div>
@@ -402,7 +430,7 @@
 								class="truncate text-[11px] font-medium"
 								style="color: {event.color ? '#ffffff' : '#3730a3'};"
 							>
-								{event.title || 'Untitled'}
+								{event.title || t('common.untitled')}
 							</p>
 							<p
 								class="truncate text-[9.5px]"
@@ -453,7 +481,7 @@
 		role="tooltip"
 	>
 		<p class="truncate text-[12.5px] font-semibold">
-			{hoverTooltip.event.title || 'Untitled lecture'}
+			{hoverTooltip.event.title || t('common.untitledLecture')}
 		</p>
 		<p class="mt-0.5 text-[11px] text-white/80">
 			{moment(hoverTooltip.event.startTime).format('HH:mm')} –{' '}

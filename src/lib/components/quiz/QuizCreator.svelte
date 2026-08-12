@@ -6,6 +6,7 @@
 	import { Button, Input } from '$lib/components/ui';
 	import type { Question, QuestionType, Quiz } from '$lib/quiz-types';
 	import QuestionCard from './QuestionCard.svelte';
+	import { t } from '$lib/i18n';
 
 	function makeId() {
 		return typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -128,15 +129,17 @@
 	</div>
 {:else}
 	<div class="mx-auto w-2xl px-8 py-10">
-		<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">Quiz</p>
+		<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">
+			{t('quiz.quiz')}
+		</p>
 
 		<div class="mt-4 space-y-4">
 			<div class="flex items-end justify-between gap-4">
 				<div class="min-w-0 flex-1">
 					<Input
-						label="Quiz title"
+						label={t('quiz.quizTitle')}
 						bind:value={title}
-						placeholder="e.g. Cardiology Quiz 1"
+						placeholder={t('quiz.quizTitlePlaceholder')}
 					/>
 				</div>
 				<Button onclick={saveChanges} disabled={saving} class="shrink-0">
@@ -144,9 +147,9 @@
 						<div
 							class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
 						></div>
-						Saving…
+						{t('common.saving')}
 					{:else}
-						Save
+						{t('common.save')}
 					{/if}
 				</Button>
 			</div>
@@ -154,7 +157,7 @@
 			<div class="flex items-end gap-6">
 				<Input
 					type="number"
-					label="Passing score"
+					label={t('quiz.passingScore')}
 					value={passingScoreInput}
 					oninput={handlePassingScore}
 					class="w-24"
@@ -166,14 +169,14 @@
 						bind:checked={shuffle}
 						class="h-4 w-4 rounded border-ink-900/20 text-iris-500"
 					/>
-					Shuffle questions
+					{t('quiz.shuffleQuestions')}
 				</label>
 			</div>
 		</div>
 
 		<div class="mt-9 border-t border-ink-900/10 pt-6">
 			<p class="text-[15px] font-semibold text-ink-900">
-				Questions
+				{t('quiz.questions')}
 				<span class="ml-1.5 font-normal text-ink-300">({questions.length})</span>
 			</p>
 
@@ -182,9 +185,9 @@
 					<div
 						class="rounded-xl border border-dashed border-ink-900/15 py-12 text-center"
 					>
-						<p class="text-[14px] text-ink-400">No questions yet.</p>
+						<p class="text-[14px] text-ink-400">{t('quiz.noQuestionsYet')}</p>
 						<p class="mt-0.5 text-[13px] text-ink-300">
-							Click the button below to add your first question.
+							{t('quiz.clickAddFirst')}
 						</p>
 					</div>
 				{/if}
@@ -204,7 +207,7 @@
 
 				<Button variant="dashed" onclick={addQuestion} class="w-full">
 					<Plus class="h-3.5 w-3.5" />
-					Add question
+					{t('quiz.addQuestion')}
 				</Button>
 			</div>
 		</div>

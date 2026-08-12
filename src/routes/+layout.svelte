@@ -8,7 +8,7 @@
 
 	let { children }: { children: Snippet } = $props();
 
-	const authRoutes = ['/login', '/'];
+	const authRoutes = ['/login', '/', '/activate'];
 	const isAuthPage = $derived(authRoutes.includes(page.url.pathname));
 </script>
 

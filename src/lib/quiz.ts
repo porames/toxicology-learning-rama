@@ -13,14 +13,21 @@ export function gradeQuestion(question: Question, answer: string | string[]): bo
 			return answer.every((a) => question.correctAnswer.includes(a));
 		}
 		case 'short-answer':
-			return (answer as string).toLowerCase().includes((question.correctAnswer as string).toLowerCase());
+			return (answer as string)
+				.toLowerCase()
+				.includes((question.correctAnswer as string).toLowerCase());
 	}
 }
 
 export function gradeQuiz(
 	questions: Question[],
-	answers: Record<string, string | string[]>
-): { score: number; totalPoints: number; passed: boolean; graded: { questionId: string; correct: boolean }[] } {
+	answers: Record<string, string | string[]>,
+): {
+	score: number;
+	totalPoints: number;
+	passed: boolean;
+	graded: { questionId: string; correct: boolean }[];
+} {
 	let score = 0;
 	let totalPoints = 0;
 	const graded: { questionId: string; correct: boolean }[] = [];
@@ -44,10 +51,10 @@ export function gradeQuiz(
 export async function getQuizAttempts(quizId: string): Promise<QuizAttempt[]> {
 	const q = query(collectionGroup(db, 'quizAttempts'), where('quizId', '==', quizId));
 	const snap = await getDocs(q);
-	return snap.docs.map((d) => ({ id: d.id, ...d.data() } as QuizAttempt));
+	return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as QuizAttempt);
 }
 
 export async function getUserAttempts(userId: string): Promise<QuizAttempt[]> {
 	const snap = await getDocs(collection(db, 'users', userId, 'quizAttempts'));
-	return snap.docs.map((d) => ({ id: d.id, ...d.data() } as QuizAttempt));
+	return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as QuizAttempt);
 }

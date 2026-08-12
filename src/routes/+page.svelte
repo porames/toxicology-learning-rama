@@ -3,6 +3,8 @@
 	import { authState } from '$lib/auth.svelte';
 	import LoginForm from '$lib/components/LoginForm.svelte';
 	import MeshPanel from '$lib/components/MeshPanel.svelte';
+	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
+	import { t } from '$lib/i18n';
 
 	$effect(() => {
 		if (authState.profile) {
@@ -12,14 +14,17 @@
 </script>
 
 <svelte:head>
-	<title>RAMA Toxico | Sign In</title>
+	<title>RAMA Toxico | {t('auth.signIn')}</title>
 </svelte:head>
 
 {#if !authState.profile}
 	<main class="flex min-h-screen bg-canvas">
 		<MeshPanel />
 
-		<div class="flex flex-1 flex-col items-center justify-center px-6 py-16 sm:px-10">
+		<div class="relative flex flex-1 flex-col items-center justify-center px-6 py-16 sm:px-10">
+			<div class="absolute right-6 top-6">
+				<LanguageSwitcher />
+			</div>
 			<div class="mb-10 flex items-center gap-2.5 lg:hidden">
 				<div
 					class="flex h-8 w-8 items-center justify-center rounded-lg bg-iris-600 shadow-lg"

@@ -21,15 +21,12 @@
 	import TemplateLectureEditor from './TemplateLectureEditor.svelte';
 	import ScheduleCalendar from './ScheduleCalendar.svelte';
 	import moment from 'moment';
+	import { t, tn } from '$lib/i18n';
 
 	let {
 		template,
-		onClose,
-		onSaved,
 	}: {
 		template: CourseTemplate;
-		onClose: () => void;
-		onSaved: () => void;
 	} = $props();
 
 	let draftId = $state(template.id ?? '');
@@ -75,7 +72,7 @@
 					date: start.toDate(),
 					startTime: start.toDate(),
 					endTime: end.toDate(),
-					title: l.title || 'Untitled lecture',
+					title: l.title || t('common.untitledLecture'),
 					lectureTemplateId: l.id,
 				};
 			}),
@@ -101,6 +98,8 @@
 
 	function closeLectureEditor() {
 		selectedLectureId = null;
+		clearTimeout(persistTimer);
+		persistLectures();
 	}
 
 	function openLectureEditor(lectureId: string) {
@@ -147,7 +146,7 @@
 			const lec = l as Record<string, unknown>;
 			return {
 				id: String(lec.id ?? Utils.makeId()),
-				title: (lec.title as string) ?? 'Untitled lecture',
+				title: (lec.title as string) ?? t('common.untitledLecture'),
 				startTime: toTemplateTime(lec.startTime),
 				endTime: toTemplateTime(lec.endTime),
 				materials: ((lec.materials as unknown[]) ?? []).map((m) => {
@@ -157,7 +156,9 @@
 						type: mat.type as Material['type'],
 						title: (mat.title as string) ?? '',
 						value: (mat.value as string) ?? '',
-						requiredPostTest: mat.requiredPostTest as boolean | undefined,
+						...(mat.requiredPostTest !== undefined
+							? { requiredPostTest: mat.requiredPostTest as boolean }
+							: {}),
 					};
 				}),
 				materialsOrder: (lec.materialsOrder as string[]) ?? [],
@@ -175,31 +176,66 @@
 			lectures.sort(
 				(a, b) => Utils.templateTimeToMs(a.startTime) - Utils.templateTimeToMs(b.startTime),
 			);
+			lastPersistedJson = JSON.stringify(lectures.map(lectureSnapshot));
+			hasLoaded = true;
 		} catch (err) {
 			console.error(err);
-			error = "Couldn't load template lectures.";
+			error = t('templates.couldNotLoadTemplateLectures');
 		} finally {
 			loadingLectures = false;
-			hasLoaded = true;
 		}
+	}
+
+	let persistTimer: ReturnType<typeof setTimeout> | undefined;
+	let persistQueue: Promise<void> = Promise.resolve();
+	let lastPersistedJson = '';
+
+	function lectureSnapshot(l: TemplateLecture): TemplateLecture {
+		return {
+			...l,
+			startTime: { ...l.startTime, time: new Date(l.startTime.time) },
+			endTime: { ...l.endTime, time: new Date(l.endTime.time) },
+			materials: (l.materials ?? []).map((m) => {
+				const { requiredPostTest, ...rest } = m;
+				return requiredPostTest === undefined ? rest : { ...rest, requiredPostTest };
+			}),
+			materialsOrder: [...(l.materialsOrder ?? [])],
+		};
 	}
 
 	async function persistLectures() {
 		const id = draftId;
 		if (!id) return;
-		try {
-			await updateDoc(doc(db, 'courseTemplates', id), {
-				lectures,
-				updatedAt: serverTimestamp(),
-			});
-		} catch (err) {
-			console.error(err);
-		}
+		const snapshot = lectures.map(lectureSnapshot);
+		const json = JSON.stringify(snapshot);
+		persistQueue = persistQueue.then(async () => {
+			if (json === lastPersistedJson) return;
+			try {
+				await updateDoc(doc(db, 'courseTemplates', id), {
+					lectures: snapshot,
+					updatedAt: serverTimestamp(),
+				});
+				lastPersistedJson = json;
+			} catch (err) {
+				console.error(err);
+				error = t('templates.couldNotSaveLectures');
+			}
+		});
+		await persistQueue;
 	}
 
 	$effect(() => {
 		if (!hasLoaded) return;
-		persistLectures();
+		const touched = lectures.map((l) => ({
+			title: l.title,
+			startTime: l.startTime,
+			endTime: l.endTime,
+			materials: l.materials,
+			materialsOrder: l.materialsOrder,
+		}));
+		void touched;
+		clearTimeout(persistTimer);
+		persistTimer = setTimeout(persistLectures, 300);
 	});
 
 	async function handleCreateEvent({
@@ -225,7 +261,7 @@
 			};
 			const newLecture: TemplateLecture = {
 				id: Utils.makeId(),
-				title: 'New lecture',
+				title: t('dashboard.addLecture'),
 				startTime: startObj,
 				endTime: endObj,
 				materials: [],
@@ -239,7 +275,7 @@
 			openLectureEditor(newLecture.id);
 		} catch (err) {
 			console.error(err);
-			error = "Couldn't add the lecture. Please try again.";
+			error = t('templates.couldNotAddLecture');
 		}
 	}
 
@@ -259,7 +295,7 @@
 			};
 			const newLecture: TemplateLecture = {
 				id: Utils.makeId(),
-				title: 'New lecture',
+				title: t('dashboard.addLecture'),
 				startTime: startObj,
 				endTime: endObj,
 				materials: [],
@@ -272,7 +308,7 @@
 			openLectureEditor(newLecture.id);
 		} catch (err) {
 			console.error(err);
-			error = "Couldn't add a lecture. Please try again.";
+			error = t('templates.couldNotAddALecture');
 		}
 	}
 
@@ -293,7 +329,7 @@
 
 	async function handleSave() {
 		if (!name.trim()) {
-			error = 'Template name is required.';
+			error = t('templates.templateNameRequired');
 			return;
 		}
 		saving = true;
@@ -301,6 +337,8 @@
 		saved = false;
 		try {
 			const id = await ensureTemplate();
+			clearTimeout(persistTimer);
+			await persistLectures();
 			await updateDoc(doc(db, 'courseTemplates', id), {
 				name: name.trim(),
 				code: code.trim(),
@@ -311,7 +349,7 @@
 			window.setTimeout(() => (saved = false), 2000);
 		} catch (err) {
 			console.error(err);
-			error = "Couldn't save the template. Please try again.";
+			error = t('templates.couldNotSaveTemplate');
 		} finally {
 			saving = false;
 		}
@@ -323,68 +361,65 @@
 </script>
 
 <div class="mx-auto w-full max-w-3xl px-8 py-10">
-	<button
-		type="button"
-		onclick={onClose}
-		class="mb-4 flex items-center gap-1.5 text-[13.5px] font-medium text-ink-500 transition hover:text-ink-900"
-	>
-		<ChevronLeft size={16} />
-		Back to templates
-	</button>
-
 	<div class="flex items-center justify-between">
-		<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">Course template</p>
+		<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">
+			{t('templates.courseTemplate')}
+		</p>
 		<Button variant="accent" disabled={saving} onclick={handleSave}>
 			{#if saving}
 				<div
 					class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
 				></div>
-				Saving…
+				{t('common.saving')}
 			{:else if saved}
-				Saved
+				{t('common.saved')}
 			{:else}
-				Save changes
+				{t('common.saveChanges')}
 			{/if}
 		</Button>
 	</div>
 
 	<div class="mt-4 grid grid-cols-2 gap-3">
-		<Input label="Template name" bind:value={name} placeholder="e.g. Toxicology Rotation" />
-		<Input label="Code" bind:value={code} placeholder="TOX 101" />
+		<Input
+			label={t('templates.templateName')}
+			bind:value={name}
+			placeholder="e.g. Toxicology Rotation"
+		/>
+		<Input label={t('templates.code')} bind:value={code} placeholder="TOX 101" />
 	</div>
 	<div class="mt-4">
 		<Textarea
-			label="Description"
+			label={t('templates.description')}
 			bind:value={description}
-			placeholder="Optional description of this course template."
+			placeholder={t('templates.templateDescriptionPlaceholder')}
 			rows={2}
 		/>
 	</div>
 	<div class="mt-8">
 		<div class="mb-2 flex items-center justify-between gap-3">
-			<p class="text-[13.5px] font-semibold text-ink-900">Schedule</p>
+			<p class="text-[13.5px] font-semibold text-ink-900">{t('templates.schedule')}</p>
 			<div class="flex items-center gap-2">
 				<Button variant="primary" disabled={loadingLectures} onclick={handleAddLecture}>
 					<Plus class="h-3.5 w-3.5" />
-					Add lecture
+					{t('templates.addLecture')}
 				</Button>
 				<div class="flex items-center gap-1">
 					<button
 						type="button"
 						onclick={() => (weekOffset = weekOffset - 1)}
 						class="flex h-7 w-7 items-center justify-center rounded-md text-ink-500 transition hover:bg-ink-900/5 hover:text-ink-900"
-						aria-label="Previous week"
+						aria-label={t('dashboard.previousWeek')}
 					>
 						<ChevronLeft class="h-3.5 w-3.5" />
 					</button>
 					<p class="min-w-24 text-center text-[12px] font-medium text-ink-600">
-						Week {weekOffset + 1}
+						{t('templates.week', { week: weekOffset + 1 })}
 					</p>
 					<button
 						type="button"
 						onclick={() => (weekOffset = weekOffset + 1)}
 						class="flex h-7 w-7 items-center justify-center rounded-md text-ink-500 transition hover:bg-ink-900/5 hover:text-ink-900"
-						aria-label="Next week"
+						aria-label={t('dashboard.nextWeek')}
 					>
 						<ChevronRight class="h-3.5 w-3.5" />
 					</button>
@@ -392,11 +427,12 @@
 			</div>
 		</div>
 		<p class="mb-2 text-[12.5px] text-ink-500">
-			Drag on a day to draw a time slot and create a new lecture template.
+			{t('templates.dragHint')}
 		</p>
 		<ScheduleCalendar
 			{weekStart}
 			events={calendarEvents}
+			showDate={false}
 			onCreate={handleCreateEvent}
 			onEventClick={handleEventClick}
 			onEventChange={handleEventChange}
@@ -404,8 +440,11 @@
 	</div>
 
 	<p class="mt-3 text-[12.5px] text-ink-500">
-		{lectures.length} lecture template{lectures.length === 1 ? '' : 's'}. Click an event block
-		to edit its details and materials.
+		{tn(
+			lectures.length,
+			'templates.lectureTemplatesCount',
+			'templates.lectureTemplatesCountPlural',
+		)}. {t('templates.lectureTemplatesClickHint')}
 	</p>
 
 	{#if error}
@@ -420,7 +459,7 @@
 
 <Modal
 	open={selectedLecture !== null}
-	title="Lecture template"
+	title={t('templates.lectureTemplate')}
 	onclose={closeLectureEditor}
 	class="max-w-4xl"
 	contentClass="max-h-[70vh] overflow-y-auto px-4 py-3"
@@ -442,9 +481,9 @@
 		<div class="flex w-full items-center justify-between">
 			<Button variant="danger" onclick={() => (deleteConfirmOpen = true)}>
 				<Trash2 class="h-4 w-4" />
-				Delete
+				{t('common.delete')}
 			</Button>
-			<Button variant="accent" onclick={closeLectureEditor}>Save</Button>
+			<Button variant="accent" onclick={closeLectureEditor}>{t('common.save')}</Button>
 		</div>
 	{/snippet}
 </Modal>

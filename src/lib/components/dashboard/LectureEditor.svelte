@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { ClassItem, Lecture, Material, MaterialType } from '$lib/dashboard/types';
-	import { MATERIAL_LABELS } from '$lib/dashboard/types';
+	import { getMaterialLabel } from '$lib/dashboard/types';
 	import { MATERIAL_ICON, MATERIAL_COLOR } from '$lib/dashboard/icons';
 	import { authState } from '$lib/auth.svelte';
 	import { functionsUrl } from '$lib/functionsUrl';
@@ -23,6 +23,7 @@
 	import QuizPicker from './materials/QuizPicker.svelte';
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { t } from '$lib/i18n';
 
 	let {
 		selectedClass,
@@ -35,6 +36,7 @@
 		embedded = false,
 		isNew = false,
 		onCreated,
+		onSaved,
 		saveRequested = $bindable(false),
 		deleteRequested = $bindable(false),
 		saveDisabled = $bindable(false),
@@ -51,6 +53,7 @@
 		embedded?: boolean;
 		isNew?: boolean;
 		onCreated?: (lecture: Lecture) => void;
+		onSaved?: () => void;
 		saveRequested?: boolean;
 		deleteRequested?: boolean;
 		saveDisabled?: boolean;
@@ -509,6 +512,7 @@
 				);
 			}
 			syncBaseline();
+			onSaved?.();
 		} catch (err) {
 			console.error(err);
 		} finally {
@@ -537,7 +541,9 @@
 <div class={embedded ? '' : 'mx-auto max-w-xl px-8 py-10'}>
 	{#if !embedded}
 		<div class="flex item-center justify-between">
-			<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">Lecture</p>
+			<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">
+				{t('lectureEditor.lecture')}
+			</p>
 			<Button
 				variant="accent"
 				disabled={leSaving || timeInvalid || createInvalid || (!isNew && !isDirty)}
@@ -547,16 +553,16 @@
 					<div
 						class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
 					></div>
-					Saving…
+					{t('common.saving')}
 				{:else}
-					{isNew ? 'Create' : 'Save changes'}
+					{isNew ? t('common.create') : t('common.saveChanges')}
 				{/if}
 			</Button>
 		</div>
 	{/if}
 	<div class="mt-4">
 		<Input
-			label="Lecture title"
+			label={t('lectureEditor.lectureTitle')}
 			value={selectedLecture.title}
 			oninput={(e) => {
 				const target = e.target as HTMLInputElement;
@@ -569,7 +575,7 @@
 	<div class="mt-4 grid grid-cols-2 gap-3">
 		<Input
 			type="datetime-local"
-			label="Start time"
+			label={t('lectureEditor.startTime')}
 			value={Utils.dateToStringInput(selectedLecture.startTime)}
 			error={startTimeError ?? ''}
 			oninput={(e) => {
@@ -581,9 +587,9 @@
 		/>
 		<Input
 			type="datetime-local"
-			label="End time"
+			label={t('lectureEditor.endTime')}
 			value={Utils.dateToStringInput(selectedLecture.endTime)}
-			error={endTimeError ?? (timeInvalid ? 'End time must be after the start time.' : '')}
+			error={endTimeError ?? (timeInvalid ? t('lectureEditor.endAfterStart') : '')}
 			oninput={(e) => {
 				const target = e.target as HTMLInputElement;
 				onUpdateLecture({
@@ -595,13 +601,13 @@
 
 	{#if timeInvalid}
 		<p class="mt-2 rounded-md bg-red-50 px-3 py-2 text-[12.5px] font-medium text-red-600">
-			End time must be after the start time.
+			{t('lectureEditor.endAfterStart')}
 		</p>
 	{/if}
 
 	<div class="mt-9 border-t border-ink-900/10 pt-6">
 		<p class="text-[13.5px] font-medium text-ink-900">
-			Class materials
+			{t('lectureEditor.classMaterials')}
 			<span class="ml-1.5 font-normal text-ink-300">({lectureMaterials.length})</span>
 		</p>
 
@@ -610,10 +616,12 @@
 				<div
 					class="h-5 w-5 animate-spin rounded-full border-2 border-ink-900/10 border-t-iris-600"
 				></div>
-				<span class="text-[13px] text-ink-500">Loading materials…</span>
+				<span class="text-[13px] text-ink-500">{t('lectureEditor.loadingMaterials')}</span>
 			</div>
 		{:else if lectureMaterials.length === 0}
-			<p class="py-4 text-center text-[13px] text-ink-400">No materials yet.</p>
+			<p class="py-4 text-center text-[13px] text-ink-400">
+				{t('lectureEditor.noMaterialsYet')}
+			</p>
 		{:else}
 			<DragDropProvider onDragEnd={handleDragEnd}>
 				<div class="mt-4 space-y-3">
@@ -656,7 +664,7 @@
 								/>
 							</span>
 							<span class="text-[13px] font-medium text-ink-900">
-								{data.title || 'Material'}
+								{data.title || t('lectureEditor.material')}
 							</span>
 						</div>
 					{/snippet}
@@ -665,7 +673,9 @@
 		{/if}
 
 		<div class="mt-4">
-			<p class="mb-2 text-[12.5px] font-medium text-ink-500">Add material</p>
+			<p class="mb-2 text-[12.5px] font-medium text-ink-500">
+				{t('lectureEditor.addMaterial')}
+			</p>
 			<div class="flex flex-wrap gap-2">
 				{#each materialTypes as type}
 					{@const Icon = MATERIAL_ICON[type]}
@@ -681,7 +691,7 @@
 						>
 							<Icon class="h-2.5 w-2.5" />
 						</span>
-						{MATERIAL_LABELS[type]}
+						{getMaterialLabel(type)}
 					</button>
 				{/each}
 			</div>
@@ -706,37 +716,46 @@
 			class="mt-12 mb-4 text-[13px] font-medium text-red-500 hover:text-red-600 disabled:opacity-50"
 		>
 			{#if leDeleteLecture}
-				Deleting...
+				{t('common.deletingEllipsis')}
 			{:else}
-				Delete this lecture
+				{t('lectureEditor.deleteThisLecture')}
 			{/if}
 		</button>
 	{/if}
 
-	<Modal open={leShowConfirm} title="Delete lecture?" onclose={() => (leShowConfirm = false)}>
+	<Modal
+		open={leShowConfirm}
+		title={t('lectureEditor.deleteLectureTitle')}
+		onclose={() => (leShowConfirm = false)}
+	>
 		<p class="text-[13px] text-ink-500">
-			This will permanently delete "{selectedLecture.title}" and all its materials. This
-			action cannot be undone.
+			{t('lectureEditor.deleteLectureConfirm', { title: selectedLecture.title })}
 		</p>
 		{#snippet footer()}
-			<Button variant="ghost" onclick={() => (leShowConfirm = false)}>Cancel</Button>
+			<Button variant="ghost" onclick={() => (leShowConfirm = false)}
+				>{t('common.cancel')}</Button
+			>
 			<Button variant="danger-solid" disabled={leDeleteLecture} onclick={handleDeleteLecture}>
-				{leDeleteLecture ? 'Deleting...' : 'Delete'}
+				{leDeleteLecture ? t('common.deletingEllipsis') : t('common.delete')}
 			</Button>
 		{/snippet}
 	</Modal>
 
 	<Modal
 		open={showLeaveWarning}
-		title="Unsaved changes"
+		title={t('dashboard.unsavedChanges')}
 		onclose={() => (showLeaveWarning = false)}
 	>
 		<p class="text-[13px] text-ink-500">
-			You have unsaved changes to this lecture. If you leave now, your changes will be lost.
+			{t('dashboard.unsavedChangesLecture')}
 		</p>
 		{#snippet footer()}
-			<Button variant="ghost" onclick={() => (showLeaveWarning = false)}>Keep editing</Button>
-			<Button variant="danger-solid" onclick={confirmLeave}>Discard &amp; leave</Button>
+			<Button variant="ghost" onclick={() => (showLeaveWarning = false)}
+				>{t('dashboard.keepEditing')}</Button
+			>
+			<Button variant="danger-solid" onclick={confirmLeave}
+				>{t('dashboard.discardAndLeave')}</Button
+			>
 		{/snippet}
 	</Modal>
 </div>

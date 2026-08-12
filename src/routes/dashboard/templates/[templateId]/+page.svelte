@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
 	import TemplateEditor from '$lib/components/dashboard/schedule/TemplateEditor.svelte';
 	import { db } from '$lib/firebase';
 	import { doc, getDoc } from 'firebase/firestore';
 	import type { CourseTemplate } from '$lib/dashboard/types';
+	import { t } from '$lib/i18n';
 
 	const templateId = page.params.templateId ?? '';
 
@@ -19,7 +19,7 @@
 			try {
 				const snap = await getDoc(doc(db, 'courseTemplates', templateId));
 				if (!snap.exists()) {
-					error = 'Template not found.';
+					error = t('common.templateNotFoundClient');
 					return;
 				}
 				template = {
@@ -29,7 +29,7 @@
 				} as unknown as CourseTemplate;
 			} catch (err) {
 				console.error(err);
-				error = "Couldn't load the template. Try refreshing the page.";
+				error = t('common.somethingWentWrong');
 			} finally {
 				loading = false;
 			}
@@ -48,7 +48,7 @@
 			<div
 				class="h-8 w-8 animate-spin rounded-full border-4 border-ink-900/10 border-t-iris-600"
 			></div>
-			<span class="text-[13px] text-ink-500">Loading template…</span>
+			<span class="text-[13px] text-ink-500">{t('common.loading')}</span>
 		</div>
 	</div>
 {:else if error || !template}
@@ -56,9 +56,5 @@
 		<p class="text-[13.5px] text-ink-500">{error}</p>
 	</div>
 {:else}
-	<TemplateEditor
-		{template}
-		onClose={() => goto('/dashboard/templates')}
-		onSaved={() => goto('/dashboard/templates')}
-	/>
+	<TemplateEditor {template} />
 {/if}

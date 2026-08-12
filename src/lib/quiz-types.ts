@@ -1,4 +1,5 @@
 import type { Timestamp } from 'firebase/firestore';
+import { t } from '$lib/i18n';
 
 export type QuestionType = 'multiple-choice' | 'multiple-answer' | 'true-false' | 'short-answer';
 
@@ -43,9 +44,15 @@ export function getOptionLabel(options: Option[], id: string): string {
 	return options.find((o) => o.id === id)?.value ?? id;
 }
 
-export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
-	'multiple-choice': 'Multiple choice',
-	'multiple-answer': 'Multiple answer',
-	'true-false': 'True / False',
-	'short-answer': 'Short answer'
-};
+export function getQuestionTypeLabel(type: QuestionType): string {
+	switch (type) {
+		case 'multiple-choice':
+			return t('quiz.questionTypeMultipleChoice');
+		case 'multiple-answer':
+			return t('quiz.questionTypeMultipleAnswer');
+		case 'true-false':
+			return t('quiz.questionTypeTrueFalse');
+		case 'short-answer':
+			return t('quiz.questionTypeShortAnswer');
+	}
+}

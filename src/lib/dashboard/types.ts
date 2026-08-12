@@ -1,5 +1,7 @@
 export type MaterialType = 'youtube' | 'pdf' | 'link' | 'text' | 'file' | 'video' | 'quiz';
 
+import { t } from '$lib/i18n';
+
 export interface Material {
 	id: string;
 	type: MaterialType;
@@ -22,7 +24,9 @@ export interface ClassItem {
 	name: string;
 	code: string;
 	lectures?: Lecture[];
-	students?: [];
+	students?: string[];
+	classStart?: Date | null;
+	classEnd?: Date | null;
 }
 
 export type Selection =
@@ -42,12 +46,17 @@ export interface Activity {
 }
 
 export interface Student {
-	id: string;
-	rama_id: string;
-	name: string;
 	email: string;
-	role?: string;
-	year: string;
+	name: string;
+	role: string;
+	phone: string;
+	lineId?: string;
+	electiveStart: Date;
+	electiveEnd: Date;
+	rama_id?: string;
+	year?: string;
+	enroledClasses?: string[];
+	id: string; // authId
 }
 
 export interface RequiredAttachment {
@@ -117,12 +126,21 @@ export interface ScheduleEvent {
 	color?: string;
 }
 
-export const MATERIAL_LABELS: Record<MaterialType, string> = {
-	youtube: 'YouTube video',
-	pdf: 'PDF file',
-	link: 'Link',
-	text: 'Note',
-	file: 'Attached file',
-	video: 'Video',
-	quiz: 'Quiz',
-};
+export function getMaterialLabel(type: MaterialType): string {
+	switch (type) {
+		case 'youtube':
+			return t('materials.youtubeVideo');
+		case 'pdf':
+			return t('materials.pdfFile');
+		case 'link':
+			return t('materials.link');
+		case 'text':
+			return t('materials.note');
+		case 'file':
+			return t('materials.attachedFile');
+		case 'video':
+			return t('materials.video');
+		case 'quiz':
+			return t('materials.quiz');
+	}
+}

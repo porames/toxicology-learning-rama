@@ -2,6 +2,7 @@
 	import { ChevronRight, Folder, Clock } from '@lucide/svelte';
 	import type { ClassItem, Lecture } from '$lib/dashboard/types';
 	import formatTimeRange from '$lib/formatTimeRange';
+	import { t } from '$lib/i18n';
 	import moment from 'moment';
 
 	let {
@@ -35,7 +36,7 @@
 
 {#if classes.length === 0}
 	<div class="px-4 py-10 text-center">
-		<p class="text-[13.5px] text-ink-300">No classes yet.</p>
+		<p class="text-[13.5px] text-ink-300">{t('dashboard.noClassesYet')}</p>
 	</div>
 {:else}
 	<div class="space-y-0.5 py-2">
@@ -61,7 +62,7 @@
 						onToggle(cls.id, classExpanded);
 					}}
 					class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-ink-300 hover:text-ink-500"
-					aria-label={classExpanded ? 'Collapse' : 'Expand'}
+					aria-label={classExpanded ? t('dashboard.collapse') : t('dashboard.expand')}
 				>
 					<ChevronRight
 						class={`h-3.5 w-3.5 transition-transform ${classExpanded ? 'rotate-90' : ''}`}
@@ -85,9 +86,13 @@
 					<div class="absolute bottom-1 left-0 top-0 w-px bg-ink-900/10"></div>
 					<div class="pl-4">
 						{#if cls.lectures === undefined}
-							<p class="py-2 text-[12.5px] italic text-ink-300">Loading ...</p>
+							<p class="py-2 text-[12.5px] italic text-ink-300">
+								{t('common.loadingEllipsis')}
+							</p>
 						{:else if cls.lectures.length === 0}
-							<p class="py-2 text-[12.5px] italic text-ink-300">No lectures yet</p>
+							<p class="py-2 text-[12.5px] italic text-ink-300">
+								{t('dashboard.noLecturesYet')}
+							</p>
 						{:else}
 							{#each groupedLectures(cls.lectures) as [key, lecs]}
 								{@const firstLec = lecs[0]}
@@ -120,7 +125,7 @@
 										</span>
 										<span class="flex min-w-0 flex-1 items-baseline gap-2">
 											<span class="truncate text-[13.5px] font-medium"
-												>{lec.title || 'Untitled lecture'}</span
+												>{lec.title || t('common.untitledLecture')}</span
 											>
 											<span class="shrink-0 truncate text-[12px] text-ink-300"
 												>{formatTimeRange(lec.startTime, lec.endTime)}</span

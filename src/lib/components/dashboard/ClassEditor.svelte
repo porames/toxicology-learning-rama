@@ -1,17 +1,24 @@
 <script lang="ts">
-	import { type Lecture, type ClassItem, type ScheduleEvent } from '$lib/dashboard/types';
-	import { Button, Input, Modal } from '$lib/components/ui';
+	import {
+		type Lecture,
+		type ClassItem,
+		type ScheduleEvent,
+		type Assignment,
+		type RequiredAttachment,
+	} from '$lib/dashboard/types';
+	import { Button, Input, Modal, DateTimeInput } from '$lib/components/ui';
 	import {
 		Plus,
 		ChevronLeft,
 		ChevronRight,
 		CalendarCheck,
-		ClipboardList,
 		Trash2,
 		Library,
 	} from '@lucide/svelte';
 	import { db } from '$lib/firebase';
-	import { updateDoc, deleteDoc, doc } from 'firebase/firestore';
+	import { collection, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+	import { authState } from '$lib/auth.svelte';
+	import { functionsUrl } from '$lib/functionsUrl';
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { onMount, tick } from 'svelte';
 	import moment from 'moment';
@@ -19,7 +26,11 @@
 	import ScheduleCalendar from './schedule/ScheduleCalendar.svelte';
 	import ImportLecturesFromTemplate from './schedule/ImportLecturesFromTemplate.svelte';
 	import LectureEditor from './LectureEditor.svelte';
+	import AssignmentEditor from './AssignmentEditor.svelte';
+	import AssignmentCard from './AssignmentCard.svelte';
 	import { dashboardStore } from '$lib/dashboard/dashboardStore.svelte';
+	import { t, tn } from '$lib/i18n';
+	import { translateApiError } from '$lib/i18n/apiErrors';
 
 	let {
 		selectedClass,
@@ -27,14 +38,14 @@
 		onDeleteClass,
 		onEnrolStudents,
 		onViewAttendance,
-		onViewAssignments,
 	}: {
 		selectedClass: ClassItem;
-		onRename: (patch: Partial<Pick<ClassItem, 'name' | 'code'>>) => void;
+		onRename: (
+			patch: Partial<Pick<ClassItem, 'name' | 'code' | 'classStart' | 'classEnd'>>,
+		) => void;
 		onDeleteClass: (classId: string) => void;
 		onEnrolStudents: (classId: string) => void;
 		onViewAttendance: (classId: string) => void;
-		onViewAssignments: (classId: string) => void;
 	} = $props();
 
 	let ceSaving = $state(false);
@@ -42,7 +53,18 @@
 	let ceShowConfirm = $state(false);
 
 	let lastClassId = $state<string | null>(null);
-	let baseline = $state({ name: '', code: '' });
+	let baseline = $state({
+		name: '',
+		code: '',
+		classStart: null as Date | null,
+		classEnd: null as Date | null,
+	});
+	let draft = $state({
+		name: '',
+		code: '',
+		classStart: null as Date | null,
+		classEnd: null as Date | null,
+	});
 	let allowLeave = $state(false);
 	let showLeaveWarning = $state(false);
 	let pendingUrl = $state<string | null>(null);
@@ -55,13 +77,27 @@
 	let saveDisabled = $state(true);
 
 	const dirty = $derived(
-		baseline.name !== selectedClass.name || baseline.code !== selectedClass.code,
+		baseline.name !== draft.name ||
+			baseline.code !== draft.code ||
+			(baseline.classStart?.getTime() ?? 0) !== (draft.classStart?.getTime() ?? 0) ||
+			(baseline.classEnd?.getTime() ?? 0) !== (draft.classEnd?.getTime() ?? 0),
 	);
 
 	$effect(() => {
 		if (lastClassId !== selectedClass.id) {
 			lastClassId = selectedClass.id;
-			baseline = { name: selectedClass.name, code: selectedClass.code };
+			baseline = {
+				name: selectedClass.name,
+				code: selectedClass.code,
+				classStart: selectedClass.classStart ?? null,
+				classEnd: selectedClass.classEnd ?? null,
+			};
+			draft = {
+				name: selectedClass.name,
+				code: selectedClass.code,
+				classStart: selectedClass.classStart ?? null,
+				classEnd: selectedClass.classEnd ?? null,
+			};
 			allowLeave = false;
 		}
 	});
@@ -90,10 +126,23 @@
 		ceSaving = true;
 		try {
 			await updateDoc(doc(db, 'classes', selectedClass.id), {
-				name: selectedClass.name,
-				code: selectedClass.code,
+				name: draft.name,
+				code: draft.code,
+				classStart: draft.classStart ?? null,
+				classEnd: draft.classEnd ?? null,
 			});
-			baseline = { name: selectedClass.name, code: selectedClass.code };
+			baseline = {
+				name: draft.name,
+				code: draft.code,
+				classStart: draft.classStart ?? null,
+				classEnd: draft.classEnd ?? null,
+			};
+			onRename({
+				name: draft.name,
+				code: draft.code,
+				classStart: draft.classStart,
+				classEnd: draft.classEnd,
+			});
 		} catch (err) {
 			console.error(err);
 		} finally {
@@ -104,7 +153,12 @@
 	function confirmLeave() {
 		allowLeave = true;
 		showLeaveWarning = false;
-		onRename({ name: baseline.name, code: baseline.code });
+		onRename({
+			name: baseline.name,
+			code: baseline.code,
+			classStart: baseline.classStart,
+			classEnd: baseline.classEnd,
+		});
 		if (pendingUrl) {
 			goto(pendingUrl);
 		}
@@ -113,7 +167,21 @@
 	async function handleDeleteClass() {
 		ceDeleting = true;
 		try {
-			await deleteDoc(doc(db, 'classes', selectedClass.id));
+			const user = authState.user;
+			if (!user) throw new Error('Not logged in');
+			const token = await user.getIdToken();
+			const res = await fetch(functionsUrl('deleteClass'), {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({ classId: selectedClass.id }),
+			});
+			if (!res.ok) {
+				const data = await res.json().catch(() => ({}));
+				throw new Error(translateApiError(data.error));
+			}
 			onDeleteClass(selectedClass.id);
 		} catch (err) {
 			console.error(err);
@@ -141,6 +209,12 @@
 				endTime: l.endTime,
 				title: l.title || 'Untitled lecture',
 			})),
+	);
+
+	const sortedLectures = $derived(
+		[...(selectedClass.lectures ?? [])].sort(
+			(a, b) => a.startTime.getTime() - b.startTime.getTime(),
+		),
 	);
 
 	const lectureToEdit = $derived(
@@ -201,6 +275,17 @@
 		showAddLectureModal = true;
 	}
 
+	function handleScheduleCreate(event: { date: Date; startTime: Date; endTime: Date }) {
+		newLectureDraft = {
+			id: '',
+			title: '',
+			startTime: event.startTime,
+			endTime: event.endTime,
+			materials: [],
+		};
+		showAddLectureModal = true;
+	}
+
 	function handleImportedLectures(lectures: Lecture[]) {
 		for (const lec of lectures) {
 			dashboardStore.insertLecture(selectedClass.id, lec);
@@ -219,29 +304,122 @@
 			console.error(err);
 		}
 	}
+
+	let assignments = $state<Assignment[]>([]);
+	let assignmentsLoading = $state(true);
+	let assignmentsError = $state<string | null>(null);
+	let showAddAssignmentModal = $state(false);
+	let newAssignmentDraft = $state<Assignment | null>(null);
+	let confirmingDeleteAssignment = $state<Assignment | null>(null);
+	let deletingAssignment = $state(false);
+
+	async function loadAssignments() {
+		assignmentsLoading = true;
+		assignmentsError = null;
+		try {
+			const snap = await getDocs(collection(db, 'classes', selectedClass.id, 'assignments'));
+			const loaded = snap.docs.map((d) => ({
+				id: d.id,
+				...d.data(),
+				requiredAttachments: (d.data()?.requiredAttachments ?? []) as RequiredAttachment[],
+				assignedStudentIds: (d.data()?.assignedStudentIds ?? []) as string[],
+			})) as Assignment[];
+			loaded.sort(
+				(a, b) =>
+					(a.dueDate?.toDate?.()?.getTime() ?? 0) -
+					(b.dueDate?.toDate?.()?.getTime() ?? 0),
+			);
+			assignments = loaded;
+		} catch (err) {
+			console.error(err);
+			assignmentsError = t('classes.couldNotLoadAssignments');
+		} finally {
+			assignmentsLoading = false;
+		}
+	}
+
+	$effect(() => {
+		loadAssignments();
+	});
+
+	function handleAddAssignment() {
+		newAssignmentDraft = {
+			id: '',
+			title: '',
+			instructions: '',
+			opensAt: { toDate: () => new Date() },
+			dueDate: { toDate: () => new Date() },
+			requiredAttachments: [],
+			assignedStudentIds: [],
+			createdAt: null,
+		};
+		showAddAssignmentModal = true;
+	}
+
+	function handleAssignmentCreated(assignment: Assignment) {
+		assignments = [assignment, ...assignments].sort(
+			(a, b) =>
+				(a.dueDate?.toDate?.()?.getTime() ?? 0) - (b.dueDate?.toDate?.()?.getTime() ?? 0),
+		);
+		showAddAssignmentModal = false;
+		newAssignmentDraft = null;
+	}
+
+	async function handleDeleteAssignment() {
+		const target = confirmingDeleteAssignment;
+		if (!target) return;
+		deletingAssignment = true;
+		try {
+			await deleteDoc(doc(db, 'classes', selectedClass.id, 'assignments', target.id));
+			assignments = assignments.filter((a) => a.id !== target.id);
+			confirmingDeleteAssignment = null;
+		} catch (err) {
+			console.error(err);
+		} finally {
+			deletingAssignment = false;
+		}
+	}
 </script>
 
-<div class="mx-auto max-w-2xl w-full px-8 py-10">
-	<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">Class</p>
+<div class="mx-auto max-w-2xl w-full px-8">
+	<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">
+		{t('dashboard.class')}
+	</p>
 	<div class="mt-4 grid grid-cols-[1fr_auto] gap-3">
 		<Input
-			label="Class name"
-			value={selectedClass.name}
+			label={t('dashboard.className')}
+			value={draft.name}
 			oninput={(e) => {
-				const target = e.target as HTMLInputElement;
-				onRename({ name: target.value });
+				draft.name = (e.target as HTMLInputElement).value;
 			}}
 			placeholder="e.g. Introduction to Algorithms"
 		/>
 		<Input
-			label="Code"
-			value={selectedClass.code}
+			label={t('dashboard.code')}
+			value={draft.code}
 			oninput={(e) => {
-				const target = e.target as HTMLInputElement;
-				onRename({ code: target.value });
+				draft.code = (e.target as HTMLInputElement).value;
 			}}
 			placeholder="CS 201"
 			class="w-28"
+		/>
+	</div>
+	<div class="mt-4 grid grid-cols-2 gap-3">
+		<DateTimeInput
+			label={t('dashboard.classStart')}
+			mode="date"
+			value={draft.classStart ?? null}
+			onchange={(v) => {
+				draft.classStart = v;
+			}}
+		/>
+		<DateTimeInput
+			label={t('dashboard.classEnd')}
+			mode="date"
+			value={draft.classEnd ?? null}
+			onchange={(v) => {
+				draft.classEnd = v;
+			}}
 		/>
 	</div>
 	<Button variant="accent" disabled={ceSaving || !dirty} onclick={handleSaveClass} class="mt-4">
@@ -249,57 +427,96 @@
 			<div
 				class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
 			></div>
-			Saving…
+			{t('common.saving')}
 		{:else}
-			Save changes
+			{t('common.saveChanges')}
 		{/if}
 	</Button>
 
 	<div class="mt-8 flex items-center justify-between border-t border-ink-900/10 pt-6">
 		<div>
 			<p class="text-[13.5px] font-medium text-ink-900">
-				{selectedClass.students ? (selectedClass.students as unknown[]).length : 0} students enroled
-				in this class
+				{t('dashboard.studentsEnroled', {
+					count: selectedClass.students ? selectedClass.students.length : 0,
+				})}
 			</p>
-			<p class="text-[12.5px] text-ink-500">Manage students enrolment.</p>
+			<p class="text-[12.5px] text-ink-500">{t('dashboard.manageEnrolment')}</p>
 		</div>
 		<div class="flex shrink-0 items-center gap-2">
 			<Button variant="primary" onclick={() => onEnrolStudents(selectedClass.id)}>
 				<Plus class="h-3.5 w-3.5" />
-				Enrol students
+				{t('dashboard.enrolStudents')}
 			</Button>
 			<Button variant="primary" onclick={() => onViewAttendance(selectedClass.id)}>
 				<CalendarCheck class="h-3.5 w-3.5" />
-				Attendance
+				{t('dashboard.attendance')}
 			</Button>
 		</div>
 	</div>
-	<div class="mt-8 flex items-center justify-between border-t border-ink-900/10 pt-6">
-		<div>
-			<p class="text-[13.5px] font-medium text-ink-900">Manage class assignments</p>
+	<div class="mt-8 border-t border-ink-900/10 pt-6">
+		<div class="flex items-center justify-between">
+			<div>
+				<p class="text-[13.5px] font-medium text-ink-900">
+					{t('dashboard.classAssignments')}
+					<span class="ml-1.5 font-normal text-ink-300">({assignments.length})</span>
+				</p>
+				<p class="text-[12.5px] text-ink-500">
+					{t('dashboard.createAssignmentsForStudents')}
+				</p>
+			</div>
+			<Button variant="primary" onclick={handleAddAssignment}>
+				<Plus class="h-3.5 w-3.5" />
+				{t('dashboard.addAssignment')}
+			</Button>
 		</div>
-		<Button variant="primary" onclick={() => onViewAssignments(selectedClass.id)}>
-			<ClipboardList class="h-3.5 w-3.5" />
-			Assignments
-		</Button>
+
+		{#if assignmentsLoading}
+			<div class="mt-4 space-y-2">
+				{#each Array(2) as _}
+					<div class="h-20 w-full animate-pulse rounded-lg bg-ink-900/5"></div>
+				{/each}
+			</div>
+		{:else if assignmentsError}
+			<p class="mt-4 rounded-lg bg-red-50 px-3 py-2 text-[13px] text-red-600">
+				{assignmentsError}
+			</p>
+		{:else if assignments.length === 0}
+			<p
+				class="mt-4 rounded-lg border border-dashed border-ink-900/15 bg-ink-900/[0.015] px-4 py-8 text-center text-[13px] text-ink-500"
+			>
+				{t('dashboard.noAssignmentsYet')}
+			</p>
+		{:else}
+			<div class="mt-4 space-y-2">
+				{#each assignments as assignment (assignment.id)}
+					<AssignmentCard
+						classId={selectedClass.id}
+						{assignment}
+						onDelete={() => (confirmingDeleteAssignment = assignment)}
+					/>
+				{/each}
+			</div>
+		{/if}
 	</div>
 	<div class="mt-8 flex items-center justify-between border-t border-ink-900/10 pt-6">
 		<div>
 			<p class="text-[13.5px] font-medium text-ink-900">
-				{selectedClass.lectures?.length ?? 0} lecture{selectedClass.lectures?.length === 1
-					? ''
-					: 's'}
+				{tn(
+					selectedClass.lectures?.length ?? 0,
+					'dashboard.lecturesCount',
+					'dashboard.lecturesCountPlural',
+				)}
 			</p>
-			<p class="text-[12.5px] text-ink-500">Add a lecture to start scheduling materials.</p>
+			<p class="text-[12.5px] text-ink-500">{t('dashboard.addLectureHint')}</p>
 		</div>
 		<div class="flex shrink-0 items-center gap-2">
 			<Button variant="ghost" onclick={() => (showImportModal = true)}>
 				<Library class="h-3.5 w-3.5" />
-				Import from template
+				{t('dashboard.importFromTemplate')}
 			</Button>
 			<Button variant="primary" onclick={handleAddLectureLocal}>
 				<Plus class="h-3.5 w-3.5" />
-				Add lecture
+				{t('dashboard.addLecture')}
 			</Button>
 		</div>
 	</div>
@@ -308,7 +525,7 @@
 			<p
 				class="rounded-lg border border-dashed border-ink-900/15 bg-ink-900/[0.015] px-4 py-8 text-center text-[13px] text-ink-500"
 			>
-				No lectures yet. Add one to start scheduling.
+				{t('dashboard.noLecturesYetHint')}
 			</p>
 		{:else}
 			<div class="mb-3 flex items-center justify-between">
@@ -317,7 +534,7 @@
 						type="button"
 						onclick={() => (weekOffset = weekOffset - 1)}
 						class="flex h-7 w-7 items-center justify-center rounded-md text-ink-500 transition hover:bg-ink-900/5 hover:text-ink-900"
-						aria-label="Previous week"
+						aria-label={t('dashboard.previousWeek')}
 					>
 						<ChevronLeft class="h-3.5 w-3.5" />
 					</button>
@@ -330,7 +547,7 @@
 						type="button"
 						onclick={() => (weekOffset = weekOffset + 1)}
 						class="flex h-7 w-7 items-center justify-center rounded-md text-ink-500 transition hover:bg-ink-900/5 hover:text-ink-900"
-						aria-label="Next week"
+						aria-label={t('dashboard.nextWeek')}
 					>
 						<ChevronRight class="h-3.5 w-3.5" />
 					</button>
@@ -339,46 +556,95 @@
 			<ScheduleCalendar
 				{weekStart}
 				events={calendarEvents}
+				onCreate={handleScheduleCreate}
 				onEventClick={(event) => (editingLectureId = event.id)}
 				onEventChange={handleEventChange}
 			/>
+			<div class="mt-6">
+				<p class="mb-2 text-[12px] font-semibold uppercase tracking-wider text-ink-400">
+					{t('dashboard.allLectures')}
+				</p>
+				<ul
+					class="divide-y divide-ink-900/10 overflow-hidden rounded-xl border border-ink-900/10 bg-white shadow-soft"
+				>
+					{#each sortedLectures as lecture (lecture.id)}
+						<li>
+							<button
+								type="button"
+								onclick={() => (editingLectureId = lecture.id)}
+								class="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-ink-900/[0.03]"
+							>
+								<span class="min-w-0 flex-1">
+									<span
+										class="block truncate text-[14px] font-medium text-ink-900"
+									>
+										{lecture.title || t('common.untitledLecture')}
+									</span>
+									<span class="block text-[12px] text-ink-500">
+										{moment(lecture.startTime).format('ddd, MMM D')} · {moment(
+											lecture.startTime,
+										).format('HH:mm')}
+										– {moment(lecture.endTime).format('HH:mm')}
+									</span>
+								</span>
+								<span class="shrink-0 text-[12px] text-ink-400">
+									{tn(
+										lecture.materials?.length ?? 0,
+										'dashboard.materialsCount',
+										'dashboard.materialsCountPlural',
+									)}
+								</span>
+							</button>
+						</li>
+					{/each}
+				</ul>
+			</div>
 		{/if}
 	</div>
 
-	<Button variant="danger" onclick={() => (ceShowConfirm = true)} class="mt-8 mb-4 -mx-3.5">
-		Delete this class
+	<Button variant="danger" onclick={() => (ceShowConfirm = true)} class="my-4 -mx-3.5">
+		{t('dashboard.deleteThisClass')}
 	</Button>
 
-	<Modal open={ceShowConfirm} title="Delete class?" onclose={() => (ceShowConfirm = false)}>
+	<Modal
+		open={ceShowConfirm}
+		title={t('dashboard.deleteClassTitle')}
+		onclose={() => (ceShowConfirm = false)}
+	>
 		<p class="text-[13px] text-ink-500">
-			This will permanently delete "{selectedClass.name}" and all its lectures and materials.
-			This action cannot be undone.
+			{t('dashboard.deleteClassConfirm', { name: selectedClass.name })}
 		</p>
 		{#snippet footer()}
-			<Button variant="ghost" onclick={() => (ceShowConfirm = false)}>Cancel</Button>
+			<Button variant="ghost" onclick={() => (ceShowConfirm = false)}
+				>{t('common.cancel')}</Button
+			>
 			<Button variant="danger-solid" disabled={ceDeleting} onclick={handleDeleteClass}>
-				{ceDeleting ? 'Deleting...' : 'Delete'}
+				{ceDeleting ? t('common.deletingEllipsis') : t('common.delete')}
 			</Button>
 		{/snippet}
 	</Modal>
 
 	<Modal
 		open={showLeaveWarning}
-		title="Unsaved changes"
+		title={t('dashboard.unsavedChanges')}
 		onclose={() => (showLeaveWarning = false)}
 	>
 		<p class="text-[13px] text-ink-500">
-			You have unsaved changes to this class. If you leave now, your changes will be lost.
+			{t('dashboard.unsavedChangesClass')}
 		</p>
 		{#snippet footer()}
-			<Button variant="ghost" onclick={() => (showLeaveWarning = false)}>Keep editing</Button>
-			<Button variant="danger-solid" onclick={confirmLeave}>Discard &amp; leave</Button>
+			<Button variant="ghost" onclick={() => (showLeaveWarning = false)}
+				>{t('dashboard.keepEditing')}</Button
+			>
+			<Button variant="danger-solid" onclick={confirmLeave}
+				>{t('dashboard.discardAndLeave')}</Button
+			>
 		{/snippet}
 	</Modal>
 
 	<Modal
 		open={showAddLectureModal}
-		title="Create a new lecture"
+		title={t('dashboard.createNewLecture')}
 		onclose={handleCloseNewLecture}
 		class="max-w-2xl"
 		contentClass="max-h-[75vh] overflow-y-auto px-4 py-3"
@@ -407,14 +673,14 @@
 			<div class="flex w-full items-center justify-between">
 				<Button variant="danger" onclick={() => (deleteRequested = true)}>
 					<Trash2 class="h-4 w-4" />
-					Delete
+					{t('common.delete')}
 				</Button>
 				<Button
 					variant="accent"
 					disabled={saveDisabled}
 					onclick={() => (saveRequested = true)}
 				>
-					Create
+					{t('common.create')}
 				</Button>
 			</div>
 		{/snippet}
@@ -422,22 +688,24 @@
 
 	<Modal
 		open={showDiscardConfirm}
-		title="Unsaved changes"
+		title={t('dashboard.unsavedChanges')}
 		onclose={() => (showDiscardConfirm = false)}
 	>
 		<p class="text-[13px] text-ink-500">
-			You have unsaved changes to this lecture. If you close now, your changes will be lost.
+			{t('dashboard.unsavedChangesLecture')}
 		</p>
 		{#snippet footer()}
 			<Button variant="ghost" onclick={() => (showDiscardConfirm = false)}
-				>Keep editing</Button
+				>{t('dashboard.keepEditing')}</Button
 			>
-			<Button variant="danger-solid" onclick={confirmDiscard}>Discard &amp; close</Button>
+			<Button variant="danger-solid" onclick={confirmDiscard}
+				>{t('dashboard.discardAndClose')}</Button
+			>
 		{/snippet}
 	</Modal>
 	<Modal
 		open={editingLectureId !== null}
-		title="Edit lecture"
+		title={t('dashboard.editLecture')}
 		onclose={handleRequestCloseLecture}
 		class="max-w-2xl"
 		contentClass="max-h-[75vh] overflow-y-auto px-4 py-3"
@@ -458,38 +726,89 @@
 				onBackToClasses={() => {}}
 				onBackToClass={() => {}}
 				onDeleteLecture={handleDeleteLectureModal}
+				onSaved={() => (editingLectureId = null)}
 			/>
 		{/if}
 		{#snippet footer()}
 			<div class="flex w-full items-center justify-between">
 				<Button variant="danger" onclick={() => (deleteRequested = true)}>
 					<Trash2 class="h-4 w-4" />
-					Delete
+					{t('common.delete')}
 				</Button>
 				<Button
 					variant="accent"
 					disabled={saveDisabled}
 					onclick={() => (saveRequested = true)}
 				>
-					Save changes
+					{t('common.saveChanges')}
 				</Button>
 			</div>
 		{/snippet}
 	</Modal>
 
 	<Modal
-		open={showDiscardConfirm}
-		title="Unsaved changes"
-		onclose={() => (showDiscardConfirm = false)}
+		open={showAddAssignmentModal}
+		title={t('dashboard.createNewAssignment')}
+		onclose={() => {
+			showAddAssignmentModal = false;
+			newAssignmentDraft = null;
+		}}
+		class="max-w-2xl"
+		contentClass="max-h-[75vh] overflow-y-auto px-4 py-3"
+	>
+		{#if newAssignmentDraft}
+			<AssignmentEditor
+				classId={selectedClass.id}
+				assignment={newAssignmentDraft}
+				embedded
+				isNew
+				onDeleted={() => {}}
+				bind:saveRequested
+				bind:saveDisabled
+				onCreated={handleAssignmentCreated}
+			/>
+		{/if}
+		{#snippet footer()}
+			<div class="flex w-full items-center justify-between">
+				<Button
+					variant="ghost"
+					onclick={() => {
+						showAddAssignmentModal = false;
+						newAssignmentDraft = null;
+					}}
+				>
+					{t('common.cancel')}
+				</Button>
+				<Button
+					variant="accent"
+					disabled={saveDisabled}
+					onclick={() => (saveRequested = true)}
+				>
+					{t('dashboard.createAssignment')}
+				</Button>
+			</div>
+		{/snippet}
+	</Modal>
+
+	<Modal
+		open={confirmingDeleteAssignment !== null}
+		title={t('dashboard.deleteAssignmentTitle')}
+		onclose={() => (confirmingDeleteAssignment = null)}
 	>
 		<p class="text-[13px] text-ink-500">
-			You have unsaved changes to this lecture. If you close now, your changes will be lost.
+			{t('dashboard.deleteAssignmentConfirm')}
 		</p>
 		{#snippet footer()}
-			<Button variant="ghost" onclick={() => (showDiscardConfirm = false)}
-				>Keep editing</Button
+			<Button variant="ghost" onclick={() => (confirmingDeleteAssignment = null)}>
+				{t('common.cancel')}
+			</Button>
+			<Button
+				variant="danger-solid"
+				disabled={deletingAssignment}
+				onclick={handleDeleteAssignment}
 			>
-			<Button variant="danger-solid" onclick={confirmDiscard}>Discard &amp; close</Button>
+				{deletingAssignment ? t('common.deletingEllipsis') : t('common.delete')}
+			</Button>
 		{/snippet}
 	</Modal>
 </div>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Upload, File as FileIcon } from '@lucide/svelte';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		accept?: string;
@@ -12,7 +13,7 @@
 
 	let {
 		accept,
-		label = 'Choose file',
+		label = t('assignmentDetail.chooseFile'),
 		disabled = false,
 		multiple = false,
 		onupload,
@@ -72,7 +73,7 @@
 	>
 		{#if dragging}
 			<FileIcon class="h-4 w-4 shrink-0" />
-			<span>Drop files here</span>
+			<span>{t('assignmentDetail.dropFilesHere')}</span>
 		{:else}
 			<Upload class="h-4 w-4 shrink-0" />
 			<span>{label}</span>

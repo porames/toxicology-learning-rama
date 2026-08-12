@@ -11,6 +11,7 @@
 		Users,
 	} from '@lucide/svelte';
 	import type { Lecture } from '$lib/dashboard/types';
+	import { t, tn } from '$lib/i18n';
 	import moment from 'moment';
 
 	let { classId }: { classId: string } = $props();
@@ -53,7 +54,7 @@
 		try {
 			const classSnap = await getDoc(doc(db, 'classes', classId));
 			if (!classSnap.exists()) {
-				error = 'Class not found.';
+				error = t('common.classNotFound');
 				return;
 			}
 			console.log(classSnap.data());
@@ -62,7 +63,7 @@
 			const lecSnap = await getDocs(collection(db, 'classes', classId, 'lectures'));
 			lectures = lecSnap.docs.map((d) => ({
 				id: d.id,
-				title: d.data()?.title ?? 'Untitled lecture',
+				title: d.data()?.title ?? t('common.untitledLecture'),
 				startTime: d.data()?.startTime?.toDate?.() ?? new Date(),
 				endTime: d.data()?.endTime?.toDate?.() ?? new Date(),
 				materials: [],
@@ -104,7 +105,7 @@
 			students = rows;
 		} catch (err) {
 			console.error(err);
-			error = "Couldn't load attendance. Try refreshing the page.";
+			error = t('common.somethingWentWrong');
 		} finally {
 			loading = false;
 		}
@@ -128,13 +129,16 @@
 		const fmt = (d?: Date | null) => (d ? moment(d).format('YYYY-MM-DD HH:mm:ss') : '');
 		const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
 		const header = [
-			'Student ID',
-			'Full Name',
-			'Email',
-			'Checked In',
-			'Completed',
-			'Total Lectures',
-			...lectures.flatMap((l) => [`Check-in: ${l.title}`, `Completed: ${l.title}`]),
+			t('export.studentId'),
+			t('export.fullName'),
+			t('export.email'),
+			t('export.checkedIn'),
+			t('export.completed'),
+			t('export.totalLectures'),
+			...lectures.flatMap((l) => [
+				t('export.checkInFor', { title: l.title }),
+				t('export.completedFor', { title: l.title }),
+			]),
 		];
 		const lines = students.map((s) =>
 			[
@@ -166,15 +170,17 @@
 <div class="mx-auto w-xl px-8 py-10">
 	<div class="flex items-center justify-between gap-3">
 		<div>
-			<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">Attendance</p>
+			<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">
+				{t('dashboard.attendance')}
+			</p>
 			<h1 class="mt-1 flex items-center gap-2 text-[18px] font-semibold text-ink-900">
 				<CalendarCheck class="h-4 w-4 text-emerald-500" />
-				Student attendance
+				{t('students.enrolledStudents')}
 			</h1>
 			<p class="mt-1 text-[13px] text-ink-500">
 				{loading
-					? 'Loading…'
-					: `${students.length} student${students.length === 1 ? '' : 's'} · ${lectures.length} lecture${lectures.length === 1 ? '' : 's'}`}
+					? t('common.loading')
+					: `${tn(students.length, 'dashboard.studentsCount', 'dashboard.studentsCountPlural')} · ${tn(lectures.length, 'dashboard.lecturesCount', 'dashboard.lecturesCountPlural')}`}
 			</p>
 		</div>
 		<button
@@ -183,7 +189,7 @@
 			class="flex shrink-0 items-center gap-1.5 rounded-lg border border-ink-900/10 bg-white px-3.5 py-2 text-[13px] font-semibold text-ink-700 shadow-soft transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
 		>
 			<Download class="h-3.5 w-3.5" />
-			Export CSV
+			{t('quiz.exportCsv')}
 		</button>
 	</div>
 
@@ -192,7 +198,7 @@
 			<div
 				class="h-5 w-5 animate-spin rounded-full border-2 border-ink-900/10 border-t-iris-600"
 			></div>
-			<span class="text-[13px] text-ink-500">Loading attendance…</span>
+			<span class="text-[13px] text-ink-500">{t('common.loading')}</span>
 		</div>
 	{:else if error}
 		<p class="py-10 text-center text-[13px] text-red-600">{error}</p>
@@ -203,9 +209,9 @@
 			>
 				<CalendarCheck class="h-6 w-6" />
 			</div>
-			<p class="mt-4 text-[15px] font-medium text-ink-900">No lectures yet</p>
+			<p class="mt-4 text-[15px] font-medium text-ink-900">{t('dashboard.noLecturesYet')}</p>
 			<p class="mt-1 max-w-xs text-[13.5px] text-ink-500">
-				Add lectures to this class to start tracking attendance.
+				{t('dashboard.addLectureHint')}
 			</p>
 		</div>
 	{:else if students.length === 0}
@@ -215,9 +221,11 @@
 			>
 				<Users class="h-6 w-6" />
 			</div>
-			<p class="mt-4 text-[15px] font-medium text-ink-900">No students enrolled</p>
+			<p class="mt-4 text-[15px] font-medium text-ink-900">
+				{t('students.noStudentsEnrolledYet')}
+			</p>
 			<p class="mt-1 max-w-xs text-[13.5px] text-ink-500">
-				Enrol students into this class to start tracking their attendance.
+				{t('students.importStudentsHint')}
 			</p>
 		</div>
 	{:else}
@@ -277,7 +285,7 @@
 												<p
 													class="truncate text-[13px] font-medium text-ink-900"
 												>
-													{lec.title || 'Untitled lecture'}
+													{lec.title || t('common.untitledLecture')}
 												</p>
 												<p class="text-[12px] text-ink-400">
 													{moment(lec.startTime).format(
@@ -296,7 +304,7 @@
 													<ClockCheck class="h-3.5 w-3.5" />
 													{act?.checkedInAt
 														? fmtTime(act.checkedInAt)
-														: 'Not checked in'}
+														: t('common.notCheckedIn')}
 												</span>
 												<span
 													class="inline-flex items-center gap-1 font-medium {act?.completedAt
@@ -306,7 +314,7 @@
 													<ListChecks class="h-3.5 w-3.5" />
 													{act?.completedAt
 														? fmtTime(act.completedAt)
-														: 'Not completed'}
+														: t('common.notCompleted')}
 												</span>
 											</div>
 										</li>

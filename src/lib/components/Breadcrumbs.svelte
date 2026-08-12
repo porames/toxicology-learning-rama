@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ChevronRight } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
+	import { t } from '$lib/i18n';
 
 	interface Crumb {
 		label: string;
@@ -17,7 +18,7 @@
 
 <nav
 	class="flex min-w-0 items-center gap-1 overflow-x-auto whitespace-nowrap scrollbar-none ml-2"
-	aria-label="Breadcrumbs"
+	aria-label={t('nav.breadcrumbs')}
 >
 	{#each crumbs as crumb, i}
 		{#if i > 0}

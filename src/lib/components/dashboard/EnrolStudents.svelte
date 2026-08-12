@@ -12,6 +12,9 @@
 		GraduationCap,
 	} from '@lucide/svelte';
 
+	import { t, tn } from '$lib/i18n';
+	import { translateApiError } from '$lib/i18n/apiErrors';
+
 	let { classId }: { classId: string } = $props();
 
 	let students: Student[] | undefined = $state(undefined);
@@ -40,13 +43,13 @@
 
 			if (!res.ok) {
 				const body = await res.json().catch(() => null);
-				throw new Error(body?.message || 'Failed to load students');
+				throw new Error(translateApiError(body?.message));
 			}
 
 			const data = await res.json();
 			students = data.students;
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Something went wrong';
+			error = err instanceof Error ? err.message : t('common.somethingWentWrong');
 			students = [];
 		} finally {
 			studentsLoading = false;
@@ -59,7 +62,7 @@
 
 	async function addStudents() {
 		if (selectedStudents.length === 0) {
-			error = 'Select at least one student first.';
+			error = t('students.selectAtLeastOne');
 			return;
 		}
 
@@ -86,14 +89,14 @@
 
 			if (!res.ok) {
 				const body = await res.json().catch(() => null);
-				throw new Error(body?.message || 'Failed to enrol students');
+				throw new Error(translateApiError(body?.message));
 			}
 
-			success = `Enrolled ${selectedStudents.length} student(s) successfully.`;
+			success = t('students.enrolledSuccessfully', { count: selectedStudents.length });
 			selectedStudents = [];
 			await loadStudents();
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Something went wrong';
+			error = err instanceof Error ? err.message : t('common.somethingWentWrong');
 		} finally {
 			enrolling = false;
 		}
@@ -116,11 +119,17 @@
 					<Users size={16} />
 				</div>
 				<div>
-					<h1 class="text-sm font-semibold text-gray-900">Enrolled students</h1>
+					<h1 class="text-sm font-semibold text-gray-900">
+						{t('students.enrolledStudents')}
+					</h1>
 					<p class="text-xs text-gray-500">
 						{students === undefined || studentsLoading
-							? 'Loading roster…'
-							: `${students.length} student${students.length === 1 ? '' : 's'} enrolled`}
+							? t('students.loadingRoster')
+							: tn(
+									students.length,
+									'students.enrolledCount',
+									'students.enrolledCountPlural',
+								)}
 					</p>
 				</div>
 			</div>
@@ -132,11 +141,11 @@
 					<tr
 						class="border-b border-gray-100 bg-gray-50 text-[11px] uppercase tracking-wide text-gray-500"
 					>
-						<th class="px-5 py-2.5 text-left font-medium">Student ID</th>
-						<th class="px-5 py-2.5 text-left font-medium">Full name</th>
-						<th class="px-5 py-2.5 text-left font-medium">Email</th>
-						<th class="px-5 py-2.5 text-left font-medium">Role</th>
-						<th class="px-5 py-2.5 text-left font-medium">Year</th>
+						<th class="px-5 py-2.5 text-left font-medium">{t('students.studentId')}</th>
+						<th class="px-5 py-2.5 text-left font-medium">{t('students.fullName')}</th>
+						<th class="px-5 py-2.5 text-left font-medium">{t('students.email')}</th>
+						<th class="px-5 py-2.5 text-left font-medium">{t('students.role')}</th>
+						<th class="px-5 py-2.5 text-left font-medium">{t('students.year')}</th>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-gray-100">
@@ -158,10 +167,10 @@
 								>
 									<GraduationCap size={22} class="text-gray-300" />
 									<p class="text-sm font-medium text-gray-600">
-										No students enrolled yet
+										{t('students.noStudentsEnrolledYet')}
 									</p>
 									<p class="text-xs text-gray-400">
-										Import students from the list below to get started.
+										{t('students.importStudentsHint')}
 									</p>
 								</div>
 							</td>
@@ -210,50 +219,17 @@
 				<UserPlus size={16} />
 			</div>
 			<div>
-				<h1 class="text-sm font-semibold text-gray-900">Import from student list</h1>
+				<h1 class="text-sm font-semibold text-gray-900">
+					{t('students.importFromStudentList')}
+				</h1>
 				<p class="text-xs text-gray-500">
-					Select students below, then enrol them into this class.
+					{t('students.selectStudentsHint')}
 				</p>
 			</div>
 		</div>
 
 		<div class="px-5 py-4">
-			<ManageStudents enableSelection={true} setSelectedStudents={handleSelectedStudents} />
-
-			<div class="mt-5 flex flex-wrap items-center gap-3 border-t border-gray-100 pt-4">
-				<button
-					type="button"
-					onclick={() => addStudents()}
-					disabled={enrolling || selectedStudents.length === 0}
-					class="inline-flex items-center gap-2 rounded-md bg-gradient-to-b from-blue-500 to-blue-700 px-4 py-2 text-xs font-semibold text-white shadow-button-sky transition-colors hover:from-blue-500 hover:to-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
-				>
-					{#if enrolling}
-						<Loader2 size={14} class="animate-spin" />
-					{/if}
-					{enrolling
-						? 'Enrolling…'
-						: selectedStudents.length > 0
-							? `Enrol ${selectedStudents.length} selected student${selectedStudents.length === 1 ? '' : 's'}`
-							: 'Enrol selected students'}
-				</button>
-
-				{#if error}
-					<div
-						class="flex items-center gap-1.5 rounded-md bg-red-50 px-2.5 py-1.5 text-xs text-red-600"
-					>
-						<AlertCircle size={14} class="shrink-0" />
-						<span>{error}</span>
-					</div>
-				{/if}
-				{#if success}
-					<div
-						class="flex items-center gap-1.5 rounded-md bg-green-50 px-2.5 py-1.5 text-xs text-green-700"
-					>
-						<CheckCircle2 size={14} class="shrink-0" />
-						<span>{success}</span>
-					</div>
-				{/if}
-			</div>
+			<ManageStudents showImportedStudents={false} />
 		</div>
 	</section>
 </div>

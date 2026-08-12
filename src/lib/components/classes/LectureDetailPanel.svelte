@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { ChevronLeft, ChevronRight, LoaderCircle, ClockCheck, ListChecks } from '@lucide/svelte';
+	import {
+		ChevronLeft,
+		ChevronRight,
+		LoaderCircle,
+		ClockCheck,
+		ListChecks,
+	} from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import moment from 'moment';
 	import formatTimeRange from '$lib/formatTimeRange';
@@ -8,6 +14,7 @@
 	import MaterialRenderer from '$lib/components/materials/MaterialRenderer.svelte';
 	import QuizResultModal from './QuizResultModal.svelte';
 	import QuizTaker from '$lib/components/quiz/QuizTaker.svelte';
+	import { t } from '$lib/i18n';
 
 	interface QuizAttempt {
 		passed: boolean;
@@ -79,17 +86,21 @@
 				class="mb-4 flex items-center gap-1.5 text-[13.5px] font-medium text-ink-500 hover:text-ink-900 transition"
 			>
 				<ChevronLeft size={16} />
-				Back to materials
+				{t('classes.backToMaterials')}
 			</button>
-			<QuizTaker quizId={displayQuiz} lectureId={selectedLecture?.id} oncomplete={onQuizComplete} />
+			<QuizTaker
+				quizId={displayQuiz}
+				lectureId={selectedLecture?.id}
+				oncomplete={onQuizComplete}
+			/>
 		</div>
 	{:else if quizResult}
 		<QuizResultModal {quizResult} onClose={onCloseQuizResult} {onViewAttempts} />
 	{:else if !selectedLecture}
 		<div class="flex h-full flex-col items-center justify-center gap-2 text-center">
-			<p class="text-sm font-medium text-ink-900">Select a lecture</p>
+			<p class="text-sm font-medium text-ink-900">{t('classes.selectLecture')}</p>
 			<p class="max-w-xs text-sm text-ink-900/50">
-				Pick a lecture from the list to see its materials.
+				{t('classes.pickLecture')}
 			</p>
 		</div>
 	{:else}
@@ -107,7 +118,7 @@
 						class="inline-flex items-center gap-1 rounded-full bg-iris-500/10 px-2 py-0.5 text-xs font-medium text-iris-600"
 					>
 						<ClockCheck size={12} />
-						Checked in · {moment(checkedInTime).format('hh:mm A')}
+						{t('classes.checkedIn')} · {moment(checkedInTime).format('hh:mm A')}
 					</span>
 				{/if}
 				{#if completedIds.has(selectedLecture.id)}
@@ -115,7 +126,9 @@
 						class="inline-flex items-center gap-1 rounded-full bg-teal-500/10 px-2 py-0.5 text-xs font-medium text-teal-600"
 					>
 						<ListChecks size={12} />
-						Completed{completedTime ? ` · ${moment(completedTime).format('hh:mm A')}` : ''}
+						{t('classes.completed')}{completedTime
+							? ` · ${moment(completedTime).format('hh:mm A')}`
+							: ''}
 					</span>
 				{/if}
 			</div>
@@ -131,7 +144,7 @@
 					<p class="text-xs text-red-600">{materialsError}</p>
 				{:else if selectedLecture.materials.length === 0}
 					<p class="text-xs text-ink-900/40">
-						No materials uploaded for this lecture yet.
+						{t('classes.noMaterialsForLecture')}
 					</p>
 				{:else}
 					<ul class="space-y-1.5">
@@ -164,17 +177,17 @@
 		>
 			{#if completingLec}
 				<LoaderCircle class="h-4 w-4 animate-spin" />
-				Marking...
+				{t('classes.marking')}
 			{:else if selectedLecture && completedIds.has(selectedLecture.id)}
 				<ListChecks class="h-4 w-4" />
-				Completed
+				{t('classes.completed')}
 			{:else}
 				<ListChecks class="h-4 w-4" />
-				Mark as completed
+				{t('classes.markAsCompleted')}
 			{/if}
 		</button>
 		{#if selectedLecture && !allRequiredPassed}
-			<p class="mt-1.5 text-xs text-red-500">Please complete the required posttest first</p>
+			<p class="mt-1.5 text-xs text-red-500">{t('classes.pleaseCompletePosttest')}</p>
 		{/if}
 	{/if}
 </div>

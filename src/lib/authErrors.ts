@@ -1,24 +1,26 @@
+import { t } from '$lib/i18n';
+
 export function getAuthErrorMessage(code: string): string {
 	switch (code) {
-		case "auth/invalid-email":
-			return "That email address doesn't look right.";
-		case "auth/user-disabled":
-			return "This account has been disabled. Contact support for help.";
-		case "auth/user-not-found":
-		case "auth/wrong-password":
-		case "auth/invalid-credential":
-			return "Incorrect email or password.";
-		case "auth/email-already-in-use":
-			return "An account already exists with this email.";
-		case "auth/weak-password":
-			return "Choose a password with at least 6 characters.";
-		case "auth/too-many-requests":
-			return "Too many attempts. Wait a moment and try again.";
-		case "auth/popup-closed-by-user":
-			return "Sign-in was cancelled before it finished.";
-		case "auth/network-request-failed":
-			return "Network error. Check your connection and try again.";
+		case 'auth/invalid-email':
+			return t('auth.invalidEmail');
+		case 'auth/user-disabled':
+			return t('auth.userDisabled');
+		case 'auth/user-not-found':
+		case 'auth/wrong-password':
+		case 'auth/invalid-credential':
+			return t('auth.invalidCredential');
+		case 'auth/email-already-in-use':
+			return t('auth.emailAlreadyInUse');
+		case 'auth/weak-password':
+			return t('auth.weakPassword');
+		case 'auth/too-many-requests':
+			return t('auth.tooManyRequests');
+		case 'auth/popup-closed-by-user':
+			return t('auth.popupClosedByUser');
+		case 'auth/network-request-failed':
+			return t('auth.networkRequestFailed');
 		default:
-			return "Something went wrong. Please try again.";
+			return t('common.somethingWentWrong');
 	}
 }

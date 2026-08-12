@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { visibleNavItems, isNavActive } from '$lib/navigation';
+	import { t, type MessageKeys } from '$lib/i18n';
 
 	let { isAdmin = false }: { isAdmin?: boolean } = $props();
 
@@ -32,7 +33,7 @@
 				<item.icon class="h-4 w-4" />
 			</span>
 			<span class="truncate text-[13.5px] font-medium">
-				{item.label}
+				{t(item.labelKey as MessageKeys)}
 			</span>
 		</div>
 	{/each}

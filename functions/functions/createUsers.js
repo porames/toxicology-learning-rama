@@ -3,7 +3,7 @@ import {admin, db} from "../lib/admin.js";
 import {handleCors} from "../lib/cors.js";
 import {verifyAdmin} from "../lib/auth.js";
 
-const BASE_REQUIRED = ["email", "name", "role", "rama_id"];
+const BASE_REQUIRED = ["email", "name", "role"];
 
 export const createUsers = onRequest(async (req, res) => {
   try {
@@ -31,51 +31,50 @@ export const createUsers = onRequest(async (req, res) => {
         return;
       }
 
-      const ramaKey = String(s.rama_id).toLowerCase();
-      const emailKey = String(s.email).toLowerCase();
-
-      if (seenRama.has(ramaKey)) {
-        res.status(400).json({
-          error: `Duplicate RAMA ID "${s.rama_id}" appears more than once in this upload.`,
-        });
-        return;
+      if (s.rama_id) {
+        const ramaKey = String(s.rama_id).toLowerCase();
+        if (seenRama.has(ramaKey)) {
+          res.status(400).json({
+            error: `Duplicate RAMA ID "${s.rama_id}" appears more than once in this upload.`,
+          });
+          return;
+        }
+        seenRama.set(ramaKey, s.rama_id);
       }
+      const emailKey = String(s.email).toLowerCase();
       if (seenEmail.has(emailKey)) {
         res.status(400).json({
           error: `Duplicate email "${s.email}" appears more than once in this upload.`,
         });
         return;
       }
-      seenRama.set(ramaKey, s.rama_id);
       seenEmail.set(emailKey, s.email);
       cleaned.push(s);
     }
 
     // Reject entries that collide with existing users (exact match, case-sensitive).
-    const uniqueRamaIds = [...new Set(cleaned.map((s) => String(s.rama_id)))];
+    const uniqueRamaIds = [...new Set(cleaned.filter((s) => s.rama_id).map((s) => String(s.rama_id)))];
     const uniqueEmails = [...new Set(cleaned.map((s) => String(s.email)))];
     const foundRama = new Set();
     const foundEmail = new Set();
     const CHUNK = 30;
-    for (let i = 0; i < Math.max(uniqueRamaIds.length, uniqueEmails.length); i += CHUNK) {
-      const snap = await db
-          .collection("users")
-          .where(
-              admin.firestore.Filter.or(
-                  admin.firestore.Filter.where("rama_id", "in", uniqueRamaIds.slice(i, i + CHUNK)),
-                  admin.firestore.Filter.where("email", "in", uniqueEmails.slice(i, i + CHUNK)),
-              ),
-          )
-          .get();
-      snap.forEach((doc) => {
-        const data = doc.data();
-        if (data.rama_id) foundRama.add(String(data.rama_id));
-        if (data.email) foundEmail.add(String(data.email));
-      });
-    }
+    const queryCollisions = async (ids, field, found) => {
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const snap = await db
+            .collection("users")
+            .where(field, "in", ids.slice(i, i + CHUNK))
+            .get();
+        snap.forEach((doc) => {
+          const data = doc.data();
+          if (data[field]) found.add(String(data[field]));
+        });
+      }
+    };
+    await queryCollisions(uniqueRamaIds, "rama_id", foundRama);
+    await queryCollisions(uniqueEmails, "email", foundEmail);
 
     for (const s of cleaned) {
-      if (foundRama.has(String(s.rama_id))) {
+      if (s.rama_id && foundRama.has(String(s.rama_id))) {
         res.status(400).json({
           error: `RAMA ID "${s.rama_id}" is already in use by an existing user.`,
         });
@@ -99,7 +98,7 @@ export const createUsers = onRequest(async (req, res) => {
         name: s.name,
         year: s.year,
         role: s.role,
-        rama_id: s.rama_id,
+        ...(s.rama_id && {rama_id: s.rama_id}),
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         signedUp: false,
       });

@@ -9,6 +9,7 @@
 	import type { Material } from '$lib/dashboard/types';
 	import type { MaterialState } from '$lib/dashboard/materialState';
 	import VideoPicker from './VideoPicker.svelte';
+	import { t } from '$lib/i18n';
 
 	let {
 		material,
@@ -117,7 +118,7 @@
 				<div class="overflow-hidden rounded-lg border border-ink-900/8">
 					<div class="aspect-video">
 						<iframe
-							title="Video player"
+							title={t('materials.videoPlayer')}
 							src={mstate.embedUrl}
 							class="h-full w-full"
 							allow="autoplay; encrypted-media; picture-in-picture"
@@ -130,12 +131,12 @@
 					<div
 						class="h-4 w-4 animate-spin rounded-full border-2 border-ink-900/10 border-t-iris-600"
 					></div>
-					Loading video…
+					{t('materials.loadingVideo')}
 				</div>
 			{/if}
 			<div class="flex items-center gap-2 text-[12.5px] text-emerald-600">
 				<Check class="h-4 w-4" />
-				Video uploaded
+				{t('materials.videoUploaded')}
 				<button
 					type="button"
 					onclick={() => {
@@ -145,7 +146,7 @@
 					}}
 					class="text-[12px] text-ink-400 hover:text-red-500 underline ml-2"
 				>
-					Remove
+					{t('materials.remove')}
 				</button>
 			</div>
 		</div>
@@ -162,7 +163,7 @@
 						: 'bg-ink-900/5 text-ink-700 hover:bg-ink-900/10'
 				}`}
 			>
-				YouTube
+				{t('materials.youtube')}
 			</button>
 			<button
 				type="button"
@@ -175,7 +176,7 @@
 						: 'bg-ink-900/5 text-ink-700 hover:bg-ink-900/10'
 				}`}
 			>
-				Upload
+				{t('materials.upload')}
 			</button>
 		</div>
 
@@ -189,14 +190,14 @@
 					}}
 					placeholder="https://youtube.com/watch?v=..."
 					error={material.value && !Utils.getYoutubeVideoId(material.value)
-						? 'Please enter a valid YouTube link'
+						? t('materials.validYouTubeLink')
 						: ''}
 				/>
 				{#if Utils.getYoutubeVideoId(material.value)}
 					<div class="overflow-hidden rounded-lg border border-ink-900/8">
 						<div class="aspect-video">
 							<iframe
-								title="YouTube video"
+								title={t('materials.youtube')}
 								src={`https://www.youtube.com/embed/${Utils.getYoutubeVideoId(material.value)}`}
 								class="h-full w-full"
 								allow="autoplay; encrypted-media; picture-in-picture"
@@ -211,14 +212,16 @@
 				<FileUpload
 					accept="video/*"
 					disabled={mstate.uploading}
-					label={mstate.uploading ? `Uploading ${mstate.progress}%` : 'Choose video file'}
+					label={mstate.uploading
+						? t('assignmentDetail.uploadingPercent', { percent: mstate.progress })
+						: t('materials.chooseVideoFile')}
 					onupload={(file) => {
 						if (file instanceof File) handleVideoUpload(file);
 					}}
 				/>
 				<Button variant="ghost" onclick={() => (showVideoPicker = true)}>
 					<FolderOpen class="h-4 w-4" />
-					Choose uploaded video
+					{t('materials.chooseUploadedVideo')}
 				</Button>
 				{#if mstate.uploading}
 					<div class="flex-1 h-2 rounded-full bg-ink-900/10 overflow-hidden">

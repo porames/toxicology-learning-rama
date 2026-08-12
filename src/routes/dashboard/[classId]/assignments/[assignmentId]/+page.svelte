@@ -5,6 +5,7 @@
 	import { db } from '$lib/firebase';
 	import { doc, getDoc } from 'firebase/firestore';
 	import type { Assignment, RequiredAttachment } from '$lib/dashboard/types';
+	import { t } from '$lib/i18n';
 
 	const classId = $derived(page.params.classId ?? '');
 	const assignmentId = $derived(page.params.assignmentId ?? '');
@@ -20,18 +21,19 @@
 			try {
 				const snap = await getDoc(doc(db, 'classes', classId, 'assignments', assignmentId));
 				if (!snap.exists()) {
-					error = 'Assignment not found.';
+					error = t('common.assignmentNotFound');
 					return;
 				}
 				assignment = {
 					id: snap.id,
 					...snap.data(),
-					requiredAttachments: (snap.data()?.requiredAttachments ?? []) as RequiredAttachment[],
+					requiredAttachments: (snap.data()?.requiredAttachments ??
+						[]) as RequiredAttachment[],
 					assignedStudentIds: (snap.data()?.assignedStudentIds ?? []) as string[],
 				} as Assignment;
 			} catch (err) {
 				console.error(err);
-				error = "Couldn't load the assignment. Try refreshing the page.";
+				error = t('common.somethingWentWrong');
 			} finally {
 				loading = false;
 			}
@@ -50,7 +52,7 @@
 			<div
 				class="h-8 w-8 animate-spin rounded-full border-4 border-ink-900/10 border-t-iris-600"
 			></div>
-			<span class="text-[13px] text-ink-500">Loading assignment…</span>
+			<span class="text-[13px] text-ink-500">{t('common.loading')}</span>
 		</div>
 	</div>
 {:else if error || !assignment}
@@ -58,9 +60,5 @@
 		<p class="text-[13.5px] text-ink-500">{error}</p>
 	</div>
 {:else}
-	<AssignmentEditor
-		{classId}
-		{assignment}
-		onDeleted={() => goto(`/dashboard/${classId}/assignments`)}
-	/>
+	<AssignmentEditor {classId} {assignment} onDeleted={() => goto(`/dashboard/${classId}`)} />
 {/if}

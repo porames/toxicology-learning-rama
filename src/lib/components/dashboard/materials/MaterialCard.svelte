@@ -5,6 +5,7 @@
 	import type { Component, Snippet } from 'svelte';
 	import type { Material } from '$lib/dashboard/types';
 	import type { MaterialState } from '$lib/dashboard/materialState';
+	import { t } from '$lib/i18n';
 
 	let {
 		material,
@@ -48,7 +49,7 @@
 			type="button"
 			{@attach sortable.attachHandle}
 			class="mt-1 flex h-6 w-5 shrink-0 cursor-grab items-center justify-center rounded text-ink-300 transition active:cursor-grabbing hover:text-ink-500"
-			aria-label="Drag to reorder"
+			aria-label={t('materials.dragToReorder')}
 		>
 			<GripVertical class="h-4 w-4" />
 		</button>
@@ -66,7 +67,7 @@
 						const target = e.target as HTMLInputElement;
 						onTitleChange(target.value);
 					}}
-					placeholder="Material title"
+					placeholder={t('materials.materialTitle')}
 				/>
 
 				{@render children()}
@@ -76,7 +77,7 @@
 				type="button"
 				disabled={state.deleting}
 				onclick={onDelete}
-				aria-label="Delete material"
+				aria-label={t('materials.deleteMaterial')}
 				class="flex h-6 w-6 shrink-0 items-center justify-center rounded text-ink-300 transition hover:bg-red-50 hover:text-red-500 disabled:opacity-40"
 			>
 				{#if state.deleting}

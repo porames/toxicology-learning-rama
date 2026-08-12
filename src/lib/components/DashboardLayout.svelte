@@ -6,6 +6,7 @@
 	import UserInfoCard from '$lib/components/UserInfoCard.svelte';
 	import { authState } from '$lib/auth.svelte';
 	import { auth } from '$lib/firebase';
+	import { t } from '$lib/i18n';
 
 	import type { Snippet } from 'svelte';
 
@@ -28,9 +29,9 @@
 	);
 </script>
 
-<div class="flex h-screen flex-col bg-canvas">
+<div class="flex min-h-screen flex-col bg-canvas">
 	<header
-		class="flex h-16 shrink-0 items-center justify-between border-b border-ink-900/8 bg-white px-5"
+		class="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-ink-900/8 bg-white px-5"
 	>
 		<div class="flex items-center gap-1 sm:gap-2.5 min-w-0">
 			<button type="button" onclick={() => (showMenu = !showMenu)} class="md:hidden shrink-0">
@@ -46,7 +47,7 @@
 			{/if}
 		</div>
 	</header>
-	<div class="flex min-h-0 flex-1">
+	<div class="flex flex-1">
 		{#if showMenu}
 			<div
 				class="fixed inset-0 z-10 bg-black/30 md:hidden"
@@ -56,7 +57,7 @@
 			></div>
 		{/if}
 		<aside
-			class={`flex shrink-0 flex-col border-r border-ink-900/8 bg-white p-4 transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 z-20 md:relative md:z-auto md:translate-x-0 md:pointer-events-auto min-w-72 ${sidebarClass} ${
+			class={`flex shrink-0 flex-col border-r border-ink-900/8 bg-white p-4 transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 z-20 md:sticky md:top-16 md:h-[calc(100vh-4rem)] md:z-auto md:translate-x-0 md:pointer-events-auto min-w-72 ${sidebarClass} ${
 				showMenu
 					? 'translate-x-0 pointer-events-auto'
 					: '-translate-x-full pointer-events-none'
@@ -80,11 +81,11 @@
 					class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium text-ink-500 transition hover:bg-red-50 hover:text-red-600"
 				>
 					<LogOut class="h-4 w-4" />
-					Sign out
+					{t('nav.signOut')}
 				</button>
 			</div>
 		</aside>
-		<main class="flex min-h-0 flex-1 overflow-y-auto justify-center">
+		<main class="flex min-w-0 flex-1 justify-center pt-2 pb-8">
 			{@render children()}
 		</main>
 	</div>

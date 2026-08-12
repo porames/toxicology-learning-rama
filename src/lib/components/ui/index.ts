@@ -6,3 +6,5 @@ export { default as FileUpload } from './FileUpload.svelte';
 export { default as Modal } from './Modal.svelte';
 export { default as Tooltip } from './Tooltip.svelte';
 export { default as ImageContainer } from './ImageContainer.svelte';
+export { default as Table } from './Table.svelte';
+export { default as DateTimeInput } from './DateTimeInput.svelte';

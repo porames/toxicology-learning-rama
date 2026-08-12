@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import ClassEditor from '$lib/components/dashboard/ClassEditor.svelte';
 	import { dashboardStore } from '$lib/dashboard/dashboardStore.svelte';
+	import { t } from '$lib/i18n';
 
 	const classId = $derived(page.params.classId ?? '');
 	const selectedClass = $derived(dashboardStore.getClass(classId));
@@ -23,7 +24,7 @@
 			<div
 				class="h-8 w-8 animate-spin rounded-full border-4 border-ink-900/10 border-t-iris-600"
 			></div>
-			<span class="text-[13px] text-ink-500">Loading…</span>
+			<span class="text-[13px] text-ink-500">{t('common.loading')}</span>
 		</div>
 	</div>
 {:else if selectedClass.lectures === undefined}
@@ -32,7 +33,7 @@
 			<div
 				class="h-8 w-8 animate-spin rounded-full border-4 border-ink-900/10 border-t-iris-600"
 			></div>
-			<span class="text-[13px] text-ink-500">Loading lectures…</span>
+			<span class="text-[13px] text-ink-500">{t('common.loading')}</span>
 		</div>
 	</div>
 {:else}
@@ -42,6 +43,5 @@
 		onDeleteClass={handleDeleteClass}
 		onEnrolStudents={(cid) => goto(`/dashboard/${cid}/students`)}
 		onViewAttendance={(cid) => goto(`/dashboard/${cid}/attendance`)}
-		onViewAssignments={(cid) => goto(`/dashboard/${cid}/assignments`)}
 	/>
 {/if}

@@ -4,7 +4,14 @@
 	import { materialTypeLabel, getFileNameFromUrl } from './utils';
 	import type { Component } from 'svelte';
 
-	let { icon: IconComponent, title, type, bg, text: textColor, url }: {
+	let {
+		icon: IconComponent,
+		title,
+		type,
+		bg,
+		text: textColor,
+		url,
+	}: {
 		icon: Component;
 		title: string;
 		type: string;
@@ -13,9 +20,7 @@
 		url: string;
 	} = $props();
 
-	const subtitle = $derived(
-		type === 'link' || type === 'pdf' ? url : getFileNameFromUrl(url)
-	);
+	const subtitle = $derived(type === 'link' || type === 'pdf' ? url : getFileNameFromUrl(url));
 </script>
 
 <a

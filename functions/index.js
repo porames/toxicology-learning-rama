@@ -13,3 +13,4 @@ export {deleteUser} from "./functions/deleteUser.js";
 export {updateUserRole} from "./functions/updateUserRole.js";
 export {createClassFromTemplate} from "./functions/createClassFromTemplate.js";
 export {readGoogleSheet} from "./functions/readGoogleSheet.js";
+export {uploadMaterial} from "./functions/file.js";

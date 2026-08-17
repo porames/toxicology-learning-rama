@@ -1,4 +1,4 @@
-export type MaterialType = 'youtube' | 'pdf' | 'link' | 'text' | 'file' | 'video' | 'quiz';
+export type MaterialType = 'youtube' | 'link' | 'text' | 'file' | 'video' | 'quiz';
 
 import { t } from '$lib/i18n';
 
@@ -130,8 +130,6 @@ export function getMaterialLabel(type: MaterialType): string {
 	switch (type) {
 		case 'youtube':
 			return t('materials.youtubeVideo');
-		case 'pdf':
-			return t('materials.pdfFile');
 		case 'link':
 			return t('materials.link');
 		case 'text':

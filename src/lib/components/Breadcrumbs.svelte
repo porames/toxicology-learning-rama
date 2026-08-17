@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ChevronRight } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { t } from '$lib/i18n';
 
 	interface Crumb {
@@ -31,7 +32,7 @@
 		{:else if crumb.href}
 			<button
 				type="button"
-				onclick={() => goto(crumb.href!)}
+				onclick={() => goto(`${base}/#${crumb.href!}`)}
 				class="{chipClass} rounded-full bg-ink-900/[0.06] px-3 text-ink-700 hover:bg-iris-600 hover:text-white"
 			>
 				{crumb.label}

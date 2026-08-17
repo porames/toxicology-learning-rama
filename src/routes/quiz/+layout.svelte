@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { page } from '$app/state';
 	import { collection, getDocs } from 'firebase/firestore';
 	import { db } from '$lib/firebase';
@@ -20,7 +21,7 @@
 
 	$effect(() => {
 		if (!isAdmin) {
-			goto('/dashboard');
+			goto(`${base}/#/dashboard`);
 			return;
 		}
 		async function load() {
@@ -36,32 +37,32 @@
 		load();
 	});
 
-	const segments = $derived(page.url.pathname.split('/').filter(Boolean));
-	const quizId = $derived(segments[1] && segments[1] !== 'new' ? segments[1] : null);
+	const routeId = $derived(page.route.id ?? '');
+	const quizId = $derived(page.params.id ?? null);
 	const currentQuiz = $derived(quizId ? allQuizzes.find((q) => q.id === quizId) : null);
 
 	const breadcrumbs = $derived.by(() => {
 		const crumbs: { label: string; href: string | null }[] = [];
 
-		if (segments.length === 1) {
+		if (routeId === '/quiz') {
 			crumbs.push({ label: t('nav.quizzes'), href: null });
 		} else {
 			crumbs.push({ label: t('nav.quizzes'), href: '/quiz' });
 
-			if (segments[1] === 'new') {
+			if (routeId === '/quiz/new') {
 				crumbs.push({ label: t('quiz.newQuiz'), href: null });
 			} else if (currentQuiz) {
 				crumbs.push({
 					label: currentQuiz.title || t('common.untitledQuiz'),
-					href: segments.length > 2 ? `/quiz/${quizId}` : null,
+					href: routeId === '/quiz/[id]' ? null : `/quiz/${quizId}`,
 				});
-				if (segments[2] === 'edit') {
+				if (routeId === '/quiz/[id]/edit') {
 					crumbs.push({ label: t('quiz.edit'), href: null });
-				} else if (segments[2] === 'take') {
+				} else if (routeId === '/quiz/[id]/take') {
 					crumbs.push({ label: t('quiz.takeQuiz'), href: null });
-				} else if (segments[2] === 'preview') {
+				} else if (routeId === '/quiz/[id]/preview') {
 					crumbs.push({ label: t('quiz.preview'), href: null });
-				} else if (segments[2] === 'results') {
+				} else if (routeId.startsWith('/quiz/[id]/results')) {
 					crumbs.push({ label: t('quiz.results'), href: null });
 				}
 			}

@@ -2,6 +2,7 @@ import { onAuthStateChanged, type User } from 'firebase/auth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db, auth } from '$lib/firebase';
 import { goto } from '$app/navigation';
+import { base } from '$app/paths';
 
 export interface UserProfile {
 	name: string;
@@ -27,7 +28,7 @@ function createAuthState() {
 			loading = false;
 			wasSignedIn = false;
 			if (redirectToLogin) {
-				goto('/');
+				goto(`${base}/#/`);
 			}
 			return;
 		}

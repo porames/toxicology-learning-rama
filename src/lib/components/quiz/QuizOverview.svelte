@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { doc, getDoc } from 'firebase/firestore';
 	import { db } from '$lib/firebase';
 	import { Pencil, Play, BarChart3, FileQuestion, ClipboardCheck } from '@lucide/svelte';
@@ -16,7 +17,7 @@
 			try {
 				const snap = await getDoc(doc(db, 'quizzes', quizId));
 				if (!snap.exists()) {
-					goto('/quiz');
+					goto(`${base}/#/quiz`);
 					return;
 				}
 				quiz = { id: snap.id, ...snap.data() } as Quiz;
@@ -35,28 +36,28 @@
 				{
 					label: t('quiz.actionEditQuiz'),
 					description: t('quiz.actionEditQuizDesc'),
-					href: `/quiz/${quizId}/edit`,
+					href: `${base}/#/quiz/${quizId}/edit`,
 					icon: Pencil,
 					color: 'iris',
 				},
 				{
 					label: t('quiz.actionTakeQuiz'),
 					description: t('quiz.actionTakeQuizDesc'),
-					href: `/quiz/${quizId}/take`,
+					href: `${base}/#/quiz/${quizId}/take`,
 					icon: ClipboardCheck,
 					color: 'emerald',
 				},
 				{
 					label: t('quiz.actionPreview'),
 					description: t('quiz.actionPreviewDesc'),
-					href: `/quiz/${quizId}/preview`,
+					href: `${base}/#/quiz/${quizId}/preview`,
 					icon: Play,
 					color: 'emerald',
 				},
 				{
 					label: t('quiz.actionResults'),
 					description: t('quiz.actionResultsDesc'),
-					href: `/quiz/${quizId}/results`,
+					href: `${base}/#/quiz/${quizId}/results`,
 					icon: BarChart3,
 					color: 'amber',
 				},

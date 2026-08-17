@@ -22,12 +22,14 @@
 		videoUrls,
 		onStartQuiz,
 		quizAttempts,
+		onVideoPositionChange,
 	}: {
 		material: MaterialData;
 		color: { bg: string; text: string };
 		videoUrls: Record<string, string>;
 		onStartQuiz: (quizId: string) => void;
 		quizAttempts: Record<string, { passed: boolean; completedAt: Date | null }>;
+		onVideoPositionChange?: (seconds: number) => void;
 	} = $props();
 
 	const icon = $derived(materialIcon(material.type));
@@ -45,7 +47,11 @@
 {:else if material.type === 'youtube' && material.value}
 	<MaterialYouTube {...shared} url={material.value} />
 {:else if material.type === 'video' && videoUrls[material.id]}
-	<MaterialVideo {...shared} embedUrl={videoUrls[material.id]} />
+	<MaterialVideo
+		{...shared}
+		embedUrl={videoUrls[material.id]}
+		onPositionChange={onVideoPositionChange}
+	/>
 {:else if material.type === 'quiz' && material.value}
 	<MaterialQuiz
 		{...shared}

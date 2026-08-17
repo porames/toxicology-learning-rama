@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { dashboardStore } from '$lib/dashboard/dashboardStore.svelte';
 	import { db } from '$lib/firebase';
 	import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -9,7 +10,7 @@
 
 	async function handleAddClass() {
 		const id = await dashboardStore.addClass();
-		goto(`/dashboard/${id}`);
+		goto(`${base}/#/dashboard/${id}`);
 	}
 
 	let templates = $state<{ id: string; name: string; code: string; lectureCount: number }[]>([]);
@@ -50,7 +51,7 @@
 				description: '',
 				createdAt: serverTimestamp(),
 			});
-			goto(`/dashboard/templates/${ref.id}`);
+			goto(`${base}/#/dashboard/templates/${ref.id}`);
 		} catch (err) {
 			console.error(err);
 		}
@@ -93,11 +94,11 @@
 					<div
 						role="button"
 						tabindex="0"
-						onclick={() => goto(`/dashboard/${cls.id}`)}
+						onclick={() => goto(`${base}/#/dashboard/${cls.id}`)}
 						onkeydown={(e) => {
 							if (e.key === 'Enter' || e.key === ' ') {
 								e.preventDefault();
-								goto(`/dashboard/${cls.id}`);
+								goto(`${base}/#/dashboard/${cls.id}`);
 							}
 						}}
 						class="flex w-full cursor-pointer items-center gap-3 rounded-lg border border-ink-900/10 bg-white px-4 py-3 text-left shadow-soft transition hover:border-iris-400 hover:bg-iris-50"
@@ -124,7 +125,7 @@
 							<button
 								onclick={(e) => {
 									e.stopPropagation();
-									goto(`/dashboard/${cls.id}/students`);
+									goto(`${base}/#/dashboard/${cls.id}/students`);
 								}}
 								class="mt-1 flex items-center gap-1 text-[12px] font-medium text-iris-600 hover:text-iris-900 transition"
 							>
@@ -141,7 +142,7 @@
 								type="button"
 								onclick={(e) => {
 									e.stopPropagation();
-									goto(`/dashboard/${cls.id}`);
+									goto(`${base}/#/dashboard/${cls.id}`);
 								}}
 								class="flex items-center gap-1 rounded-md px-2 py-1.5 text-[12px] font-medium text-ink-600 transition hover:bg-ink-900/5 hover:text-ink-900"
 							>
@@ -190,7 +191,7 @@
 					{#each templates as tpl}
 						<button
 							type="button"
-							onclick={() => goto(`/dashboard/templates/${tpl.id}`)}
+							onclick={() => goto(`${base}/#/dashboard/templates/${tpl.id}`)}
 							class="flex w-full items-center gap-3 rounded-lg border border-ink-900/10 bg-white px-4 py-3 text-left shadow-soft transition hover:border-iris-400 hover:bg-iris-50"
 						>
 							<span

@@ -5,7 +5,6 @@
 	import MaterialCard from './MaterialCard.svelte';
 	import MaterialLinkEditor from './MaterialLinkEditor.svelte';
 	import MaterialTextEditor from './MaterialTextEditor.svelte';
-	import MaterialPdfEditor from './MaterialPdfEditor.svelte';
 	import MaterialFileEditor from './MaterialFileEditor.svelte';
 	import MaterialQuizEditor from './MaterialQuizEditor.svelte';
 	import MaterialVideoEditor from './MaterialVideoEditor.svelte';
@@ -51,8 +50,6 @@
 		<MaterialLinkEditor {material} {onValueChange} />
 	{:else if material.type === 'text'}
 		<MaterialTextEditor {material} {onValueChange} />
-	{:else if material.type === 'pdf'}
-		<MaterialPdfEditor {material} {state} {onValueChange} />
 	{:else if material.type === 'file'}
 		<MaterialFileEditor
 			{material}

@@ -8,7 +8,6 @@ export interface MaterialState {
 	embedUrl: string | null;
 	deleting: boolean;
 	requiredPostTest: boolean;
-	pdfUrl: string;
 	fileUploading: boolean;
 	fileProgress: number;
 	fileUrl: string;
@@ -23,7 +22,6 @@ export function initMaterialState(mat: Material): MaterialState {
 		embedUrl: null,
 		deleting: false,
 		requiredPostTest: mat.requiredPostTest ?? false,
-		pdfUrl: mat.type === 'pdf' ? mat.value || '' : '',
 		fileUploading: false,
 		fileProgress: 0,
 		fileUrl: mat.type === 'file' ? mat.value || '' : '',

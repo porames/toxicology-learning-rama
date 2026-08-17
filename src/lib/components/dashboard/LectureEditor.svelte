@@ -181,7 +181,7 @@
 			const url = navigation.to?.url;
 			if (!url) return;
 			navigation.cancel();
-			pendingUrl = url.pathname + url.search;
+			pendingUrl = url.pathname + url.hash + url.search;
 			showLeaveWarning = true;
 		});
 	}

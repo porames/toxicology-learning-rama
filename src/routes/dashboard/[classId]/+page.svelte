@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import ClassEditor from '$lib/components/dashboard/ClassEditor.svelte';
 	import { dashboardStore } from '$lib/dashboard/dashboardStore.svelte';
 	import { t } from '$lib/i18n';
@@ -10,7 +11,7 @@
 
 	function handleDeleteClass(cid: string) {
 		dashboardStore.deleteClass(cid);
-		goto('/dashboard');
+		goto(`${base}/#/dashboard`);
 	}
 </script>
 
@@ -41,7 +42,7 @@
 		{selectedClass}
 		onRename={(patch) => dashboardStore.renameClass(classId, patch)}
 		onDeleteClass={handleDeleteClass}
-		onEnrolStudents={(cid) => goto(`/dashboard/${cid}/students`)}
-		onViewAttendance={(cid) => goto(`/dashboard/${cid}/attendance`)}
+		onEnrolStudents={(cid) => goto(`${base}/#/dashboard/${cid}/students`)}
+		onViewAttendance={(cid) => goto(`${base}/#/dashboard/${cid}/attendance`)}
 	/>
 {/if}

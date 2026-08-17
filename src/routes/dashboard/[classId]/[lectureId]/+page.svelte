@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import LectureEditor from '$lib/components/dashboard/LectureEditor.svelte';
 	import { dashboardStore } from '$lib/dashboard/dashboardStore.svelte';
 	import { t } from '$lib/i18n';
@@ -12,7 +13,7 @@
 
 	function handleDeleteLecture(cid: string, lid: string) {
 		dashboardStore.deleteLecture(cid, lid);
-		goto(`/dashboard/${cid}`);
+		goto(`${base}/#/dashboard/${cid}`);
 	}
 </script>
 
@@ -35,8 +36,8 @@
 		{selectedLecture}
 		highlightMaterialId={undefined}
 		onUpdateLecture={(patch) => dashboardStore.updateLecture(classId, lectureId, patch)}
-		onBackToClasses={() => goto('/dashboard')}
-		onBackToClass={() => goto(`/dashboard/${classId}`)}
+		onBackToClasses={() => goto(`${base}/#/dashboard`)}
+		onBackToClass={() => goto(`${base}/#/dashboard/${classId}`)}
 		onDeleteLecture={handleDeleteLecture}
 	/>
 {/if}

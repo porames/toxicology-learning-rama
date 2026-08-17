@@ -9,7 +9,7 @@
 	let { children }: { children: Snippet } = $props();
 
 	const authRoutes = ['/login', '/', '/activate'];
-	const isAuthPage = $derived(authRoutes.includes(page.url.pathname));
+	const isAuthPage = $derived(authRoutes.includes(page.route.id ?? ''));
 </script>
 
 <svelte:head>

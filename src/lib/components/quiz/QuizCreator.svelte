@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { doc, getDoc, updateDoc } from 'firebase/firestore';
 	import { db } from '$lib/firebase';
 	import { Plus } from '@lucide/svelte';
@@ -56,7 +57,7 @@
 			try {
 				const snap = await getDoc(doc(db, 'quizzes', quizId));
 				if (!snap.exists()) {
-					goto('/quiz');
+					goto(`${base}/#/quiz`);
 					return;
 				}
 				const data = { id: snap.id, ...snap.data() } as Quiz;

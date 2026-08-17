@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 	import { db, auth } from '$lib/firebase';
 	import { functionsUrl } from '$lib/functionsUrl';
@@ -61,7 +62,7 @@
 			try {
 				const snap = await getDoc(doc(db, 'quizzes', quizId));
 				if (!snap.exists()) {
-					goto('/quiz');
+					goto(`${base}/#/quiz`);
 					return;
 				}
 				quiz = { id: snap.id, ...snap.data() } as Quiz;
@@ -128,7 +129,7 @@
 				submitting = false;
 				return;
 			}
-			goto(`/quiz/${quizId}/results/${data.id}`);
+			goto(`${base}/#/quiz/${quizId}/results/${data.id}`);
 		} catch (err) {
 			console.error(err);
 			submitting = false;

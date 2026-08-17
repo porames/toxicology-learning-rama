@@ -128,6 +128,27 @@
 		});
 	}
 
+	function lectureDayName(day: number): string {
+		switch (day) {
+			case 1:
+				return t('templates.daySunday');
+			case 2:
+				return t('templates.dayMonday');
+			case 3:
+				return t('templates.dayTuesday');
+			case 4:
+				return t('templates.dayWednesday');
+			case 5:
+				return t('templates.dayThursday');
+			case 6:
+				return t('templates.dayFriday');
+			case 7:
+				return t('templates.daySaturday');
+			default:
+				return '';
+		}
+	}
+
 	async function ensureTemplate(): Promise<string> {
 		if (draftId) return draftId;
 		const ref = await addDoc(collection(db, 'courseTemplates'), {
@@ -437,6 +458,40 @@
 			onEventClick={handleEventClick}
 			onEventChange={handleEventChange}
 		/>
+		{#if lectures.length > 0}
+			<div class="mt-6">
+				<p class="mb-2 text-[12px] font-semibold uppercase tracking-wider text-ink-400">
+					{t('dashboard.allLectures')}
+				</p>
+				<ul
+					class="divide-y divide-ink-900/10 overflow-hidden rounded-xl border border-ink-900/10 bg-white shadow-soft"
+				>
+					{#each lectures as lecture (lecture.id)}
+						<li>
+							<button
+								type="button"
+								onclick={() => openLectureEditor(lecture.id)}
+								class="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-ink-900/[0.03]"
+							>
+								<span class="min-w-0 flex-1">
+									<span
+										class="block truncate text-[14px] font-medium text-ink-900"
+									>
+										{lecture.title || t('common.untitledLecture')}
+									</span>
+									<span class="block text-[12px] text-ink-500">
+										{lectureDayName(lecture.startTime.day)} · {moment(
+											lecture.startTime.time,
+										).format('HH:mm')}
+										– {moment(lecture.endTime.time).format('HH:mm')}
+									</span>
+								</span>
+							</button>
+						</li>
+					{/each}
+				</ul>
+			</div>
+		{/if}
 	</div>
 
 	<p class="mt-3 text-[12.5px] text-ink-500">

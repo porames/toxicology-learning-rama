@@ -9,9 +9,10 @@
 		serverTimestamp,
 	} from 'firebase/firestore';
 	import type { CourseTemplate, Lecture, TemplateLecture } from '$lib/dashboard/types';
-	import { Button, Input, Modal, Select } from '$lib/components/ui';
+	import { Button, Input, Modal, SearchableSelect } from '$lib/components/ui';
 	import { Library, Plus, Loader2, AlertCircle } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import moment from 'moment';
 	import { t, tn } from '$lib/i18n';
 
@@ -85,8 +86,8 @@
 		}
 	}
 
-	async function handleTemplateChange(e: Event) {
-		selectedTemplateId = (e.target as HTMLSelectElement).value;
+	async function handleTemplateChange(value: string) {
+		selectedTemplateId = value;
 		previewLectures = [];
 		lectureCount = 0;
 		if (!selectedTemplateId) return;
@@ -202,17 +203,17 @@
 				{t('templates.noTemplatesYetCreate')}
 			</p>
 		{:else}
-			<Select
+			<SearchableSelect
 				class="mb-0"
 				label={t('templates.template')}
 				options={templateOptions}
-				value={selectedTemplateId}
+				bind:value={selectedTemplateId}
 				onchange={handleTemplateChange}
 				placeholder={t('templates.chooseTemplate')}
 			/>
 			<button
 				type="button"
-				onclick={() => goto('/dashboard')}
+				onclick={() => goto(`${base}/#/dashboard`)}
 				class="text-[12.5px] font-medium text-iris-600 hover:text-iris-700"
 			>
 				{t('templates.createNewClassTemplate')}

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 	import { db } from '$lib/firebase';
 	import { ArrowLeft, Plus } from '@lucide/svelte';
@@ -22,7 +23,7 @@
 				shuffleQuestions: shuffle,
 				createdAt: serverTimestamp(),
 			});
-			goto(`/quiz/${docRef.id}`);
+			goto(`${base}/#/quiz/${docRef.id}`);
 		} catch (err) {
 			console.error(err);
 			saving = false;

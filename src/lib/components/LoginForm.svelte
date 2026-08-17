@@ -3,6 +3,7 @@
 	import { auth } from '$lib/firebase';
 	import { getAuthErrorMessage } from '$lib/authErrors';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { t } from '$lib/i18n';
 	import { Eye, EyeOff, LoaderCircle } from '@lucide/svelte';
 
@@ -20,7 +21,7 @@
 		loading = true;
 		try {
 			await signInWithEmailAndPassword(auth, email, password);
-			goto('/classes');
+			goto(`${base}/#/classes`);
 			notice = t('auth.signedInRedirecting');
 		} catch (err: any) {
 			error = getAuthErrorMessage(err?.code ?? '');
@@ -135,7 +136,7 @@
 		{t('auth.dontHavePassword')}
 		<button
 			type="button"
-			onclick={() => goto('/activate')}
+			onclick={() => goto(`${base}/#/activate`)}
 			class="font-medium text-iris-600 hover:text-iris-700"
 		>
 			{t('auth.activateAccount')}

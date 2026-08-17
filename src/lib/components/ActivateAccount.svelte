@@ -5,6 +5,7 @@
 	import { getAuthErrorMessage } from '$lib/authErrors';
 	import { translateApiError } from '$lib/i18n/apiErrors';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { t } from '$lib/i18n';
 	import { LoaderCircle } from '@lucide/svelte';
 
@@ -95,7 +96,7 @@
 		{t('auth.alreadyHavePassword')}
 		<button
 			type="button"
-			onclick={() => goto('/')}
+			onclick={() => goto(`${base}/#/`)}
 			class="font-medium text-iris-600 hover:text-iris-700"
 		>
 			{t('auth.goToSignIn')}

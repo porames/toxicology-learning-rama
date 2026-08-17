@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import AssignmentEditor from '$lib/components/dashboard/AssignmentEditor.svelte';
 	import { db } from '$lib/firebase';
 	import { doc, getDoc } from 'firebase/firestore';
@@ -60,5 +61,9 @@
 		<p class="text-[13.5px] text-ink-500">{error}</p>
 	</div>
 {:else}
-	<AssignmentEditor {classId} {assignment} onDeleted={() => goto(`/dashboard/${classId}`)} />
+	<AssignmentEditor
+		{classId}
+		{assignment}
+		onDeleted={() => goto(`${base}/#/dashboard/${classId}`)}
+	/>
 {/if}

@@ -83,5 +83,10 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow write: if request.auth.token.role == 'admin';
     }
+
+    match /files/{fileId} {
+      allow read: if request.auth != null
+          && resource.data.userId == request.auth.uid;
+    }
   }
 }

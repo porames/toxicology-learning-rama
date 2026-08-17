@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { page } from '$app/state';
 	import { visibleNavItems, isNavActive } from '$lib/navigation';
 	import { t, type MessageKeys } from '$lib/i18n';
@@ -11,14 +12,14 @@
 
 <div class="space-y-0.5">
 	{#each items as item}
-		{@const active = isNavActive(page.url.pathname, item.href)}
+		{@const active = isNavActive(page.route.id ?? '', item.href)}
 		<div
 			role="button"
 			tabindex="0"
-			onclick={() => goto(item.href)}
+			onclick={() => goto(`${base}/#${item.href}`)}
 			onkeydown={(e) => {
 				if (e.key === 'Enter' || e.key === ' ') {
-					goto(item.href);
+					goto(`${base}/#${item.href}`);
 				}
 			}}
 			class={`group relative flex h-9 cursor-pointer items-center gap-1.5 rounded-md px-2 text-left transition ${

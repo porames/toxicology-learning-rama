@@ -22,7 +22,7 @@ export function visibleNavItems(isAdmin: boolean): NavItem[] {
 	});
 }
 
-export function isNavActive(pathname: string, href: string): boolean {
-	if (href === '/quiz') return pathname.startsWith('/quiz');
-	return pathname.startsWith(href);
+export function isNavActive(routeId: string, href: string): boolean {
+	if (href === '/quiz') return routeId.startsWith('/quiz');
+	return routeId.startsWith(href);
 }

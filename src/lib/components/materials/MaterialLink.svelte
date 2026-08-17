@@ -20,7 +20,7 @@
 		url: string;
 	} = $props();
 
-	const subtitle = $derived(type === 'link' || type === 'pdf' ? url : getFileNameFromUrl(url));
+	const subtitle = $derived(type === 'link' ? url : getFileNameFromUrl(url));
 </script>
 
 <a

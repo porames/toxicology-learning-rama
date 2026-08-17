@@ -107,7 +107,7 @@
 		const url = navigation.to?.url;
 		if (!url) return;
 		navigation.cancel();
-		pendingUrl = url.pathname + url.search;
+		pendingUrl = url.pathname + url.hash + url.search;
 		showLeaveWarning = true;
 	});
 
@@ -501,11 +501,7 @@
 	<div class="mt-8 flex items-center justify-between border-t border-ink-900/10 pt-6">
 		<div>
 			<p class="text-[13.5px] font-medium text-ink-900">
-				{tn(
-					selectedClass.lectures?.length ?? 0,
-					'dashboard.lecturesCount',
-					'dashboard.lecturesCountPlural',
-				)}
+				{t('dashboard.lectures')}
 			</p>
 			<p class="text-[12.5px] text-ink-500">{t('dashboard.addLectureHint')}</p>
 		</div>
@@ -586,13 +582,6 @@
 										).format('HH:mm')}
 										– {moment(lecture.endTime).format('HH:mm')}
 									</span>
-								</span>
-								<span class="shrink-0 text-[12px] text-ink-400">
-									{tn(
-										lecture.materials?.length ?? 0,
-										'dashboard.materialsCount',
-										'dashboard.materialsCountPlural',
-									)}
 								</span>
 							</button>
 						</li>

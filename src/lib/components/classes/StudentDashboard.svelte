@@ -13,6 +13,7 @@
 		Timestamp,
 	} from 'firebase/firestore';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { authState } from '$lib/auth.svelte';
 	import { functionsUrl } from '$lib/functionsUrl';
 	import moment from 'moment';
@@ -469,7 +470,7 @@
 				{#each classes as cls}
 					<button
 						type="button"
-						onclick={() => goto(`/classes/${cls.id}`)}
+						onclick={() => goto(`${base}/#/classes/${cls.id}`)}
 						class={`block w-full rounded-md px-2 py-2 md:py-1.5 text-left text-sm transition-colors ${
 							cls.id === classId
 								? 'bg-iris-600/10 font-medium text-iris-600'

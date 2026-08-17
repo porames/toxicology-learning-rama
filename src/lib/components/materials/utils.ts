@@ -1,11 +1,4 @@
-import {
-	Video,
-	FileText,
-	Link as LinkIcon,
-	MessageCircleWarning,
-	FileQuestion,
-	File,
-} from '@lucide/svelte';
+import { Video, Link as LinkIcon, MessageCircleWarning, FileQuestion, File } from '@lucide/svelte';
 import type { Component } from 'svelte';
 import { t } from '$lib/i18n';
 
@@ -17,8 +10,6 @@ export function materialTypeLabel(type: string): string {
 			return t('materials.youtube');
 		case 'link':
 			return t('materials.link');
-		case 'pdf':
-			return t('materials.pdf');
 		case 'text':
 			return t('materials.note');
 		case 'quiz':
@@ -46,8 +37,6 @@ export function materialIcon(type: string) {
 			return Video;
 		case 'link':
 			return LinkIcon;
-		case 'pdf':
-			return FileText;
 		case 'text':
 			return MessageCircleWarning;
 		case 'quiz':

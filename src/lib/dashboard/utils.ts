@@ -12,8 +12,6 @@ export function defaultMaterialTitle(type: MaterialType) {
 	switch (type) {
 		case 'youtube':
 			return t('materials.newVideo');
-		case 'pdf':
-			return t('materials.newFile');
 		case 'file':
 			return t('materials.newFile');
 		case 'link':

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import type { Snippet } from 'svelte';
 	import DashboardLayout from '$lib/components/DashboardLayout.svelte';
 	import Breadcrumbs from '$lib/components/Breadcrumbs.svelte';
@@ -16,8 +17,8 @@
 	const classId = $derived(page.params.classId);
 	const lectureId = $derived(page.params.lectureId);
 	const assignmentId = $derived(page.params.assignmentId);
-	const isAssignmentsPage = $derived(page.url.pathname.includes('/assignments'));
-	const isSubmissionsPage = $derived(page.url.pathname.endsWith('/submissions'));
+	const isAssignmentsPage = $derived(page.route.id?.includes('/assignments'));
+	const isSubmissionsPage = $derived(page.route.id?.endsWith('/submissions'));
 	const selectedClass = $derived(classId ? dashboardStore.getClass(classId) : null);
 	const selectedLecture = $derived(
 		classId && lectureId ? dashboardStore.getLecture(classId, lectureId) : null,
@@ -92,7 +93,7 @@
 
 	async function handleAddClass() {
 		const id = await dashboardStore.addClass();
-		goto(`/dashboard/${id}`);
+		goto(`${base}/#/dashboard/${id}`);
 	}
 </script>
 
@@ -116,8 +117,8 @@
 					dashboardStore.toggleExpand(cid, isExpanded);
 					if (!isExpanded) dashboardStore.loadLecturesForClass(cid);
 				}}
-				onSelectClass={(cid) => goto(`/dashboard/${cid}`)}
-				onSelectLecture={(cid, lid) => goto(`/dashboard/${cid}/${lid}`)}
+				onSelectClass={(cid) => goto(`${base}/#/dashboard/${cid}`)}
+				onSelectLecture={(cid, lid) => goto(`${base}/#/dashboard/${cid}/${lid}`)}
 			/>
 			<div class="flex flex-col gap-1.5 pb-3">
 				<button
@@ -130,7 +131,7 @@
 				</button>
 				<button
 					type="button"
-					onclick={() => goto('/dashboard/students')}
+					onclick={() => goto(`${base}/#/dashboard/students`)}
 					class="flex w-full items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-[12.5px] font-semibold text-teal-600 transition hover:bg-teal-50"
 				>
 					<UserRound class="h-3.5 w-3.5" />

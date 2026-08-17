@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { authState } from '$lib/auth.svelte';
 	import ActivateAccount from '$lib/components/ActivateAccount.svelte';
 	import MeshPanel from '$lib/components/MeshPanel.svelte';
@@ -7,7 +8,7 @@
 
 	$effect(() => {
 		if (authState.profile) {
-			goto('/classes', { replaceState: true });
+			goto(`${base}/#/classes`, { replaceState: true });
 		}
 	});
 </script>

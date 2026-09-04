@@ -6,7 +6,14 @@
 	import { functionsUrl } from '$lib/functionsUrl';
 	import { db } from '$lib/firebase';
 	import { collection, getDocs } from 'firebase/firestore';
-	import { Table, Modal, Button, DateTimeInput, Select, SearchableSelect } from '$lib/components/ui';
+	import {
+		Table,
+		Modal,
+		Button,
+		DateTimeInput,
+		Select,
+		SearchableSelect,
+	} from '$lib/components/ui';
 	import { t } from '$lib/i18n';
 	import { translateApiError } from '$lib/i18n/apiErrors';
 

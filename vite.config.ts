@@ -13,9 +13,6 @@ export default defineConfig({
 			paths: {
 				base: '/poisoncenter/th/elearning',
 			},
-			router: {
-				type: 'hash',
-			},
 			compilerOptions: {
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true,

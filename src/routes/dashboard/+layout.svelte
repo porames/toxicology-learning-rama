@@ -93,7 +93,7 @@
 
 	async function handleAddClass() {
 		const id = await dashboardStore.addClass();
-		goto(`${base}/#/dashboard/${id}`);
+		goto(`${base}/dashboard/${id}`);
 	}
 </script>
 
@@ -117,8 +117,8 @@
 					dashboardStore.toggleExpand(cid, isExpanded);
 					if (!isExpanded) dashboardStore.loadLecturesForClass(cid);
 				}}
-				onSelectClass={(cid) => goto(`${base}/#/dashboard/${cid}`)}
-				onSelectLecture={(cid, lid) => goto(`${base}/#/dashboard/${cid}/${lid}`)}
+				onSelectClass={(cid) => goto(`${base}/dashboard/${cid}`)}
+				onSelectLecture={(cid, lid) => goto(`${base}/dashboard/${cid}/${lid}`)}
 			/>
 			<div class="flex flex-col gap-1.5 pb-3">
 				<button
@@ -131,7 +131,7 @@
 				</button>
 				<button
 					type="button"
-					onclick={() => goto(`${base}/#/dashboard/students`)}
+					onclick={() => goto(`${base}/dashboard/students`)}
 					class="flex w-full items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-[12.5px] font-semibold text-teal-600 transition hover:bg-teal-50"
 				>
 					<UserRound class="h-3.5 w-3.5" />

@@ -22,6 +22,8 @@ export function defaultMaterialTitle(type: MaterialType) {
 			return t('materials.newVideo');
 		case 'quiz':
 			return t('materials.newQuiz');
+		case 'meet':
+			return t('materials.newMeet');
 	}
 }
 
@@ -55,7 +57,7 @@ export function validateDateTimeInput(value: string): string | null {
 	const date = new Date(value);
 	if (isNaN(date.getTime())) return t('utils.invalidDate');
 	const year = date.getFullYear();
-	if (year > 2050) return t('utils.buddhistYearNote');
+	if (year > 2100) return t('utils.buddhistYearNote');
 	return null;
 }
 

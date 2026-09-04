@@ -16,10 +16,10 @@
 		<div
 			role="button"
 			tabindex="0"
-			onclick={() => goto(`${base}/#${item.href}`)}
+			onclick={() => goto(`${base}${item.href}`)}
 			onkeydown={(e) => {
 				if (e.key === 'Enter' || e.key === ' ') {
-					goto(`${base}/#${item.href}`);
+					goto(`${base}${item.href}`);
 				}
 			}}
 			class={`group relative flex h-9 cursor-pointer items-center gap-1.5 rounded-md px-2 text-left transition ${

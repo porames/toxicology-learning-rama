@@ -12,8 +12,6 @@
 	let {
 		material,
 		index,
-		templateId,
-		lectureId,
 		onTitleChange,
 		onValueChange,
 		onTogglePostTest,
@@ -22,8 +20,6 @@
 	}: {
 		material: Material;
 		index: number;
-		templateId: string;
-		lectureId: string;
 		onTitleChange: (title: string) => void;
 		onValueChange: (value: string) => void;
 		onTogglePostTest: (checked: boolean) => Promise<void>;
@@ -51,22 +47,8 @@
 	{:else if material.type === 'quiz'}
 		<MaterialQuizEditor {material} {state} {onTogglePostTest} />
 	{:else if material.type === 'video'}
-		<MaterialVideoEditor
-			{material}
-			{state}
-			classId={templateId}
-			{lectureId}
-			{onValueChange}
-			{persistValue}
-		/>
+		<MaterialVideoEditor {material} {state} {onValueChange} {persistValue} />
 	{:else if material.type === 'file'}
-		<MaterialFileEditor
-			{material}
-			{state}
-			classId={templateId}
-			{lectureId}
-			{onValueChange}
-			{persistValue}
-		/>
+		<MaterialFileEditor {material} {state} {onValueChange} {persistValue} />
 	{/if}
 </MaterialCard>

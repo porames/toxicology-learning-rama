@@ -49,15 +49,11 @@
 	let panelTop = $state(0);
 	let panelWidth = $state(0);
 
-	const selectedLabel = $derived(
-		options.find((o) => o.value === value)?.label ?? '',
-	);
+	const selectedLabel = $derived(options.find((o) => o.value === value)?.label ?? '');
 
 	const filtered = $derived(
 		query.trim()
-			? options.filter((o) =>
-					o.label.toLowerCase().includes(query.trim().toLowerCase()),
-				)
+			? options.filter((o) => o.label.toLowerCase().includes(query.trim().toLowerCase()))
 			: options,
 	);
 
@@ -160,7 +156,9 @@
 				{selectedLabel || placeholder || '\u00a0'}
 			</span>
 			<ChevronDown
-				class="h-4 w-4 shrink-0 text-ink-400 transition-transform {open ? 'rotate-180' : ''}"
+				class="h-4 w-4 shrink-0 text-ink-400 transition-transform {open
+					? 'rotate-180'
+					: ''}"
 			/>
 		</button>
 
@@ -189,7 +187,8 @@
 								aria-selected={option.value === value}
 								onclick={() => select(option)}
 								onmouseenter={() => (highlightIndex = i)}
-								class="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[14px] transition {option.value === value
+								class="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[14px] transition {option.value ===
+								value
 									? 'bg-iris-50 text-iris-700'
 									: i === highlightIndex
 										? 'bg-ink-900/[0.04] text-ink-900'

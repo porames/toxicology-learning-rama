@@ -64,6 +64,6 @@
 	<AssignmentEditor
 		{classId}
 		{assignment}
-		onDeleted={() => goto(`${base}/#/dashboard/${classId}`)}
+		onDeleted={() => goto(`${base}/dashboard/${classId}`)}
 	/>
 {/if}

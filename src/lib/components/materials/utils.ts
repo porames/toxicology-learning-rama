@@ -1,6 +1,7 @@
 import { Video, Link as LinkIcon, MessageCircleWarning, FileQuestion, File } from '@lucide/svelte';
 import type { Component } from 'svelte';
 import { t } from '$lib/i18n';
+import GoogleMeetIcon from '$lib/components/GoogleMeetIcon.svelte';
 
 export function materialTypeLabel(type: string): string {
 	switch (type) {
@@ -14,6 +15,8 @@ export function materialTypeLabel(type: string): string {
 			return t('materials.note');
 		case 'quiz':
 			return t('materials.quiz');
+		case 'meet':
+			return t('materials.googleMeet');
 		default:
 			return t('materials.file');
 	}
@@ -41,6 +44,8 @@ export function materialIcon(type: string) {
 			return MessageCircleWarning;
 		case 'quiz':
 			return FileQuestion;
+		case 'meet':
+			return GoogleMeetIcon;
 		default:
 			return File;
 	}

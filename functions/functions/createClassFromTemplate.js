@@ -71,31 +71,24 @@ export const createClassFromTemplate = onRequest(async (req, res) => {
       );
 
       const lectureRef = db.collection("classes", classId, "lectures").doc();
-      const matRefs = (lec.materials ?? []).map((matData) => ({
-        ref: db.collection("classes", classId, "lectures", lectureRef.id, "materials").doc(),
-        data: matData,
+      const materialsData = (lec.materials ?? []).map((m) => ({
+        id: m.id,
+        type: m.type,
+        title: m.title,
+        value: m.value ?? "",
+        ...(m.requiredPostTest !== undefined
+            ? {requiredPostTest: m.requiredPostTest}
+            : {}),
       }));
       batch.set(lectureRef, {
         title: lec.title || "Untitled lecture",
         startTime,
         endTime,
-        materialsOrder: matRefs.map((x) => x.ref.id),
+        materials: materialsData,
+        materialsOrder: materialsData.map((m) => m.id),
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
       opCount++;
-
-      for (const {ref, data} of matRefs) {
-        batch.set(ref, {
-          type: data.type,
-          title: data.title,
-          value: data.value ?? "",
-          ...(data.requiredPostTest !== undefined
-              ? {requiredPostTest: data.requiredPostTest}
-              : {}),
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-        opCount++;
-      }
 
       if (opCount >= 400) {
         await batch.commit();

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Pencil, Check, Trash2 } from '@lucide/svelte';
+	import { Pencil, Trash2, UserPlus } from '@lucide/svelte';
 	import { authState } from '$lib/auth.svelte';
 	import { functionsUrl } from '$lib/functionsUrl';
 	import type { Student } from '$lib/dashboard/types';
@@ -7,6 +7,7 @@
 	import EditStudentModal from '$lib/components/dashboard/EditStudentModal.svelte';
 	import { t } from '$lib/i18n';
 	import { translateApiError } from '$lib/i18n/apiErrors';
+	import moment from 'moment';
 
 	const ROLE_LABELS = $derived<Record<string, string>>({
 		student: t('students.roleStudentShort'),
@@ -24,45 +25,30 @@
 		r3: t('students.yearR3'),
 	};
 
+	function fmtDateTime(d?: Date | null): string {
+		if (!d || d.getTime() === 0) return '—';
+		return moment(d).format('MMM D, YYYY · hh:mm A');
+	}
+
+	function fmtDay(d?: Date | null): string {
+		if (!d || d.getTime() === 0) return '—';
+		return moment(d).format('MMM D, YYYY');
+	}
+
 	let {
 		students,
-		enableSelection = false,
-		setSelectedStudents,
 		onChanged,
+		onEnrol,
 	}: {
 		students: Student[] | undefined;
-		enableSelection?: boolean;
-		setSelectedStudents?: (students: Student[]) => void;
 		onChanged?: () => void;
+		onEnrol: (student: Student) => void;
 	} = $props();
 
 	let editingStudent: Student | null = $state(null);
 	let confirmingDeleteId: string | null = $state(null);
 	let editDeleting = $state(false);
 	let editError: string | null = $state(null);
-
-	let checkedStudents: string[] = $state([]);
-
-	function isChecked(id: string) {
-		return checkedStudents.includes(id);
-	}
-
-	function toggleChecked(student: Student) {
-		if (checkedStudents.includes(student.id)) {
-			checkedStudents = checkedStudents.filter((id) => id !== student.id);
-		} else {
-			checkedStudents = [...checkedStudents, student.id];
-		}
-		const selected: Student[] = [];
-		if (students) {
-			for (const s of students) {
-				if (checkedStudents.includes(s.id)) {
-					selected.push(s);
-				}
-			}
-		}
-		setSelectedStudents?.(selected);
-	}
 
 	async function handleDelete(student: Student) {
 		editDeleting = true;
@@ -96,32 +82,22 @@
 	}
 </script>
 
-<Table>
+<Table compact>
 	{#snippet headers()}
-		{#if enableSelection}
-			<th style="width: 32px"></th>
-		{/if}
+		<th>{t('students.enrol')}</th>
+		<th>{t('students.timestamp')}</th>
 		<th>{t('students.fullName')}</th>
 		<th>{t('students.email')}</th>
 		<th>{t('students.role')}</th>
+		<th>{t('students.electiveStart')}</th>
+		<th>{t('students.electiveEnd')}</th>
+		<th>{t('students.hospital')}</th>
 		<th>{t('students.actions')}</th>
 	{/snippet}
 	{#snippet body()}
-		{#if students === undefined}
-			{#each Array(3) as _, i}
-				<tr class={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-					{#each Array(enableSelection ? 7 : 6) as _, j}
-						<td class="py-1.5">
-							<div class="h-3 w-20 animate-pulse rounded bg-gray-200"></div>
-						</td>
-					{/each}
-				</tr>
-			{/each}
-		{/if}
-
 		{#if students !== undefined && students.length === 0}
 			<tr>
-				<td colspan={enableSelection ? 7 : 6} class="py-6 text-center text-gray-400">
+				<td colspan={9} class="py-6 text-center text-gray-400">
 					{t('students.noStudentsYetAdd')}
 				</td>
 			</tr>
@@ -131,28 +107,26 @@
 			{#each students as student, idx (student.id)}
 				{@const rowBg = idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
 				<tr class={`${rowBg} transition-colors hover:bg-gray-50`}>
-					{#if enableSelection}
-						<td>
-							<button
-								type="button"
-								onclick={() => toggleChecked(student)}
-								class={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-									isChecked(student.id)
-										? 'bg-blue-600 border-blue-600'
-										: 'bg-white border-gray-300 hover:border-gray-400'
-								}`}
-							>
-								{#if isChecked(student.id)}
-									<Check size={14} class="text-white" />
-								{/if}
-							</button>
-						</td>
-					{/if}
+					<td>
+						<button
+							type="button"
+							aria-label={t('students.enrolAria', { name: student.name })}
+							onclick={() => onEnrol(student)}
+							class="inline-flex items-center gap-1 rounded-md bg-gradient-to-b from-iris-500 to-iris-700 px-2 py-1 text-xs my-0.5 font-semibold text-white transition hover:from-iris-500 hover:to-iris-800"
+						>
+							<UserPlus size={13} />
+							{t('students.enrol')}
+						</button>
+					</td>
+					<td class="text-gray-500">{fmtDateTime(student.createdAt)}</td>
 					<td>{student.name}</td>
 					<td class="text-gray-500">{student.email}</td>
 					<td class="text-gray-500">
 						{ROLE_LABELS[student.role ?? ''] ?? student.role}
 					</td>
+					<td class="text-gray-500">{fmtDay(student.electiveStart)}</td>
+					<td class="text-gray-500">{fmtDay(student.electiveEnd)}</td>
+					<td class="text-gray-500">{student.hospital || '—'}</td>
 					<td>
 						<div class="my-1 flex items-center gap-2">
 							<button type="button" onclick={() => (editingStudent = student)}>

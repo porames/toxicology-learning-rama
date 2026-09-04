@@ -24,7 +24,7 @@
 	<div class="flex items-start justify-between gap-3 p-4">
 		<button
 			type="button"
-			onclick={() => goto(`${base}/#/dashboard/${classId}/assignments/${assignment.id}`)}
+			onclick={() => goto(`${base}/dashboard/${classId}/assignments/${assignment.id}`)}
 			class="min-w-0 flex-1 text-left"
 		>
 			<div class="flex items-center gap-2">
@@ -71,7 +71,7 @@
 			<Button
 				variant="ghost"
 				onclick={() =>
-					goto(`${base}/#/dashboard/${classId}/assignments/${assignment.id}/submissions`)}
+					goto(`${base}/dashboard/${classId}/assignments/${assignment.id}/submissions`)}
 			>
 				<Users class="h-3.5 w-3.5" />
 				{t('assignmentCard.viewSubmissions')}

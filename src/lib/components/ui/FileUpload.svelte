@@ -8,6 +8,7 @@
 		disabled?: boolean;
 		multiple?: boolean;
 		onupload?: (files: FileList | File) => void;
+		id?: string;
 		class?: string;
 	}
 
@@ -17,6 +18,7 @@
 		disabled = false,
 		multiple = false,
 		onupload,
+		id = undefined,
 		class: className = '',
 	}: Props = $props();
 
@@ -82,6 +84,7 @@
 	<input
 		bind:this={fileInput}
 		type="file"
+		{id}
 		{accept}
 		{multiple}
 		{disabled}

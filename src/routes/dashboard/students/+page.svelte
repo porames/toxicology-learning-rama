@@ -10,6 +10,6 @@
 <div class="mx-auto w-full min-w-0 px-4 py-10">
 	<div class="grid grid-row gap-3">
 		<h1 class="text-lg font-semibold">{t('students.manageStudents')}</h1>
-		<ManageStudents enableSelection={false} />
+		<ManageStudents />
 	</div>
 </div>

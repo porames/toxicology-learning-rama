@@ -1,4 +1,4 @@
-export type MaterialType = 'youtube' | 'link' | 'text' | 'file' | 'video' | 'quiz';
+export type MaterialType = 'youtube' | 'link' | 'text' | 'file' | 'video' | 'quiz' | 'meet';
 
 import { t } from '$lib/i18n';
 
@@ -10,6 +10,12 @@ export interface Material {
 	requiredPostTest?: boolean;
 }
 
+export interface MeetingHost {
+	email: string;
+	displayName: string;
+	role: string;
+}
+
 export interface Lecture {
 	id: string;
 	title: string;
@@ -17,6 +23,7 @@ export interface Lecture {
 	endTime: Date;
 	materials: Material[];
 	materialsOrder?: string[];
+	meetingHost?: MeetingHost;
 }
 
 export interface ClassItem {
@@ -56,6 +63,11 @@ export interface Student {
 	rama_id?: string;
 	year?: string;
 	enroledClasses?: string[];
+	hospital?: string;
+	firstName?: string;
+	lastName?: string;
+	department?: string;
+	createdAt?: Date | null;
 	id: string; // authId
 }
 
@@ -140,5 +152,7 @@ export function getMaterialLabel(type: MaterialType): string {
 			return t('materials.video');
 		case 'quiz':
 			return t('materials.quiz');
+		case 'meet':
+			return t('materials.googleMeet');
 	}
 }

@@ -9,7 +9,7 @@
 
 	$effect(() => {
 		if (authState.profile) {
-			goto(`${base}/#/classes`, { replaceState: true });
+			goto(`${base}/classes`, { replaceState: true });
 		}
 	});
 </script>

@@ -1,7 +1,7 @@
 import { onRequest } from "firebase-functions/v2/https";
 import { admin, storage, db } from "../lib/admin.js";
 import { handleCors } from "../lib/cors.js";
-import { verifyUser } from "../lib/auth.js";
+import { verifyUser, verifyStaff } from "../lib/auth.js";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
 
@@ -62,5 +62,69 @@ export const uploadMaterial = onRequest(async (req, res) => {
   } catch (err) {
     console.error("createFile error:", err);
     res.status(500).json({ error: err.message || "Internal server error" });
+  }
+});
+
+export const uploadAssessmentForm = onRequest(async (req, res) => {
+  try {
+    if (handleCors(req, res)) return;
+    await verifyStaff(req);
+
+    const { studentId, originalName, fileData } = req.body ?? {};
+    if (!studentId || !originalName || !fileData) {
+      res
+        .status(400)
+        .json({ error: "Missing required fields: studentId, originalName, fileData" });
+      return;
+    }
+
+    const match = fileData.match(/^data:(.*?);base64,(.+)$/);
+    if (!match) {
+      res
+        .status(400)
+        .json({ error: "Invalid file data. Must be a base64-encoded data URL." });
+      return;
+    }
+
+    const contentType = match[1] || "application/pdf";
+    const isPdf =
+      contentType === "application/pdf" ||
+      (contentType === "application/octet-stream" &&
+        originalName.toLowerCase().endsWith(".pdf"));
+    if (!isPdf) {
+      res.status(400).json({ error: "Only PDF files are allowed." });
+      return;
+    }
+
+    const buffer = Buffer.from(match[2], "base64");
+    if (buffer.length > MAX_FILE_BYTES) {
+      res.status(400).json({ error: "File exceeds the 10 MB limit." });
+      return;
+    }
+
+    const ext = originalName.split(".").pop() || "pdf";
+    const fileName = `${crypto.randomUUID()}.${ext}`;
+    const storagePath = `assessment-forms/${studentId}/${fileName}`;
+    const bucket = storage.bucket();
+    const file = bucket.file(storagePath);
+
+    await file.save(buffer, { metadata: { contentType: "application/pdf" } });
+    await file.makePublic();
+    const downloadUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+
+    await db.collection("users").doc(studentId).set(
+      {
+        assessmentFormUrl: downloadUrl,
+        assessmentFormPath: storagePath,
+        assessmentFormName: originalName,
+        assessmentFormUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    res.status(200).json({ downloadUrl });
+  } catch (err) {
+    console.error("uploadAssessmentForm error:", err);
+    res.status(err.status || 500).json({ error: err.message || "Internal server error" });
   }
 });

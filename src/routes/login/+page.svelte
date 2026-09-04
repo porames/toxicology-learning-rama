@@ -2,22 +2,23 @@
 	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 	import { authState } from '$lib/auth.svelte';
-	import ActivateAccount from '$lib/components/ActivateAccount.svelte';
+	import AdminLogin from '$lib/components/AdminLogin.svelte';
 	import MeshPanel from '$lib/components/MeshPanel.svelte';
 	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
+	import { t } from '$lib/i18n';
 
 	$effect(() => {
-		if (authState.profile) {
-			goto(`${base}/#/classes`, { replaceState: true });
+		if (authState.profile?.role === 'admin') {
+			goto(`${base}/dashboard`, { replaceState: true });
 		}
 	});
 </script>
 
 <svelte:head>
-	<title>RAMA Toxico | Activate Account</title>
+	<title>RAMA Toxico | {t('auth.adminLogin')}</title>
 </svelte:head>
 
-{#if !authState.profile}
+{#if authState.profile?.role !== 'admin'}
 	<main class="flex min-h-screen bg-canvas">
 		<MeshPanel />
 
@@ -38,7 +39,7 @@
 				>
 			</div>
 
-			<ActivateAccount />
+			<AdminLogin />
 		</div>
 	</main>
 {/if}

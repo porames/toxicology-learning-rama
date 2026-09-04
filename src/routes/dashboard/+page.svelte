@@ -4,13 +4,21 @@
 	import { dashboardStore } from '$lib/dashboard/dashboardStore.svelte';
 	import { db } from '$lib/firebase';
 	import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
-	import { Plus, Folder, ChevronRight, Users, Library, Pencil } from '@lucide/svelte';
+	import {
+		Plus,
+		Folder,
+		ChevronRight,
+		Users,
+		Library,
+		Pencil,
+		GraduationCap,
+	} from '@lucide/svelte';
 	import { t, tn } from '$lib/i18n';
 	import moment from 'moment';
 
 	async function handleAddClass() {
 		const id = await dashboardStore.addClass();
-		goto(`${base}/#/dashboard/${id}`);
+		goto(`${base}/dashboard/${id}`);
 	}
 
 	let templates = $state<{ id: string; name: string; code: string; lectureCount: number }[]>([]);
@@ -51,7 +59,7 @@
 				description: '',
 				createdAt: serverTimestamp(),
 			});
-			goto(`${base}/#/dashboard/templates/${ref.id}`);
+			goto(`${base}/dashboard/templates/${ref.id}`);
 		} catch (err) {
 			console.error(err);
 		}
@@ -94,11 +102,11 @@
 					<div
 						role="button"
 						tabindex="0"
-						onclick={() => goto(`${base}/#/dashboard/${cls.id}`)}
+						onclick={() => goto(`${base}/dashboard/${cls.id}`)}
 						onkeydown={(e) => {
 							if (e.key === 'Enter' || e.key === ' ') {
 								e.preventDefault();
-								goto(`${base}/#/dashboard/${cls.id}`);
+								goto(`${base}/dashboard/${cls.id}`);
 							}
 						}}
 						class="flex w-full cursor-pointer items-center gap-3 rounded-lg border border-ink-900/10 bg-white px-4 py-3 text-left shadow-soft transition hover:border-iris-400 hover:bg-iris-50"
@@ -125,7 +133,7 @@
 							<button
 								onclick={(e) => {
 									e.stopPropagation();
-									goto(`${base}/#/dashboard/${cls.id}/students`);
+									goto(`${base}/dashboard/${cls.id}/students`);
 								}}
 								class="mt-1 flex items-center gap-1 text-[12px] font-medium text-iris-600 hover:text-iris-900 transition"
 							>
@@ -142,7 +150,7 @@
 								type="button"
 								onclick={(e) => {
 									e.stopPropagation();
-									goto(`${base}/#/dashboard/${cls.id}`);
+									goto(`${base}/dashboard/${cls.id}`);
 								}}
 								class="flex items-center gap-1 rounded-md px-2 py-1.5 text-[12px] font-medium text-ink-600 transition hover:bg-ink-900/5 hover:text-ink-900"
 							>
@@ -191,7 +199,7 @@
 					{#each templates as tpl}
 						<button
 							type="button"
-							onclick={() => goto(`${base}/#/dashboard/templates/${tpl.id}`)}
+							onclick={() => goto(`${base}/dashboard/templates/${tpl.id}`)}
 							class="flex w-full items-center gap-3 rounded-lg border border-ink-900/10 bg-white px-4 py-3 text-left shadow-soft transition hover:border-iris-400 hover:bg-iris-50"
 						>
 							<span
@@ -225,6 +233,56 @@
 					</button>
 				</div>
 			{/if}
+		</div>
+
+		<div class="mt-8 border-t border-ink-900/8 pt-5">
+			<div class="mb-3 flex items-center justify-between px-2">
+				<h2 class="text-[11px] font-semibold uppercase tracking-wider text-ink-300">
+					{t('dashboard.manage')}
+				</h2>
+			</div>
+			<div class="space-y-2">
+				<button
+					type="button"
+					onclick={() => goto(`${base}/dashboard/students`)}
+					class="flex w-full items-center gap-3 rounded-lg border border-ink-900/10 bg-white px-4 py-3 text-left shadow-soft transition hover:border-iris-400 hover:bg-iris-50"
+				>
+					<span
+						class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-iris-50 text-iris-500"
+					>
+						<Users class="h-4 w-4" />
+					</span>
+					<div class="min-w-0 flex-1">
+						<p class="truncate text-sm font-medium text-ink-900">
+							{t('nav.manageStudents')}
+						</p>
+						<p class="truncate text-xs text-ink-400">
+							{t('dashboard.manageStudentsHint')}
+						</p>
+					</div>
+					<ChevronRight class="h-4 w-4 shrink-0 text-ink-300" />
+				</button>
+				<button
+					type="button"
+					onclick={() => goto(`${base}/dashboard/teachers`)}
+					class="flex w-full items-center gap-3 rounded-lg border border-ink-900/10 bg-white px-4 py-3 text-left shadow-soft transition hover:border-iris-400 hover:bg-iris-50"
+				>
+					<span
+						class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-iris-50 text-iris-500"
+					>
+						<GraduationCap class="h-4 w-4" />
+					</span>
+					<div class="min-w-0 flex-1">
+						<p class="truncate text-sm font-medium text-ink-900">
+							{t('nav.manageTeachers')}
+						</p>
+						<p class="truncate text-xs text-ink-400">
+							{t('dashboard.manageTeachersHint')}
+						</p>
+					</div>
+					<ChevronRight class="h-4 w-4 shrink-0 text-ink-300" />
+				</button>
+			</div>
 		</div>
 	</div>
 {/if}

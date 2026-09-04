@@ -1,6 +1,7 @@
 import type { MaterialType } from './types';
 import type { Component } from 'svelte';
 import { Video, Link as LinkIcon, MessageCircleWarning, FileQuestion, File } from '@lucide/svelte';
+import GoogleMeetIcon from '$lib/components/GoogleMeetIcon.svelte';
 
 const ICON_MAP: Record<MaterialType, Component> = {
 	youtube: Video,
@@ -9,6 +10,7 @@ const ICON_MAP: Record<MaterialType, Component> = {
 	file: File,
 	video: Video,
 	quiz: FileQuestion,
+	meet: GoogleMeetIcon,
 };
 
 export const MATERIAL_ICON = ICON_MAP;
@@ -20,4 +22,5 @@ export const MATERIAL_COLOR: Record<MaterialType, { text: string; bg: string; ri
 	file: { text: 'text-mesh-amber', bg: 'bg-mesh-amber/10', ring: 'ring-mesh-amber/25' },
 	video: { text: 'text-rose-500', bg: 'bg-rose-500/10', ring: 'ring-rose-500/25' },
 	quiz: { text: 'text-iris-600', bg: 'bg-iris-500/10', ring: 'ring-iris-500/25' },
+	meet: { text: 'text-emerald-600', bg: 'bg-emerald-500/10', ring: 'ring-emerald-500/25' },
 };

@@ -8,13 +8,12 @@
 	import MaterialFileEditor from './MaterialFileEditor.svelte';
 	import MaterialQuizEditor from './MaterialQuizEditor.svelte';
 	import MaterialVideoEditor from './MaterialVideoEditor.svelte';
+	import MaterialMeetEditor from './MaterialMeetEditor.svelte';
 
 	let {
 		material,
 		state,
 		index,
-		classId,
-		lectureId,
 		highlighted = false,
 		onTitleChange,
 		onValueChange,
@@ -25,8 +24,6 @@
 		material: Material;
 		state: MaterialState;
 		index: number;
-		classId: string;
-		lectureId: string;
 		highlighted: boolean;
 		onTitleChange: (title: string) => void;
 		onValueChange: (value: string) => void;
@@ -51,24 +48,12 @@
 	{:else if material.type === 'text'}
 		<MaterialTextEditor {material} {onValueChange} />
 	{:else if material.type === 'file'}
-		<MaterialFileEditor
-			{material}
-			{state}
-			{classId}
-			{lectureId}
-			{onValueChange}
-			{persistValue}
-		/>
+		<MaterialFileEditor {material} {state} {onValueChange} {persistValue} />
 	{:else if material.type === 'quiz'}
 		<MaterialQuizEditor {material} {state} {onTogglePostTest} />
 	{:else if material.type === 'video'}
-		<MaterialVideoEditor
-			{material}
-			{state}
-			{classId}
-			{lectureId}
-			{onValueChange}
-			{persistValue}
-		/>
+		<MaterialVideoEditor {material} {state} {onValueChange} {persistValue} />
+	{:else if material.type === 'meet'}
+		<MaterialMeetEditor {material} />
 	{/if}
 </MaterialCard>

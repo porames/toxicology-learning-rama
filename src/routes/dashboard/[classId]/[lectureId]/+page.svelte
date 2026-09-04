@@ -13,7 +13,7 @@
 
 	function handleDeleteLecture(cid: string, lid: string) {
 		dashboardStore.deleteLecture(cid, lid);
-		goto(`${base}/#/dashboard/${cid}`);
+		goto(`${base}/dashboard/${cid}`);
 	}
 </script>
 
@@ -36,8 +36,8 @@
 		{selectedLecture}
 		highlightMaterialId={undefined}
 		onUpdateLecture={(patch) => dashboardStore.updateLecture(classId, lectureId, patch)}
-		onBackToClasses={() => goto(`${base}/#/dashboard`)}
-		onBackToClass={() => goto(`${base}/#/dashboard/${classId}`)}
+		onBackToClasses={() => goto(`${base}/dashboard`)}
+		onBackToClass={() => goto(`${base}/dashboard/${classId}`)}
 		onDeleteLecture={handleDeleteLecture}
 	/>
 {/if}

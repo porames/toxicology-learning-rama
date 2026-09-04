@@ -57,7 +57,7 @@
 			try {
 				const snap = await getDoc(doc(db, 'quizzes', quizId));
 				if (!snap.exists()) {
-					goto(`${base}/#/quiz`);
+					goto(`${base}/quiz`);
 					return;
 				}
 				const data = { id: snap.id, ...snap.data() } as Quiz;

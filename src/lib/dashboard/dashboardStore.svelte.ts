@@ -57,8 +57,9 @@ function createDashboardStore() {
 				title: d.data()['title'],
 				startTime: d.data()['startTime'].toDate(),
 				endTime: d.data()['endTime'].toDate(),
-				materials: [] as Material[],
+				materials: (d.data()['materials'] as Material[]) ?? [],
 				materialsOrder: (d.data()['materialsOrder'] as string[]) || [],
+				...(d.data()['meetingHost'] ? { meetingHost: d.data()['meetingHost'] } : {}),
 			}));
 			classes = classes.map((cls) =>
 				cls.id === classId ? { ...cls, lectures: loadedLecs } : cls,
@@ -122,7 +123,9 @@ function createDashboardStore() {
 	function updateLecture(
 		classId: string,
 		lectureId: string,
-		patch: Partial<Pick<Lecture, 'title' | 'startTime' | 'endTime'>>,
+		patch: Partial<
+			Pick<Lecture, 'title' | 'startTime' | 'endTime' | 'materials' | 'materialsOrder'>
+		>,
 	) {
 		classes = classes.map((c) =>
 			c.id !== classId

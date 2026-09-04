@@ -8,7 +8,7 @@
 
 	let { children }: { children: Snippet } = $props();
 
-	const authRoutes = ['/login', '/', '/activate'];
+	const authRoutes = ['/login', '/', '/signup'];
 	const isAuthPage = $derived(authRoutes.includes(page.route.id ?? ''));
 </script>
 
@@ -21,6 +21,6 @@
 	<div class="flex h-screen items-center justify-center">
 		<LoaderCircle class="h-8 w-8 animate-spin text-iris-500" />
 	</div>
-{:else if isAuthPage || authState.profile}
+{:else if isAuthPage || authState.profile || authState.user}
 	{@render children()}
 {/if}

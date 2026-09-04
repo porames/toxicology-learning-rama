@@ -28,8 +28,6 @@ export const deleteClass = onRequest(async (req, res) => {
 
     const lecturesSnap = await classRef.collection("lectures").get();
     for (const lecture of lecturesSnap.docs) {
-      const materialsSnap = await lecture.ref.collection("materials").get();
-      materialsSnap.docs.forEach((m) => refsToDelete.push(m.ref));
       refsToDelete.push(lecture.ref);
     }
 

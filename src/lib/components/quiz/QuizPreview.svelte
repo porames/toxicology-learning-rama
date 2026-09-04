@@ -20,7 +20,7 @@
 			try {
 				const snap = await getDoc(doc(db, 'quizzes', quizId));
 				if (!snap.exists()) {
-					goto(`${base}/#/quiz`);
+					goto(`${base}/quiz`);
 					return;
 				}
 				quiz = { id: snap.id, ...snap.data() } as Quiz;
@@ -77,7 +77,7 @@
 				</p>
 			</div>
 			<button
-				onclick={() => goto(`${base}/#/quiz/${quizId}/edit`)}
+				onclick={() => goto(`${base}/quiz/${quizId}/edit`)}
 				class="flex shrink-0 items-center gap-1.5 rounded-lg bg-gradient-to-b from-iris-500 to-iris-700 px-3.5 py-2 text-[13px] font-semibold text-white shadow-button transition hover:from-iris-500 hover:to-iris-800"
 			>
 				<Pencil class="h-3.5 w-3.5" />
@@ -89,7 +89,7 @@
 			<div class="mt-8 rounded-xl border border-dashed border-ink-900/15 py-12 text-center">
 				<p class="text-[14px] text-ink-500">{t('quiz.noQuestionsInQuiz')}</p>
 				<button
-					onclick={() => goto(`${base}/#/quiz/${quizId}/edit`)}
+					onclick={() => goto(`${base}/quiz/${quizId}/edit`)}
 					class="mt-3 inline-flex items-center gap-1.5 text-[13.5px] font-medium text-iris-600 hover:text-iris-700"
 				>
 					<ArrowLeft class="h-3.5 w-3.5" />

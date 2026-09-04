@@ -11,7 +11,7 @@
 
 	function handleDeleteClass(cid: string) {
 		dashboardStore.deleteClass(cid);
-		goto(`${base}/#/dashboard`);
+		goto(`${base}/dashboard`);
 	}
 </script>
 
@@ -42,7 +42,8 @@
 		{selectedClass}
 		onRename={(patch) => dashboardStore.renameClass(classId, patch)}
 		onDeleteClass={handleDeleteClass}
-		onEnrolStudents={(cid) => goto(`${base}/#/dashboard/${cid}/students`)}
-		onViewAttendance={(cid) => goto(`${base}/#/dashboard/${cid}/attendance`)}
+		onEnrolStudents={(cid) => goto(`${base}/dashboard/${cid}/students`)}
+		onViewAttendance={(cid) => goto(`${base}/dashboard/${cid}/attendance`)}
+		onAssessStudents={(cid) => goto(`${base}/dashboard/${cid}/assessment`)}
 	/>
 {/if}

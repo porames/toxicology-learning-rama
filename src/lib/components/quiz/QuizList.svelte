@@ -63,7 +63,7 @@
 				shuffleQuestions: false,
 				createdAt: serverTimestamp(),
 			});
-			goto(`${base}/#/quiz/${docRef.id}`);
+			goto(`${base}/quiz/${docRef.id}`);
 		} catch (err) {
 			console.error(err);
 			creating = false;
@@ -126,7 +126,7 @@
 								<FileQuestion class="h-4 w-4 shrink-0 text-iris-500" />
 								<div class="min-w-0 flex-1">
 									<button
-										onclick={() => goto(`${base}/#/quiz/${quiz.id}`)}
+										onclick={() => goto(`${base}/quiz/${quiz.id}`)}
 										class="truncate text-[14px] font-medium text-ink-900 hover:text-iris-600"
 									>
 										{quiz.title || t('common.untitledQuiz')}
@@ -147,7 +147,7 @@
 							</div>
 							<div class="flex shrink-0 gap-1">
 								<button
-									onclick={() => goto(`${base}/#/quiz/${quiz.id}`)}
+									onclick={() => goto(`${base}/quiz/${quiz.id}`)}
 									class="flex h-7 w-7 items-center justify-center rounded text-ink-400 transition hover:bg-iris-50 hover:text-iris-600"
 									title={t('quiz.edit')}
 								>

@@ -238,8 +238,6 @@
 						<TemplateMaterialEditor
 							material={mat}
 							index={i}
-							{templateId}
-							lectureId={lecture.id}
 							onTitleChange={(t) => handleTitleChange(mat.id, t)}
 							onValueChange={(v) => handleValueChange(mat.id, v)}
 							onTogglePostTest={(checked) => toggleRequiredPostTest(mat, checked)}

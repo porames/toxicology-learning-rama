@@ -14,6 +14,7 @@
 		CalendarCheck,
 		Trash2,
 		Library,
+		ClipboardList,
 	} from '@lucide/svelte';
 	import { db } from '$lib/firebase';
 	import { collection, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore';
@@ -23,6 +24,7 @@
 	import { onMount, tick } from 'svelte';
 	import moment from 'moment';
 	import * as Utils from '$lib/dashboard/utils';
+	import GoogleMeetIcon from '$lib/components/GoogleMeetIcon.svelte';
 	import ScheduleCalendar from './schedule/ScheduleCalendar.svelte';
 	import ImportLecturesFromTemplate from './schedule/ImportLecturesFromTemplate.svelte';
 	import LectureEditor from './LectureEditor.svelte';
@@ -38,6 +40,7 @@
 		onDeleteClass,
 		onEnrolStudents,
 		onViewAttendance,
+		onAssessStudents,
 	}: {
 		selectedClass: ClassItem;
 		onRename: (
@@ -46,6 +49,7 @@
 		onDeleteClass: (classId: string) => void;
 		onEnrolStudents: (classId: string) => void;
 		onViewAttendance: (classId: string) => void;
+		onAssessStudents: (classId: string) => void;
 	} = $props();
 
 	let ceSaving = $state(false);
@@ -198,6 +202,24 @@
 	let discardRequested = $state(false);
 
 	const weekStart = $derived(moment().startOf('week').add(weekOffset, 'week').toDate());
+
+	const studentActions = $derived([
+		{
+			icon: Plus,
+			label: t('dashboard.enrolStudents'),
+			onclick: () => onEnrolStudents(selectedClass.id),
+		},
+		{
+			icon: CalendarCheck,
+			label: t('dashboard.attendance'),
+			onclick: () => onViewAttendance(selectedClass.id),
+		},
+		{
+			icon: ClipboardList,
+			label: t('dashboard.assessStudents'),
+			onclick: () => onAssessStudents(selectedClass.id),
+		},
+	]);
 
 	const calendarEvents = $derived<ScheduleEvent[]>(
 		(selectedClass.lectures ?? [])
@@ -433,7 +455,7 @@
 		{/if}
 	</Button>
 
-	<div class="mt-8 flex items-center justify-between border-t border-ink-900/10 pt-6">
+	<div class="mt-8 border-t border-ink-900/10 pt-6">
 		<div>
 			<p class="text-[13.5px] font-medium text-ink-900">
 				{t('dashboard.studentsEnroled', {
@@ -442,15 +464,21 @@
 			</p>
 			<p class="text-[12.5px] text-ink-500">{t('dashboard.manageEnrolment')}</p>
 		</div>
-		<div class="flex shrink-0 items-center gap-2">
-			<Button variant="primary" onclick={() => onEnrolStudents(selectedClass.id)}>
-				<Plus class="h-3.5 w-3.5" />
-				{t('dashboard.enrolStudents')}
-			</Button>
-			<Button variant="primary" onclick={() => onViewAttendance(selectedClass.id)}>
-				<CalendarCheck class="h-3.5 w-3.5" />
-				{t('dashboard.attendance')}
-			</Button>
+		<div class="mt-3 grid grid-cols-3 gap-2">
+			{#each studentActions as action}
+				<button
+					type="button"
+					onclick={action.onclick}
+					class="flex flex-col items-center gap-1.5 rounded-xl border border-ink-900/10 bg-white px-2 py-3 text-[12px] font-medium text-ink-700 shadow-soft transition hover:border-iris-400 hover:text-iris-700"
+				>
+					<span
+						class="flex h-8 w-8 items-center justify-center rounded-lg bg-iris-50 text-iris-600"
+					>
+						<svelte:component this={action.icon} class="h-4 w-4" />
+					</span>
+					{action.label}
+				</button>
+			{/each}
 		</div>
 	</div>
 	<div class="mt-8 border-t border-ink-900/10 pt-6">
@@ -572,9 +600,16 @@
 							>
 								<span class="min-w-0 flex-1">
 									<span
-										class="block truncate text-[14px] font-medium text-ink-900"
+										class="flex items-center gap-1.5 text-[14px] font-medium text-ink-900"
 									>
-										{lecture.title || t('common.untitledLecture')}
+										{#if lecture.materials?.some((m) => m.type === 'meet')}
+											<GoogleMeetIcon
+												class="h-4 w-4 shrink-0 text-emerald-600"
+											/>
+										{/if}
+										<span class="block truncate"
+											>{lecture.title || t('common.untitledLecture')}</span
+										>
 									</span>
 									<span class="block text-[12px] text-ink-500">
 										{moment(lecture.startTime).format('ddd, MMM D')} · {moment(

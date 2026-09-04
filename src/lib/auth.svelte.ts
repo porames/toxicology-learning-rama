@@ -20,22 +20,8 @@ function createAuthState() {
 	let loading = $state(true);
 	let wasSignedIn = false;
 
-	onAuthStateChanged(auth, async (currentUser) => {
-		if (!currentUser) {
-			const redirectToLogin = wasSignedIn;
-			user = null;
-			profile = null;
-			loading = false;
-			wasSignedIn = false;
-			if (redirectToLogin) {
-				goto(`${base}/#/`);
-			}
-			return;
-		}
-		wasSignedIn = true;
+	async function loadProfile(currentUser: User) {
 		user = currentUser;
-		const userResults = await user.getIdTokenResult();
-		console.log(userResults);
 		try {
 			await currentUser.getIdToken(true);
 			const q = query(collection(db, 'users'), where('authId', '==', currentUser.uid));
@@ -43,7 +29,6 @@ function createAuthState() {
 			if (!snap.empty) {
 				const userDoc = snap.docs[0];
 				const data = userDoc.data();
-				console.log(data);
 				profile = {
 					name: data.name ?? currentUser.displayName ?? 'User',
 					email: data.email ?? currentUser.email ?? '',
@@ -53,13 +38,43 @@ function createAuthState() {
 					uid: currentUser.uid,
 					docId: userDoc.id,
 				};
+			} else {
+				profile = null;
 			}
 		} catch (err) {
 			console.error(err);
+		}
+	}
+
+	onAuthStateChanged(auth, async (currentUser) => {
+		if (!currentUser) {
+			const redirectToLogin = wasSignedIn;
+			user = null;
+			profile = null;
+			loading = false;
+			wasSignedIn = false;
+			if (redirectToLogin) {
+				goto(`${base}/`);
+			}
+			return;
+		}
+		wasSignedIn = true;
+		try {
+			await loadProfile(currentUser);
 		} finally {
 			loading = false;
 		}
 	});
+
+	async function refreshProfile() {
+		if (!user) return;
+		loading = true;
+		try {
+			await loadProfile(user);
+		} finally {
+			loading = false;
+		}
+	}
 
 	return {
 		get user() {
@@ -71,6 +86,7 @@ function createAuthState() {
 		get loading() {
 			return loading;
 		},
+		refreshProfile,
 	};
 }
 

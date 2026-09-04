@@ -3,8 +3,6 @@
 	import { FileUpload, Input, Button } from '$lib/components/ui';
 	import { authState } from '$lib/auth.svelte';
 	import { functionsUrl } from '$lib/functionsUrl';
-	import { doc, updateDoc } from 'firebase/firestore';
-	import { db } from '$lib/firebase';
 	import * as Utils from '$lib/dashboard/utils';
 	import type { Material } from '$lib/dashboard/types';
 	import type { MaterialState } from '$lib/dashboard/materialState';
@@ -14,15 +12,11 @@
 	let {
 		material,
 		state: mstate,
-		classId,
-		lectureId,
 		onValueChange,
 		persistValue,
 	}: {
 		material: Material;
 		state: MaterialState;
-		classId: string;
-		lectureId: string;
 		onValueChange: (value: string) => void;
 		persistValue?: (value: string) => Promise<void>;
 	} = $props();
@@ -62,11 +56,6 @@
 		onValueChange(videoId);
 		if (persistValue) {
 			await persistValue(videoId);
-		} else {
-			await updateDoc(
-				doc(db, 'classes', classId, 'lectures', lectureId, 'materials', material.id),
-				{ value: videoId },
-			);
 		}
 	}
 

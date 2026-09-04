@@ -133,40 +133,32 @@
 				);
 
 				const lectureRef = doc(collection(db, 'classes', classId, 'lectures'));
-				const materialRefs = (tl.materials ?? []).map((m) => ({
-					ref: doc(
-						collection(db, 'classes', classId, 'lectures', lectureRef.id, 'materials'),
-					),
-					data: m,
+				const materialsData = (tl.materials ?? []).map((m) => ({
+					id: m.id,
+					type: m.type,
+					title: m.title,
+					value: m.value ?? '',
+					...(m.requiredPostTest !== undefined
+						? { requiredPostTest: m.requiredPostTest }
+						: {}),
 				}));
 				batch.set(lectureRef, {
 					title: tl.title || t('common.untitledLecture'),
 					startTime,
 					endTime,
-					materialsOrder: materialRefs.map((x) => x.ref.id),
+					materials: materialsData,
+					materialsOrder: materialsData.map((m) => m.id),
 					createdAt: serverTimestamp(),
 				});
 				opCount++;
-
-				for (const { ref, data: m } of materialRefs) {
-					batch.set(ref, {
-						type: m.type,
-						title: m.title,
-						value: m.value ?? '',
-						...(m.requiredPostTest !== undefined
-							? { requiredPostTest: m.requiredPostTest }
-							: {}),
-						createdAt: serverTimestamp(),
-					});
-					opCount++;
-				}
 
 				created.push({
 					id: lectureRef.id,
 					title: tl.title || t('common.untitledLecture'),
 					startTime,
 					endTime,
-					materials: [],
+					materials: materialsData,
+					materialsOrder: materialsData.map((m) => m.id),
 				});
 
 				if (opCount >= 400) {
@@ -213,7 +205,7 @@
 			/>
 			<button
 				type="button"
-				onclick={() => goto(`${base}/#/dashboard`)}
+				onclick={() => goto(`${base}/dashboard`)}
 				class="text-[12.5px] font-medium text-iris-600 hover:text-iris-700"
 			>
 				{t('templates.createNewClassTemplate')}

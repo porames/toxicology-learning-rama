@@ -1,5 +1,11 @@
 <script lang="ts">
-	import type { ClassItem, Lecture, Material, MaterialType } from '$lib/dashboard/types';
+	import type {
+		ClassItem,
+		Lecture,
+		Material,
+		MaterialType,
+		MeetingHost,
+	} from '$lib/dashboard/types';
 	import { getMaterialLabel } from '$lib/dashboard/types';
 	import { MATERIAL_ICON, MATERIAL_COLOR } from '$lib/dashboard/icons';
 	import { authState } from '$lib/auth.svelte';
@@ -7,7 +13,6 @@
 	import { db } from '$lib/firebase';
 	import {
 		collection,
-		getDocs,
 		addDoc,
 		serverTimestamp,
 		updateDoc,
@@ -21,6 +26,7 @@
 	import * as Utils from '$lib/dashboard/utils';
 	import MaterialItem from './materials/MaterialItem.svelte';
 	import QuizPicker from './materials/QuizPicker.svelte';
+	import MeetCreator from './materials/MeetCreator.svelte';
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { t } from '$lib/i18n';
@@ -46,7 +52,11 @@
 		selectedClass: ClassItem;
 		selectedLecture: Lecture;
 		highlightMaterialId: string | undefined;
-		onUpdateLecture: (patch: Partial<Pick<Lecture, 'title' | 'startTime' | 'endTime'>>) => void;
+		onUpdateLecture: (
+			patch: Partial<
+				Pick<Lecture, 'title' | 'startTime' | 'endTime' | 'materials' | 'materialsOrder'>
+			>,
+		) => void;
 		onBackToClasses: () => void;
 		onBackToClass: () => void;
 		onDeleteLecture: (classId: string, lectureId: string) => void;
@@ -66,6 +76,8 @@
 	let materialsLoading = $state(false);
 	let leSaving = $state(false);
 	let showQuizPicker = $state(false);
+	let showMeetCreator = $state(false);
+	let meetingHost = $state<MeetingHost | null>(selectedLecture.meetingHost ?? null);
 	let leDeleteLecture = $state(false);
 	let leShowConfirm = $state(false);
 
@@ -82,12 +94,7 @@
 	let showLeaveWarning = $state(false);
 	let pendingUrl = $state<string | null>(null);
 
-	function syncBaseline() {
-		baselineLecture = {
-			title: selectedLecture.title,
-			startTime: new Date(selectedLecture.startTime).getTime(),
-			endTime: new Date(selectedLecture.endTime).getTime(),
-		};
+	function syncMaterialsBaseline() {
 		baselineMaterials = lectureMaterials.map((m) => ({
 			id: m.id,
 			type: m.type,
@@ -96,6 +103,15 @@
 			requiredPostTest: m.requiredPostTest ?? false,
 		}));
 		baselineOrder = [...materialsOrder];
+	}
+
+	function syncBaseline() {
+		baselineLecture = {
+			title: selectedLecture.title,
+			startTime: new Date(selectedLecture.startTime).getTime(),
+			endTime: new Date(selectedLecture.endTime).getTime(),
+		};
+		syncMaterialsBaseline();
 	}
 
 	const lectureChanged = $derived(
@@ -132,14 +148,6 @@
 	const endTimeError = $derived(
 		Utils.validateDateTimeInput(Utils.dateToStringInput(selectedLecture.endTime)),
 	);
-
-	$effect(() => {
-		if (lastLectureId !== selectedLecture.id) {
-			lastLectureId = selectedLecture.id;
-			baselineReady = false;
-			allowLeave = false;
-		}
-	});
 
 	$effect(() => {
 		dirtyOut = isDirty;
@@ -218,52 +226,50 @@
 		}
 	}
 
-	async function loadMaterialsForLecture(classId: string, lectureId: string) {
+	function loadMaterialsForLecture() {
 		materialsLoading = true;
-		try {
-			const snapshot = await getDocs(
-				collection(db, 'classes', classId, 'lectures', lectureId, 'materials'),
-			);
-			const mats: Material[] = snapshot.docs.map((d) => ({
-				id: d.id,
-				type: d.data()?.type,
-				title: d.data()?.title,
-				value: d.data()?.value,
-				requiredPostTest: d.data()?.requiredPostTest ?? false,
-			}));
-			const lecOrder = selectedLecture.materialsOrder;
-			if (lecOrder && lecOrder.length > 0) {
-				mats.sort((a, b) => {
-					const aIdx = lecOrder.indexOf(a.id);
-					const bIdx = lecOrder.indexOf(b.id);
-					return (aIdx === -1 ? Infinity : aIdx) - (bIdx === -1 ? Infinity : bIdx);
-				});
-				materialsOrder = lecOrder;
-			} else {
-				materialsOrder = mats.map((m) => m.id);
-			}
-			lectureMaterials = mats;
-			for (const mat of mats) {
-				ensureMaterialState(mat);
-			}
-		} catch (err) {
-			console.error(err);
-		} finally {
-			materialsLoading = false;
-			syncBaseline();
-			baselineReady = true;
+		const mats: Material[] = [...(selectedLecture.materials ?? [])];
+		const lecOrder = selectedLecture.materialsOrder ?? [];
+		const order = lecOrder.length > 0 ? [...lecOrder] : mats.map((m) => m.id);
+		if (lecOrder.length > 0) {
+			mats.sort((a, b) => {
+				const aIdx = order.indexOf(a.id);
+				const bIdx = order.indexOf(b.id);
+				return (aIdx === -1 ? Infinity : aIdx) - (bIdx === -1 ? Infinity : bIdx);
+			});
 		}
+		lectureMaterials = mats;
+		materialsOrder = order;
+		for (const mat of mats) {
+			ensureMaterialState(mat);
+		}
+		materialsLoading = false;
+		baselineLecture = {
+			title: selectedLecture.title,
+			startTime: new Date(selectedLecture.startTime).getTime(),
+			endTime: new Date(selectedLecture.endTime).getTime(),
+		};
+		baselineMaterials = mats.map((m) => ({
+			id: m.id,
+			type: m.type,
+			title: m.title,
+			value: m.value,
+			requiredPostTest: m.requiredPostTest ?? false,
+		}));
+		baselineOrder = [...order];
+		baselineReady = true;
 	}
 
-	const classId = $derived(selectedClass.id);
-	const lectureId = $derived(selectedLecture.id);
-
 	$effect(() => {
+		if (lastLectureId === selectedLecture.id) return;
+		lastLectureId = selectedLecture.id;
+		baselineReady = false;
+		allowLeave = false;
+
 		if (isNew) {
 			lectureMaterials = [];
 			materialsOrder = [];
 			materialsLoading = false;
-			baselineReady = false;
 			baselineLecture = {
 				title: selectedLecture.title,
 				startTime: new Date(selectedLecture.startTime).getTime(),
@@ -273,7 +279,7 @@
 			baselineOrder = [];
 			baselineReady = true;
 		} else {
-			loadMaterialsForLecture(classId, lectureId);
+			loadMaterialsForLecture();
 		}
 	});
 
@@ -286,79 +292,56 @@
 		);
 	}
 
-	function persistMaterialsOrder(classId: string, lectureId: string, order: string[]) {
-		if (isNew) return Promise.resolve();
-		return updateDoc(doc(db, 'classes', classId, 'lectures', lectureId), {
-			materialsOrder: order,
-		});
-	}
-
 	async function addMaterialOp(type: MaterialType) {
-		const classId = selectedClass.id;
-		const lectureId = selectedLecture.id;
-		let docRef: { id: string };
-		if (isNew) {
-			docRef = { id: `mat-${Utils.makeId()}` };
-		} else {
-			docRef = await addDoc(
-				collection(db, 'classes', classId, 'lectures', lectureId, 'materials'),
-				{
-					type,
-					title: Utils.defaultMaterialTitle(type),
-					value: '',
-					createdAt: serverTimestamp(),
-				},
-			);
-		}
+		const id = `mat-${Utils.makeId()}`;
 		const newMat: Material = {
-			id: docRef.id,
+			id,
 			type,
 			title: Utils.defaultMaterialTitle(type),
 			value: '',
 		};
-		const newOrder = [...materialsOrder, docRef.id];
-		materialsOrder = newOrder;
+		materialsOrder = [...materialsOrder, id];
 		lectureMaterials = [...lectureMaterials, newMat];
 		ensureMaterialState(newMat);
-		await persistMaterialsOrder(classId, lectureId, newOrder);
+		await persistMaterials();
 	}
 
 	async function addMaterialWithQuiz(quizId: string, quizTitle: string) {
-		const classId = selectedClass.id;
-		const lectureId = selectedLecture.id;
-		let docRef: { id: string };
-		if (isNew) {
-			docRef = { id: `mat-${Utils.makeId()}` };
-		} else {
-			docRef = await addDoc(
-				collection(db, 'classes', classId, 'lectures', lectureId, 'materials'),
-				{
-					type: 'quiz',
-					title: quizTitle,
-					value: quizId,
-					createdAt: serverTimestamp(),
-				},
-			);
-		}
-		const newMat: Material = { id: docRef.id, type: 'quiz', title: quizTitle, value: quizId };
-		const newOrder = [...materialsOrder, docRef.id];
-		materialsOrder = newOrder;
+		const id = `mat-${Utils.makeId()}`;
+		const newMat: Material = { id, type: 'quiz', title: quizTitle, value: quizId };
+		materialsOrder = [...materialsOrder, id];
 		lectureMaterials = [...lectureMaterials, newMat];
 		ensureMaterialState(newMat);
-		await persistMaterialsOrder(classId, lectureId, newOrder);
+		await persistMaterials();
+	}
+
+	async function addMaterialWithMeet(meetingUri: string, host?: MeetingHost) {
+		if (host) meetingHost = host;
+		const id = `mat-${Utils.makeId()}`;
+		const newMat: Material = {
+			id,
+			type: 'meet',
+			title: Utils.defaultMaterialTitle('meet'),
+			value: meetingUri,
+		};
+		materialsOrder = [...materialsOrder, id];
+		lectureMaterials = [...lectureMaterials, newMat];
+		ensureMaterialState(newMat);
+		await persistMaterials();
 	}
 
 	function handleAddMaterial(type: MaterialType) {
 		if (type === 'quiz') {
 			showQuizPicker = true;
+		} else if (type === 'meet') {
+			if (hasMeet) return;
+			showMeetCreator = true;
 		} else {
 			addMaterialOp(type);
 		}
 	}
 
 	async function handleMaterialDragEnd(draggedId: string, targetId: string) {
-		const classId = selectedClass.id;
-		const lectureId = selectedLecture.id;
 		const oldIndex = materialsOrder.indexOf(draggedId);
 		const newIndex = materialsOrder.indexOf(targetId);
 		if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
@@ -373,8 +356,6 @@
 			const bIdx = newOrder.indexOf(b.id);
 			return aIdx - bIdx;
 		});
-
-		await persistMaterialsOrder(classId, lectureId, newOrder);
 	}
 
 	function handleDragEnd(event: {
@@ -393,9 +374,6 @@
 	}
 
 	async function deleteMaterialOp(materialId: string) {
-		const classId = selectedClass.id;
-		const lectureId = selectedLecture.id;
-
 		const mat = lectureMaterials.find((m) => m.id === materialId);
 		const state = materialStates[materialId];
 		if (!isNew && mat?.type === 'video' && state?.videoId) {
@@ -415,35 +393,33 @@
 			}
 		}
 
-		const newOrder = materialsOrder.filter((id) => id !== materialId);
-		materialsOrder = newOrder;
+		materialsOrder = materialsOrder.filter((id) => id !== materialId);
 		lectureMaterials = lectureMaterials.filter((m) => m.id !== materialId);
-
-		await persistMaterialsOrder(classId, lectureId, newOrder);
-		if (!isNew) {
-			deleteDoc(
-				doc(db, 'classes', classId, 'lectures', lectureId, 'materials', materialId),
-			).catch(console.error);
-		}
+		await persistMaterials();
 	}
 
 	async function toggleRequiredPostTest(mat: Material, checked: boolean) {
 		lectureMaterials = lectureMaterials.map((m) =>
 			m.id === mat.id ? { ...m, requiredPostTest: checked } : m,
 		);
+	}
+
+	async function persistMaterials() {
 		if (isNew) return;
-		await updateDoc(
-			doc(
-				db,
-				'classes',
-				selectedClass.id,
-				'lectures',
-				selectedLecture.id,
-				'materials',
-				mat.id,
-			),
-			{ requiredPostTest: checked },
-		);
+		const materialsData = lectureMaterials.map((m) => ({
+			id: m.id,
+			type: m.type,
+			title: m.title,
+			value: m.value,
+			...(m.requiredPostTest !== undefined ? { requiredPostTest: m.requiredPostTest } : {}),
+		}));
+		await updateDoc(doc(db, 'classes', selectedClass.id, 'lectures', selectedLecture.id), {
+			materials: materialsData,
+			materialsOrder,
+			...(meetingHost ? { meetingHost } : {}),
+		});
+		onUpdateLecture({ materials: lectureMaterials, materialsOrder });
+		syncMaterialsBaseline();
 	}
 
 	async function saveLectureChanges() {
@@ -454,62 +430,43 @@
 		try {
 			const lec = selectedLecture;
 			if (!lec) return;
+			const materialsData = lectureMaterials.map((m) => ({
+				id: m.id,
+				type: m.type,
+				title: m.title,
+				value: m.value,
+				...(m.requiredPostTest !== undefined
+					? { requiredPostTest: m.requiredPostTest }
+					: {}),
+			}));
 			if (isNew) {
 				const ref = await addDoc(collection(db, 'classes', classId, 'lectures'), {
 					title: lec.title,
 					startTime: lec.startTime,
 					endTime: lec.endTime,
+					materials: materialsData,
+					materialsOrder,
+					...(meetingHost ? { meetingHost } : {}),
 					createdAt: serverTimestamp(),
 				});
-				const order: string[] = [];
-				for (const mat of lectureMaterials) {
-					const mRef = await addDoc(
-						collection(db, 'classes', classId, 'lectures', ref.id, 'materials'),
-						{
-							type: mat.type,
-							title: mat.title,
-							value: mat.value,
-							...(mat.requiredPostTest !== undefined
-								? { requiredPostTest: mat.requiredPostTest }
-								: {}),
-							createdAt: serverTimestamp(),
-						},
-					);
-					order.push(mRef.id);
-				}
-				if (order.length > 0) {
-					await updateDoc(doc(db, 'classes', classId, 'lectures', ref.id), {
-						materialsOrder: order,
-					});
-				}
 				onCreated?.({
 					id: ref.id,
 					title: lec.title,
 					startTime: lec.startTime,
 					endTime: lec.endTime,
 					materials: lectureMaterials,
-					materialsOrder: order,
+					materialsOrder,
 				});
 			} else {
 				await updateDoc(doc(db, 'classes', classId, 'lectures', lectureId), {
 					title: lec.title,
 					startTime: lec.startTime,
 					endTime: lec.endTime,
+					materials: materialsData,
+					materialsOrder,
+					...(meetingHost ? { meetingHost } : {}),
 				});
-				await Promise.all(
-					lectureMaterials.map((mat) => {
-						const patch: Record<string, unknown> = {};
-						if (mat.type !== undefined) patch.type = mat.type;
-						if (mat.title !== undefined) patch.title = mat.title;
-						if (mat.value !== undefined) patch.value = mat.value;
-						if (mat.requiredPostTest !== undefined)
-							patch.requiredPostTest = mat.requiredPostTest;
-						return updateDoc(
-							doc(db, 'classes', classId, 'lectures', lectureId, 'materials', mat.id),
-							patch,
-						);
-					}),
-				);
+				onUpdateLecture({ materials: lectureMaterials, materialsOrder });
 			}
 			syncBaseline();
 			onSaved?.();
@@ -535,7 +492,8 @@
 		}
 	}
 
-	const materialTypes: MaterialType[] = ['video', 'file', 'link', 'text', 'quiz'];
+	const materialTypes: MaterialType[] = ['video', 'file', 'link', 'text', 'quiz', 'meet'];
+	const hasMeet = $derived(lectureMaterials.some((m) => m.type === 'meet'));
 </script>
 
 <div class={embedded ? '' : 'mx-auto max-w-xl px-8 py-10'}>
@@ -633,16 +591,13 @@
 								material={mat}
 								{state}
 								index={i}
-								classId={selectedClass.id}
-								lectureId={selectedLecture.id}
 								{highlighted}
 								onTitleChange={(title) => updateMaterialLocal(mat.id, { title })}
 								onValueChange={(value) => updateMaterialLocal(mat.id, { value })}
 								onDelete={() => deleteMaterialOp(mat.id)}
 								onTogglePostTest={(checked) => toggleRequiredPostTest(mat, checked)}
-								persistValue={isNew
-									? async (value) => updateMaterialLocal(mat.id, { value })
-									: undefined}
+								persistValue={async (value) =>
+									updateMaterialLocal(mat.id, { value })}
 							/>
 						{/if}
 					{/each}
@@ -682,7 +637,7 @@
 					{@const color = MATERIAL_COLOR[type]}
 					<button
 						type="button"
-						disabled={materialsLoading}
+						disabled={materialsLoading || (type === 'meet' && hasMeet)}
 						onclick={() => handleAddMaterial(type)}
 						class={`flex items-center gap-1.5 rounded-lg border border-ink-900/10 bg-white px-3 py-1.5 text-[12.5px] font-medium text-ink-700 shadow-soft transition hover:border-transparent hover:${color.bg} disabled:cursor-not-allowed disabled:opacity-40`}
 					>
@@ -705,6 +660,20 @@
 				showQuizPicker = false;
 			}}
 			onClose={() => (showQuizPicker = false)}
+		/>
+	{/if}
+
+	{#if showMeetCreator}
+		<MeetCreator
+			classId={selectedClass.id}
+			title={selectedLecture.title}
+			startTime={selectedLecture.startTime}
+			endTime={selectedLecture.endTime}
+			onClose={() => (showMeetCreator = false)}
+			onCreated={(meetingUri, host) => {
+				addMaterialWithMeet(meetingUri, host);
+				showMeetCreator = false;
+			}}
 		/>
 	{/if}
 

@@ -52,7 +52,7 @@
 			try {
 				const quizSnap = await getDoc(doc(db, 'quizzes', quizId));
 				if (!quizSnap.exists()) {
-					goto(`${base}/#/quiz`);
+					goto(`${base}/quiz`);
 					return;
 				}
 				quiz = { id: quizSnap.id, ...quizSnap.data() } as Quiz;
@@ -60,7 +60,7 @@
 				if (attemptId) {
 					const attemptSnap = await getDoc(doc(db, 'quizAttempts', attemptId));
 					if (!attemptSnap.exists()) {
-						goto(`${base}/#/quiz`);
+						goto(`${base}/quiz`);
 						return;
 					}
 					attempt = { id: attemptSnap.id, ...attemptSnap.data() } as QuizAttempt;
@@ -357,7 +357,7 @@
 												<tr
 													onclick={() =>
 														goto(
-															`${base}/#/quiz/${quizId}/results/${row.attempt.id}`,
+															`${base}/quiz/${quizId}/results/${row.attempt.id}`,
 														)}
 													class="cursor-pointer text-ink-700 transition-colors hover:bg-iris-50/50"
 												>

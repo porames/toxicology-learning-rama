@@ -21,7 +21,7 @@
 
 	$effect(() => {
 		if (!isAdmin) {
-			goto(`${base}/#/dashboard`);
+			goto(`${base}/dashboard`);
 			return;
 		}
 		async function load() {

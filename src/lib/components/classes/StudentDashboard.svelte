@@ -121,7 +121,7 @@
 				title: doc.data().title,
 				startTime: doc.data().startTime.toDate(),
 				endTime: doc.data().endTime.toDate(),
-				materials: [],
+				materials: doc.data().materials ?? [],
 				materialsOrder: doc.data().materialsOrder || [],
 			}));
 			lectures = lecturesData;
@@ -137,40 +137,6 @@
 		if (!classId) return;
 		selection = { level: 'lecture', classId, lectureId: lec.id };
 		selectedAssignment = null;
-
-		const existing = lectures.find((l) => l.id === lec.id);
-		if (existing && existing.materials.length > 0) return;
-
-		materialsLoading = true;
-		materialsError = null;
-		try {
-			const snapshot = await getDocs(
-				collection(db, 'classes', classId, 'lectures', lec.id, 'materials'),
-			);
-			const materials = snapshot.docs.map((doc) => ({
-				id: doc.id,
-				type: doc.data().type,
-				title: doc.data().title,
-				value: doc.data().value,
-				requiredPostTest: doc.data()?.requiredPostTest,
-			}));
-
-			const lecOrder = lec.materialsOrder;
-			if (lecOrder && lecOrder.length > 0) {
-				materials.sort((a: any, b: any) => {
-					const aIdx = lecOrder.indexOf(a.id);
-					const bIdx = lecOrder.indexOf(b.id);
-					return (aIdx === -1 ? Infinity : aIdx) - (bIdx === -1 ? Infinity : bIdx);
-				});
-			}
-
-			lectures = lectures.map((l) => (l.id === lec.id ? { ...l, materials } : l));
-		} catch (err) {
-			console.error(err);
-			materialsError = t('classes.couldNotLoadMaterials');
-		} finally {
-			materialsLoading = false;
-		}
 	}
 
 	function handleLecSelection(lec: Lecture) {
@@ -280,8 +246,13 @@
 		const authLoad = authState.loading;
 		const user = authState.user;
 		const profile = authState.profile;
-		if (!authLoad && user && profile) {
+		if (authLoad) return;
+		if (user && profile) {
 			loadClasses();
+		} else if (user && !profile) {
+			classes = [];
+			classesLoading = false;
+			classesError = null;
 		}
 	});
 
@@ -470,7 +441,7 @@
 				{#each classes as cls}
 					<button
 						type="button"
-						onclick={() => goto(`${base}/#/classes/${cls.id}`)}
+						onclick={() => goto(`${base}/classes/${cls.id}`)}
 						class={`block w-full rounded-md px-2 py-2 md:py-1.5 text-left text-sm transition-colors ${
 							cls.id === classId
 								? 'bg-iris-600/10 font-medium text-iris-600'

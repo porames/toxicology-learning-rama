@@ -18,7 +18,7 @@
 			{#each classes as cls}
 				<button
 					type="button"
-					onclick={() => goto(`${base}/#/classes/${cls.id}`)}
+					onclick={() => goto(`${base}/classes/${cls.id}`)}
 					class="flex w-full items-center gap-3 rounded-lg border border-ink-900/10 bg-white px-4 py-3 text-left shadow-soft transition hover:border-iris-400 hover:bg-iris-50"
 				>
 					<span

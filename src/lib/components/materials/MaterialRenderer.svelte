@@ -4,6 +4,7 @@
 	import MaterialVideo from './MaterialVideo.svelte';
 	import MaterialQuiz from './MaterialQuiz.svelte';
 	import MaterialLink from './MaterialLink.svelte';
+	import MaterialMeet from './MaterialMeet.svelte';
 	import MaterialEmpty from './MaterialEmpty.svelte';
 	import { materialIcon } from './utils';
 	import type { Component } from 'svelte';
@@ -60,6 +61,8 @@
 		{onStartQuiz}
 		attempt={quizAttempts[material.value]}
 	/>
+{:else if material.type === 'meet' && material.value}
+	<MaterialMeet {...shared} url={material.value} />
 {:else if material.value}
 	<MaterialLink {...shared} url={material.value} />
 {:else}

@@ -3,7 +3,6 @@ import { t } from './index';
 const API_ERROR_KEYS: Record<string, () => string> = {
 	'Missing email': () => t('api.missingEmail'),
 	'No account registered for this email.': () => t('api.noAccount'),
-	'This account is already activated.': () => t('api.alreadyActivated'),
 	'Internal server error': () => t('api.internalServerError'),
 	'Missing data points': () => t('api.missingData'),
 	'Something went wrong': () => t('api.somethingWentWrong'),
@@ -12,6 +11,8 @@ const API_ERROR_KEYS: Record<string, () => string> = {
 	'Missing required fields: imageData, caseId, investigationId': () =>
 		t('api.missingImageFields'),
 	'No approved user found': () => t('api.noApprovedUser'),
+	'Email not enrolled': () => t('auth.notEnrolled'),
+	'Email already registered': () => t('signup.alreadyRegistered'),
 	'Submission not found': () => t('api.submissionNotFound'),
 	Unauthorized: () => t('api.unauthorized'),
 	'electiveStart and electiveEnd must be valid dates': () => t('api.invalidDates'),

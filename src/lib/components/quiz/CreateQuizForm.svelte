@@ -23,7 +23,7 @@
 				shuffleQuestions: shuffle,
 				createdAt: serverTimestamp(),
 			});
-			goto(`${base}/#/quiz/${docRef.id}`);
+			goto(`${base}/quiz/${docRef.id}`);
 		} catch (err) {
 			console.error(err);
 			saving = false;

@@ -36,17 +36,15 @@
 
 {#if open}
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-		role="none"
+		class="modal modal-open"
+		role="dialog"
+		aria-modal="true"
+		tabindex="-1"
 		transition:fade={{ duration: 150 }}
-		onclick={() => onclose?.()}
 	>
 		<div
-			class="mx-4 w-full rounded-xl bg-white shadow-xl {className || 'max-w-sm'}"
-			role="dialog"
-			aria-modal="true"
+			class="modal-box p-0 {className || 'max-w-sm'}"
 			transition:fly={{ duration: 200, y: 16, easing: cubicOut }}
-			onclick={(e) => e.stopPropagation()}
 		>
 			{#if title}
 				<div class="flex items-center justify-between border-b border-ink-900/10 px-5 py-4">
@@ -72,5 +70,11 @@
 				</div>
 			{/if}
 		</div>
+		<button
+			type="button"
+			class="modal-backdrop"
+			aria-label={t('common.close')}
+			onclick={() => onclose?.()}
+		></button>
 	</div>
 {/if}

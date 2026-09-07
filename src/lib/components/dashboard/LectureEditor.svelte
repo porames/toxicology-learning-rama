@@ -77,7 +77,6 @@
 	let leSaving = $state(false);
 	let showQuizPicker = $state(false);
 	let showMeetCreator = $state(false);
-	let meetingHost = $state<MeetingHost | null>(selectedLecture.meetingHost ?? null);
 	let leDeleteLecture = $state(false);
 	let leShowConfirm = $state(false);
 
@@ -87,7 +86,14 @@
 	let baselineReady = $state(false);
 	let baselineLecture = $state({ title: '', startTime: 0, endTime: 0 });
 	let baselineMaterials = $state<
-		{ id: string; type: string; title: string; value: string; requiredPostTest: boolean }[]
+		{
+			id: string;
+			type: string;
+			title: string;
+			value: string;
+			requiredPostTest: boolean;
+			hostEmail: string;
+		}[]
 	>([]);
 	let baselineOrder = $state<string[]>([]);
 	let allowLeave = $state(false);
@@ -101,6 +107,7 @@
 			title: m.title,
 			value: m.value,
 			requiredPostTest: m.requiredPostTest ?? false,
+			hostEmail: m.meetingHost?.email ?? '',
 		}));
 		baselineOrder = [...materialsOrder];
 	}
@@ -132,7 +139,8 @@
 						m.type !== b.type ||
 						m.title !== b.title ||
 						m.value !== b.value ||
-						(m.requiredPostTest ?? false) !== b.requiredPostTest
+						(m.requiredPostTest ?? false) !== b.requiredPostTest ||
+						(m.meetingHost?.email ?? '') !== b.hostEmail
 					);
 				})),
 	);
@@ -255,6 +263,7 @@
 			title: m.title,
 			value: m.value,
 			requiredPostTest: m.requiredPostTest ?? false,
+			hostEmail: m.meetingHost?.email ?? '',
 		}));
 		baselineOrder = [...order];
 		baselineReady = true;
@@ -316,13 +325,13 @@
 	}
 
 	async function addMaterialWithMeet(meetingUri: string, host?: MeetingHost) {
-		if (host) meetingHost = host;
 		const id = `mat-${Utils.makeId()}`;
 		const newMat: Material = {
 			id,
 			type: 'meet',
 			title: Utils.defaultMaterialTitle('meet'),
 			value: meetingUri,
+			...(host ? { meetingHost: host } : {}),
 		};
 		materialsOrder = [...materialsOrder, id];
 		lectureMaterials = [...lectureMaterials, newMat];
@@ -331,6 +340,7 @@
 	}
 
 	function handleAddMaterial(type: MaterialType) {
+		if (lectureTitleMissing) return;
 		if (type === 'quiz') {
 			showQuizPicker = true;
 		} else if (type === 'meet') {
@@ -412,11 +422,11 @@
 			title: m.title,
 			value: m.value,
 			...(m.requiredPostTest !== undefined ? { requiredPostTest: m.requiredPostTest } : {}),
+			...(m.meetingHost ? { meetingHost: m.meetingHost } : {}),
 		}));
 		await updateDoc(doc(db, 'classes', selectedClass.id, 'lectures', selectedLecture.id), {
 			materials: materialsData,
 			materialsOrder,
-			...(meetingHost ? { meetingHost } : {}),
 		});
 		onUpdateLecture({ materials: lectureMaterials, materialsOrder });
 		syncMaterialsBaseline();
@@ -438,6 +448,7 @@
 				...(m.requiredPostTest !== undefined
 					? { requiredPostTest: m.requiredPostTest }
 					: {}),
+				...(m.meetingHost ? { meetingHost: m.meetingHost } : {}),
 			}));
 			if (isNew) {
 				const ref = await addDoc(collection(db, 'classes', classId, 'lectures'), {
@@ -446,7 +457,6 @@
 					endTime: lec.endTime,
 					materials: materialsData,
 					materialsOrder,
-					...(meetingHost ? { meetingHost } : {}),
 					createdAt: serverTimestamp(),
 				});
 				onCreated?.({
@@ -464,7 +474,6 @@
 					endTime: lec.endTime,
 					materials: materialsData,
 					materialsOrder,
-					...(meetingHost ? { meetingHost } : {}),
 				});
 				onUpdateLecture({ materials: lectureMaterials, materialsOrder });
 			}
@@ -494,6 +503,7 @@
 
 	const materialTypes: MaterialType[] = ['video', 'file', 'link', 'text', 'quiz', 'meet'];
 	const hasMeet = $derived(lectureMaterials.some((m) => m.type === 'meet'));
+	const lectureTitleMissing = $derived(selectedLecture.title.trim() === '');
 </script>
 
 <div class={embedded ? '' : 'mx-auto max-w-xl px-8 py-10'}>
@@ -556,12 +566,6 @@
 			}}
 		/>
 	</div>
-
-	{#if timeInvalid}
-		<p class="mt-2 rounded-md bg-red-50 px-3 py-2 text-[12.5px] font-medium text-red-600">
-			{t('lectureEditor.endAfterStart')}
-		</p>
-	{/if}
 
 	<div class="mt-9 border-t border-ink-900/10 pt-6">
 		<p class="text-[13.5px] font-medium text-ink-900">
@@ -637,7 +641,9 @@
 					{@const color = MATERIAL_COLOR[type]}
 					<button
 						type="button"
-						disabled={materialsLoading || (type === 'meet' && hasMeet)}
+						disabled={materialsLoading ||
+							lectureTitleMissing ||
+							(type === 'meet' && hasMeet)}
 						onclick={() => handleAddMaterial(type)}
 						class={`flex items-center gap-1.5 rounded-lg border border-ink-900/10 bg-white px-3 py-1.5 text-[12.5px] font-medium text-ink-700 shadow-soft transition hover:border-transparent hover:${color.bg} disabled:cursor-not-allowed disabled:opacity-40`}
 					>

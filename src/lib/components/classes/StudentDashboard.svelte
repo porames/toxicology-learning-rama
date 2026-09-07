@@ -148,6 +148,10 @@
 		showCheckInModal = true;
 	}
 
+	function hasMeet(lec: Lecture): boolean {
+		return (lec.materials ?? []).some((m) => m.type === 'meet' && m.value);
+	}
+
 	async function confirmCheckIn() {
 		const lec = pendingCheckInLecture;
 		if (!lec || !classId || !authState.profile || checkingIn) return;
@@ -229,10 +233,24 @@
 			return map;
 		}, {}),
 	);
+	const meetSessionForSelected = $derived.by(() => {
+		if (!selectedLecture) return null;
+		const ms = activities.find((a) => a.lectureId === selectedLecture.id)?.meetSession;
+		if (!ms) return null;
+		return {
+			displayName: ms.displayName ?? '',
+			joinTime: ms.joinTime?.toDate?.() ?? null,
+			leaveTime: ms.leaveTime?.toDate?.() ?? null,
+			durationSec: ms.durationSec ?? null,
+		};
+	});
 	const canCheckIn = $derived.by(() => {
 		if (!pendingCheckInLecture) return false;
 		const start = new Date(pendingCheckInLecture.startTime).getTime();
 		const t = now.getTime();
+		if (hasMeet(pendingCheckInLecture)) {
+			return t >= start && t <= new Date(pendingCheckInLecture.endTime).getTime();
+		}
 		return t >= start - 15 * 60 * 1000 && t <= start + 15 * 60 * 1000;
 	});
 	const requiredQuizValues = $derived(
@@ -506,6 +524,7 @@
 						{videoUrls}
 						{quizAttempts}
 						{quizResult}
+						meetSession={meetSessionForSelected}
 						onBack={() => (selection = null)}
 						onBackFromQuiz={() => (displayQuiz = null)}
 						onStartQuiz={(quizId) => (displayQuiz = quizId)}
@@ -549,10 +568,14 @@
 			>
 				<ClockCheck class="mt-0.5 h-4 w-4 shrink-0 text-iris-500" />
 				<span>
-					{t('classes.checkInWindow', {
-						before: t('classes.minutesBefore'),
-						after: t('classes.minutesAfter'),
-					})}
+					{#if hasMeet(pendingCheckInLecture)}
+						{t('classes.checkInDuringLecture')}
+					{:else}
+						{t('classes.checkInWindow', {
+							before: t('classes.minutesBefore'),
+							after: t('classes.minutesAfter'),
+						})}
+					{/if}
 				</span>
 			</div>
 			{#if checkInError}

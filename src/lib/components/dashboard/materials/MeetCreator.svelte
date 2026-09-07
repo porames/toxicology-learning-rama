@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { LoaderCircle, Users } from '@lucide/svelte';
-	import { Button, Modal, SearchableSelect } from '$lib/components/ui';
+	import { Button, Modal } from '$lib/components/ui';
+	import HostPicker, { type HostPick } from './HostPicker.svelte';
 	import { authState } from '$lib/auth.svelte';
 	import { functionsUrl } from '$lib/functionsUrl';
-	import { db } from '$lib/firebase';
-	import { collection, getDocs, query, where } from 'firebase/firestore';
 	import type { MeetingHost } from '$lib/dashboard/types';
 	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
@@ -33,46 +32,9 @@
 	let error = $state('');
 	let needsConnect = $state(false);
 
-	let loadingHosts = $state(false);
-	let hosts = $state<{ id: string; email: string; displayName: string; role: string }[]>([]);
-	let hostUid = $state(authState.profile?.uid ?? '');
+	let selected = $state<HostPick | null>(null);
 
-	const hostOptions = $derived(hosts.map((h) => ({ value: h.id, label: h.displayName || h.id })));
-	const selectedHost = $derived(hosts.find((h) => h.id === hostUid));
-
-	async function loadHosts() {
-		loadingHosts = true;
-		try {
-			const snap = await getDocs(
-				query(collection(db, 'users'), where('role', 'in', ['teacher', 'admin'])),
-			);
-			const loaded = snap.docs.map((d) => {
-				const data = d.data();
-				return {
-					id: d.id,
-					email: data.email ?? '',
-					displayName: data.displayName ?? data.name ?? '',
-					role: data.role ?? '',
-				};
-			});
-			const profile = authState.profile;
-			if (profile && !loaded.some((h) => h.id === profile.uid)) {
-				loaded.unshift({
-					id: profile.uid,
-					email: profile.email,
-					displayName: profile.name,
-					role: profile.role,
-				});
-			}
-			hosts = loaded;
-			if (!hostUid && profile) hostUid = profile.uid;
-		} catch (err) {
-			console.error(err);
-			hosts = [];
-		} finally {
-			loadingHosts = false;
-		}
-	}
+	const selectedHost = $derived(selected);
 
 	async function loadInvitees() {
 		if (!classId) return;
@@ -98,10 +60,6 @@
 			loadingInvitees = false;
 		}
 	}
-
-	$effect(() => {
-		loadHosts();
-	});
 
 	$effect(() => {
 		loadInvitees();
@@ -135,10 +93,11 @@
 				selectedHost ??
 				(authState.profile
 					? {
-							id: authState.profile.uid,
+							key: authState.profile.uid,
 							email: authState.profile.email,
 							displayName: authState.profile.name,
 							role: authState.profile.role,
+							source: 'registered' as const,
 						}
 					: undefined);
 			onCreated(
@@ -169,14 +128,11 @@
 			</p>
 		</div>
 
-		<SearchableSelect
+		<HostPicker
+			bind:selected
 			label={t('materials.hostTeacher')}
 			hint={t('materials.hostTeacherHint')}
-			options={hostOptions}
-			bind:value={hostUid}
 			placeholder={t('materials.hostTeacher')}
-			disabled={loadingHosts || hosts.length === 0}
-			compact
 		/>
 
 		<p class="text-[12.5px] font-medium text-ink-600">{t('materials.inviteesHint')}</p>

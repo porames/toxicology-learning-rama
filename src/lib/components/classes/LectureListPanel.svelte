@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Sun, ClockCheck, ListChecks, Folder, Lock, ClipboardList } from '@lucide/svelte';
+	import GoogleMeetIcon from '$lib/components/GoogleMeetIcon.svelte';
 	import formatTimeRange from '$lib/formatTimeRange';
 	import { Tooltip } from '$lib/components/ui';
 	import type { Lecture, ClassItem, Assignment } from '$lib/dashboard/types';
@@ -141,8 +142,13 @@
 
 	function isAccessible(lec: Lecture): boolean {
 		const t = now.getTime();
-		const start = new Date(lec.startTime).getTime() - 15 * 60 * 1000;
-		return t >= start && t <= new Date(lec.endTime).getTime();
+		const start = new Date(lec.startTime).getTime();
+		if (hasMeet(lec)) return t >= start && t <= new Date(lec.endTime).getTime();
+		return t >= start - 15 * 60 * 1000 && t <= new Date(lec.endTime).getTime();
+	}
+
+	function hasMeet(lec: Lecture): boolean {
+		return (lec.materials ?? []).some((m) => m.type === 'meet' && m.value);
 	}
 </script>
 
@@ -198,7 +204,16 @@
 									<div class="flex items-center gap-2 justify-between">
 										<div>
 											<p class="text-[13.5px] font-medium text-white flex-1">
-												{lec.title || t('common.untitled')}
+												<span class="inline-flex items-center gap-1.5">
+													{lec.title || t('common.untitled')}
+													{#if hasMeet(lec)}
+														<Tooltip text={t('materials.googleMeet')}>
+															<GoogleMeetIcon
+																class="h-3.5 w-3.5 shrink-0"
+															/>
+														</Tooltip>
+													{/if}
+												</span>
 											</p>
 											<p class="text-[12px] text-white/70">
 												{formatTimeRange(lec.startTime, lec.endTime)}
@@ -421,7 +436,14 @@
 				<Lock class="h-3.5 w-3.5 shrink-0 text-ink-400" />
 			{/if}
 			<p class="text-sm font-medium text-ink-900 flex-1">
-				{lec.title || t('common.untitled')}
+				<span class="inline-flex items-center gap-1.5">
+					{lec.title || t('common.untitled')}
+					{#if hasMeet(lec)}
+						<Tooltip text={t('materials.googleMeet')}>
+							<GoogleMeetIcon class="h-3.5 w-3.5 shrink-0" />
+						</Tooltip>
+					{/if}
+				</span>
 			</p>
 			{#if checkedInIds.has(lec.id)}
 				<Tooltip text={statusLabel('checkedIn', checkedInTimes[lec.id])}>

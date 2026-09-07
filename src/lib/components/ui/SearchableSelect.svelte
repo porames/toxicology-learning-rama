@@ -146,11 +146,11 @@
 			onclick={toggle}
 			aria-haspopup="listbox"
 			aria-expanded={open}
-			class="flex w-full items-center justify-between gap-2 rounded-lg border bg-white text-left text-ink-900 transition {compact
-				? 'px-2.5 py-1.5 text-[13px]'
-				: 'px-3.5 py-2.5 text-[14.5px]'} {hasError
-				? 'border-red-300 focus:border-red-400 focus:ring-4 focus:ring-red-500/15'
-				: 'border-ink-900/12 focus:border-iris-500 focus:ring-4 focus:ring-iris-500/15'} disabled:cursor-not-allowed disabled:bg-ink-900/[0.02] disabled:text-ink-500"
+			class="input flex w-full cursor-pointer items-center justify-between gap-2 text-left transition {compact
+				? 'input-xs text-[13px]'
+				: 'input-sm text-[14.5px]'} {hasError
+				? 'input-error'
+				: ''} disabled:cursor-not-allowed"
 		>
 			<span class={selectedLabel ? '' : 'text-ink-300'}>
 				{selectedLabel || placeholder || '\u00a0'}

@@ -24,9 +24,7 @@
 <div class="relative w-full {height} {className}">
 	{#if !loaded}
 		<div class="absolute inset-0 z-10 flex items-center justify-center bg-ink-900/5">
-			<div
-				class="h-5 w-5 animate-spin rounded-full border-2 border-ink-900/10 border-t-iris-600"
-			></div>
+			<div class="loading loading-spinner loading-sm text-iris-600"></div>
 		</div>
 	{/if}
 	<div

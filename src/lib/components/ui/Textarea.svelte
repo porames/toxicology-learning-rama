@@ -52,10 +52,9 @@
 		bind:value
 		{placeholder}
 		{...rest}
-		class="w-full resize-none rounded-lg border bg-white px-3.5 py-2.5 text-[14.5px] text-ink-900 placeholder:text-ink-300 transition {hasError
-			? 'border-red-300 focus:border-red-400 focus:ring-4 focus:ring-red-500/15'
-			: 'border-ink-900/12 focus:border-iris-500 focus:ring-4 focus:ring-iris-500/15'} disabled:cursor-not-allowed disabled:bg-ink-900/[0.02] disabled:text-ink-500"
-	></textarea>
+		class="textarea w-full resize-none transition text-[14.5px] {hasError
+			? 'textarea-error'
+			: ''}"></textarea>
 	{#if hasError}
 		<p class="mt-1 text-[12.5px] text-red-600">{error}</p>
 	{:else if hint}

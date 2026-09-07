@@ -1,5 +1,45 @@
 @import 'tailwindcss';
 
+@plugin "daisyui" {
+	themes: false;
+}
+
+@plugin "daisyui/theme" {
+	name: 'toxicolearn';
+	default: true;
+	color-scheme: light;
+
+	--color-base-100: #ffffff;
+	--color-base-200: #fafaf9;
+	--color-base-300: #f4f4f2;
+	--color-base-content: #1a1523;
+	--color-primary: #7c5cfc;
+	--color-primary-content: #ffffff;
+	--color-secondary: #0ea5e9;
+	--color-secondary-content: #ffffff;
+	--color-accent: #2fd6c0;
+	--color-accent-content: #063831;
+	--color-neutral: #3f3856;
+	--color-neutral-content: #ffffff;
+	--color-info: #0ea5e9;
+	--color-info-content: #ffffff;
+	--color-success: #10b981;
+	--color-success-content: #ffffff;
+	--color-warning: #ffb84d;
+	--color-warning-content: #1a1523;
+	--color-error: #dc2626;
+	--color-error-content: #ffffff;
+
+	--radius-selector: 0.5rem;
+	--radius-field: 0.5rem;
+	--radius-box: 0.75rem;
+	--size-selector: 0.25rem;
+	--size-field: 0.25rem;
+	--border: 1px;
+	--depth: 1;
+	--noise: 0;
+}
+
 @theme {
 	--color-iris-50: #f5f3ff;
 	--color-iris-100: #ede9fe;
@@ -85,6 +125,12 @@
 	&::-webkit-scrollbar {
 		display: none;
 	}
+}
+
+.input:not(.input-error):not(:focus):not(:focus-within),
+.select:not(.select-error):not(:focus):not(:focus-within),
+.textarea:not(.textarea-error):not(:focus):not(:focus-within) {
+	--input-color: color-mix(in oklab, var(--color-base-content) 12%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {

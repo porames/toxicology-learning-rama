@@ -82,7 +82,7 @@
 	}
 </script>
 
-<Table compact>
+<Table compact nowrap minWidth="1100px">
 	{#snippet headers()}
 		<th>{t('students.enrol')}</th>
 		<th>{t('students.timestamp')}</th>

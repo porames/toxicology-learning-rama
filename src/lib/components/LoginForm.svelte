@@ -36,6 +36,12 @@
 			}
 
 			const data = await res.json();
+			if (data.pendingTeacher || data.role === 'teacher') {
+				await user.getIdToken(true);
+				await authState.refreshProfile();
+				goto(`${base}/dashboard`);
+				return;
+			}
 			if (!data.enrolled) {
 				goto(`${base}/signup`);
 				return;

@@ -8,6 +8,7 @@ export interface Material {
 	title: string;
 	value: string;
 	requiredPostTest?: boolean;
+	meetingHost?: MeetingHost;
 }
 
 export interface MeetingHost {
@@ -23,7 +24,6 @@ export interface Lecture {
 	endTime: Date;
 	materials: Material[];
 	materialsOrder?: string[];
-	meetingHost?: MeetingHost;
 }
 
 export interface ClassItem {
@@ -44,12 +44,20 @@ export type Selection =
 	| { level: 'material'; classId: string; lectureId: string; materialId: string }
 	| null;
 
+export interface MeetSession {
+	displayName: string;
+	joinTime: { toDate: () => Date } | null;
+	leaveTime: { toDate: () => Date } | null;
+	durationSec: number | null;
+}
+
 export interface Activity {
 	id: string;
 	classId: string;
 	lectureId: string;
 	checkedInAt: { toDate: () => Date } | null;
 	completedAt: { toDate: () => Date } | null;
+	meetSession?: MeetSession | null;
 }
 
 export interface Student {
@@ -68,6 +76,7 @@ export interface Student {
 	lastName?: string;
 	department?: string;
 	createdAt?: Date | null;
+	signedUp?: boolean;
 	id: string; // authId
 }
 

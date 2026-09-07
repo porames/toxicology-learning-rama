@@ -16,3 +16,5 @@ export {readGoogleSheet} from "./functions/readGoogleSheet.js";
 export {uploadMaterial, uploadAssessmentForm} from "./functions/file.js";
 export {createMeetSpace, getMeetParticipants, getMeetInvitees} from "./functions/meet.js";
 export {meetOAuthUrl, meetOAuthCallback, meetOAuthStatus} from "./functions/meetOAuth.js";
+export {getPeopleDirectory} from "./functions/peopleDirectory.js";
+export {inviteTeacher} from "./functions/inviteTeacher.js";

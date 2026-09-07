@@ -9,7 +9,9 @@
 
 	$effect(() => {
 		if (authState.profile) {
-			goto(`${base}/classes`, { replaceState: true });
+			const isStaff =
+				authState.profile.role === 'teacher' || authState.profile.role === 'admin';
+			goto(isStaff ? `${base}/dashboard` : `${base}/classes`, { replaceState: true });
 		}
 	});
 </script>

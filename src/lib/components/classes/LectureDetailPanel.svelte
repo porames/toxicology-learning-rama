@@ -10,6 +10,7 @@
 	import moment from 'moment';
 	import formatTimeRange from '$lib/formatTimeRange';
 	import { MATERIAL_COLOR } from '$lib/dashboard/icons';
+	import GoogleMeetIcon from '$lib/components/GoogleMeetIcon.svelte';
 	import type { Lecture, ClassItem } from '$lib/dashboard/types';
 	import MaterialRenderer from '$lib/components/materials/MaterialRenderer.svelte';
 	import QuizResultModal from './QuizResultModal.svelte';
@@ -43,6 +44,12 @@
 		videoUrls: Record<string, string>;
 		quizAttempts: Record<string, QuizAttempt>;
 		quizResult: QuizResult | null;
+		meetSession?: {
+			displayName: string;
+			joinTime: Date | null;
+			leaveTime: Date | null;
+			durationSec: number | null;
+		} | null;
 		onBack: () => void;
 		onBackFromQuiz: () => void;
 		onStartQuiz: (quizId: string) => void;
@@ -73,7 +80,25 @@
 		onQuizComplete,
 		onCloseQuizResult,
 		onViewAttempts,
+		meetSession = null,
 	}: Props = $props();
+
+	const meetHost = $derived(
+		selectedLecture?.materials?.find((m) => m.type === 'meet')?.meetingHost ?? null,
+	);
+	const hasPostTest = $derived(
+		(selectedLecture?.materials ?? []).some((m) => m.type === 'quiz' && m.requiredPostTest),
+	);
+
+	function fmtDateTime(d: Date | null): string {
+		if (!d) return '—';
+		return moment(d).format('ddd, MMM D · hh:mm A');
+	}
+
+	function fmtDuration(sec: number | null): string {
+		if (sec == null || sec <= 0) return '—';
+		return moment.duration(sec, 'seconds').humanize();
+	}
 </script>
 
 <div
@@ -131,6 +156,16 @@
 							: ''}
 					</span>
 				{/if}
+				{#if meetHost}
+					<span
+						class="inline-flex max-w-full items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700"
+					>
+						<GoogleMeetIcon class="h-3 w-3 shrink-0" />
+						<span class="truncate">
+							{t('materials.hostTeacher')} · {meetHost.displayName || meetHost.email}
+						</span>
+					</span>
+				{/if}
 			</div>
 
 			<div class="mt-4">
@@ -163,10 +198,47 @@
 					</ul>
 				{/if}
 			</div>
+
+			{#if meetSession}
+				<div class="mt-4 rounded-xl border border-ink-900/10 bg-white p-3 shadow-soft">
+					<div class="flex items-center gap-2">
+						<GoogleMeetIcon class="h-4 w-4 shrink-0" />
+						<p class="text-[13px] font-semibold text-ink-900">
+							{t('classes.meetingAttendance')}
+						</p>
+					</div>
+					<dl class="mt-2 space-y-1 text-[12.5px]">
+						<div class="flex items-center justify-between gap-2">
+							<dt class="text-ink-500">{t('classes.sessionName')}</dt>
+							<dd class="truncate font-medium text-ink-900">
+								{meetSession.displayName || '—'}
+							</dd>
+						</div>
+						<div class="flex items-center justify-between gap-2">
+							<dt class="text-ink-500">{t('classes.sessionJoined')}</dt>
+							<dd class="font-medium text-ink-900">
+								{fmtDateTime(meetSession.joinTime)}
+							</dd>
+						</div>
+						<div class="flex items-center justify-between gap-2">
+							<dt class="text-ink-500">{t('classes.sessionLeft')}</dt>
+							<dd class="font-medium text-ink-900">
+								{fmtDateTime(meetSession.leaveTime)}
+							</dd>
+						</div>
+						<div class="flex items-center justify-between gap-2">
+							<dt class="text-ink-500">{t('classes.sessionDuration')}</dt>
+							<dd class="font-medium text-ink-900">
+								{fmtDuration(meetSession.durationSec)}
+							</dd>
+						</div>
+					</dl>
+				</div>
+			{/if}
 		</div>
 	{/if}
 
-	{#if !displayQuiz}
+	{#if !displayQuiz && hasPostTest}
 		<button
 			onclick={onComplete}
 			disabled={!selectedLecture ||

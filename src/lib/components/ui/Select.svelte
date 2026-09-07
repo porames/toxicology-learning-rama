@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { ChevronDown } from '@lucide/svelte';
-
 	interface Option {
 		value: string;
 		label: string;
@@ -53,11 +51,9 @@
 			{disabled}
 			{onchange}
 			bind:value
-			class="w-full appearance-none rounded-lg border bg-white text-ink-900 transition {compact
-				? 'px-2.5 py-1.5 pr-8 text-[13px]'
-				: 'px-3.5 py-2.5 pr-9 text-[14.5px]'} {hasError
-				? 'border-red-300 focus:border-red-400 focus:ring-4 focus:ring-red-500/15'
-				: 'border-ink-900/12 focus:border-iris-500 focus:ring-4 focus:ring-iris-500/15'} disabled:cursor-not-allowed disabled:bg-ink-900/[0.02] disabled:text-ink-500"
+			class="select w-full transition {compact
+				? 'select-xs text-[13px]'
+				: 'select-sm text-[14.5px]'} {hasError ? 'select-error' : ''}"
 		>
 			{#if placeholder}
 				<option value="" disabled hidden>{placeholder}</option>
@@ -66,9 +62,6 @@
 				<option value={option.value}>{option.label}</option>
 			{/each}
 		</select>
-		<ChevronDown
-			class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
-		/>
 	</div>
 	{#if hasError}
 		<p class="mt-1 text-[12.5px] text-red-600">{error}</p>

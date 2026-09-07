@@ -67,11 +67,11 @@
 				fileInput?.click();
 			}
 		}}
-		class="flex cursor-pointer items-center gap-2 rounded-lg border px-3.5 py-2.5 text-[13px] font-medium transition-colors {disabled
-			? 'cursor-not-allowed opacity-50 border-ink-900/10 bg-ink-900/[0.015] text-ink-400'
+		class="btn btn-dash btn-sm gap-2 text-[13px] font-medium transition-colors {disabled
+			? 'btn-disabled opacity-50'
 			: dragging
-				? 'border-iris-500 bg-iris-50 text-iris-700'
-				: 'border-dashed border-ink-900/15 bg-ink-900/[0.015] text-ink-500 hover:border-iris-400 hover:text-iris-600'}"
+				? 'btn-primary'
+				: 'text-ink-500 hover:border-iris-400 hover:text-iris-600'}"
 	>
 		{#if dragging}
 			<FileIcon class="h-4 w-4 shrink-0" />

@@ -17,6 +17,7 @@
 	let submitting = $state(false);
 	let error = $state<string | null>(null);
 	let notice = $state<string | null>(null);
+	let checked = $state(false);
 
 	let firstName = $state('');
 	let lastName = $state('');
@@ -65,9 +66,45 @@
 
 	$effect(() => {
 		if (isGoogleConnected && !authState.profile) {
-			stage = 'form';
+			checkSignupState();
 		}
 	});
+
+	async function checkSignupState() {
+		if (checked) return;
+		if (!authState.user || authState.profile) return;
+		checked = true;
+		try {
+			const token = await authState.user.getIdToken();
+			const res = await fetch(functionsUrl('googleSignIn'), {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`,
+				},
+			});
+			const data = await res.json();
+			if (!res.ok) {
+				checked = false;
+				error = translateApiError(data?.error) || t('common.somethingWentWrong');
+				return;
+			}
+			if (data.pendingTeacher || data.role === 'teacher') {
+				await authState.user.getIdToken(true);
+				await authState.refreshProfile();
+				goto(`${base}/dashboard`);
+				return;
+			}
+			if (data.enrolled) {
+				goto(`${base}/classes`);
+				return;
+			}
+			stage = 'form';
+		} catch (err) {
+			checked = false;
+			error = err instanceof Error ? err.message : t('common.somethingWentWrong');
+		}
+	}
 
 	function dateYearError(d: Date | null): string {
 		if (!d) return '';
@@ -82,7 +119,8 @@
 		connecting = true;
 		try {
 			await signInWithPopup(auth, googleProvider);
-			stage = 'form';
+			checked = false;
+			await checkSignupState();
 		} catch (err: any) {
 			error = err?.code
 				? getAuthErrorMessage(err.code)

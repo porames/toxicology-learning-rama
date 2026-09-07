@@ -9,6 +9,8 @@ const SCOPES = [
 	'https://www.googleapis.com/auth/meetings.space.created',
 	'https://www.googleapis.com/auth/calendar.events',
 	'https://www.googleapis.com/auth/contacts.readonly',
+	'https://www.googleapis.com/auth/directory.readonly',
+	'https://www.googleapis.com/auth/gmail.send',
 ];
 
 const meetAccount = JSON.parse(readFileSync('../secret/meetAccount.json', 'utf8'));

@@ -11,7 +11,7 @@
 	import formatTimeRange from '$lib/formatTimeRange';
 	import { MATERIAL_COLOR } from '$lib/dashboard/icons';
 	import GoogleMeetIcon from '$lib/components/GoogleMeetIcon.svelte';
-	import type { Lecture, ClassItem } from '$lib/dashboard/types';
+	import type { Lecture, ClassItem, MeetParticipantInfo } from '$lib/dashboard/types';
 	import MaterialRenderer from '$lib/components/materials/MaterialRenderer.svelte';
 	import QuizResultModal from './QuizResultModal.svelte';
 	import QuizTaker from '$lib/components/quiz/QuizTaker.svelte';
@@ -50,6 +50,7 @@
 			leaveTime: Date | null;
 			durationSec: number | null;
 		} | null;
+		meetParticipant?: MeetParticipantInfo | null;
 		onBack: () => void;
 		onBackFromQuiz: () => void;
 		onStartQuiz: (quizId: string) => void;
@@ -81,13 +82,17 @@
 		onCloseQuizResult,
 		onViewAttempts,
 		meetSession = null,
+		meetParticipant = null,
 	}: Props = $props();
 
-	const meetHost = $derived(
-		selectedLecture?.materials?.find((m) => m.type === 'meet')?.meetingHost ?? null,
-	);
 	const hasPostTest = $derived(
 		(selectedLecture?.materials ?? []).some((m) => m.type === 'quiz' && m.requiredPostTest),
+	);
+	const hasMeetLecture = $derived(
+		(selectedLecture?.materials ?? []).some((m) => m.type === 'meet' && m.value),
+	);
+	const sessionRecorded = $derived(
+		selectedLecture?.sessionData?.conferenceRecord != null,
 	);
 
 	function fmtDateTime(d: Date | null): string {
@@ -131,41 +136,68 @@
 	{:else}
 		<div>
 			<h2 class="text-base font-semibold text-ink-900">{selectedLecture.title}</h2>
-			<div class="flex items-center gap-2 mt-0.5">
-				<p class="text-xs text-ink-900/50">
-					{moment(selectedLecture.startTime).format('Do MMM')} · {formatTimeRange(
-						selectedLecture.startTime,
-						selectedLecture.endTime,
-					)}
-				</p>
-				{#if checkedInTime}
-					<span
-						class="inline-flex items-center gap-1 rounded-full bg-iris-500/10 px-2 py-0.5 text-xs font-medium text-iris-600"
-					>
-						<ClockCheck size={12} />
-						{t('classes.checkedIn')} · {moment(checkedInTime).format('hh:mm A')}
-					</span>
-				{/if}
-				{#if completedIds.has(selectedLecture.id)}
-					<span
-						class="inline-flex items-center gap-1 rounded-full bg-teal-500/10 px-2 py-0.5 text-xs font-medium text-teal-600"
-					>
-						<ListChecks size={12} />
-						{t('classes.completed')}{completedTime
-							? ` · ${moment(completedTime).format('hh:mm A')}`
-							: ''}
-					</span>
-				{/if}
-				{#if meetHost}
-					<span
-						class="inline-flex max-w-full items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700"
-					>
-						<GoogleMeetIcon class="h-3 w-3 shrink-0" />
-						<span class="truncate">
-							{t('materials.hostTeacher')} · {meetHost.displayName || meetHost.email}
-						</span>
-					</span>
-				{/if}
+			<p class="mt-0.5 text-xs text-ink-900/50">
+				{moment(selectedLecture.startTime).format('Do MMM')} · {formatTimeRange(
+					selectedLecture.startTime,
+					selectedLecture.endTime,
+				)}
+			</p>
+			<div class="mt-3 rounded-xl border border-ink-900/10 bg-white px-3 py-1 shadow-soft">
+				<dl class="divide-y divide-ink-900/5 text-[12.5px]">
+					<div class="flex items-center justify-between gap-2 py-1.5">
+						<dt class="flex items-center gap-1.5 text-ink-500">
+							<ClockCheck size={13} />
+							{t('classes.checkedIn')}
+						</dt>
+						<dd
+							class={`font-medium ${checkedInTime ? 'text-emerald-600' : 'text-ink-900/40'}`}
+						>
+							{checkedInTime
+								? moment(checkedInTime).format('hh:mm A')
+								: t('classes.hasntCheckedIn')}
+						</dd>
+					</div>
+					<div class="flex items-center justify-between gap-2 py-1.5">
+						<dt class="flex items-center gap-1.5 text-ink-500">
+							<ListChecks size={13} />
+							{t('classes.completed')}
+						</dt>
+						<dd
+							class={`font-medium ${completedIds.has(selectedLecture.id) ? 'text-emerald-600' : 'text-ink-900/40'}`}
+						>
+							{#if completedTime}
+								{moment(completedTime).format('hh:mm A')}
+							{:else if completedIds.has(selectedLecture.id)}
+								{t('classes.completed')}
+							{:else}
+								{t('classes.hasntCompleted')}
+							{/if}
+						</dd>
+					</div>
+					{#if hasMeetLecture}
+						<div class="flex items-center justify-between gap-2 py-1.5">
+							<dt class="flex items-center gap-1.5 text-ink-500">
+								<GoogleMeetIcon class="h-3.5 w-3.5 shrink-0" />
+								{t('classes.attendedMeeting')}
+							</dt>
+							<dd
+								class={`font-medium ${meetParticipant ? 'text-emerald-600' : sessionRecorded ? 'text-red-600' : 'text-ink-900/40'}`}
+							>
+								{#if meetParticipant?.joinTime}
+									{t('dashboard.attended')} · {moment(meetParticipant.joinTime).format(
+										'hh:mm A',
+									)}
+								{:else if meetParticipant}
+									{t('dashboard.attended')}
+								{:else if sessionRecorded}
+									{t('dashboard.absent')}
+								{:else}
+									{t('classes.attendanceNotAvailable')}
+								{/if}
+							</dd>
+						</div>
+					{/if}
+				</dl>
 			</div>
 
 			<div class="mt-4">

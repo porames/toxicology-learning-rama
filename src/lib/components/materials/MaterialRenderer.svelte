@@ -15,6 +15,7 @@
 		title: string;
 		value: string;
 		requiredPostTest?: boolean;
+		meetingHost?: { displayName: string; email: string };
 	}
 
 	let {
@@ -62,7 +63,7 @@
 		attempt={quizAttempts[material.value]}
 	/>
 {:else if material.type === 'meet' && material.value}
-	<MaterialMeet {...shared} url={material.value} />
+	<MaterialMeet {...shared} url={material.value} host={material.meetingHost} />
 {:else if material.value}
 	<MaterialLink {...shared} url={material.value} />
 {:else}

@@ -45,7 +45,7 @@
 	let students = $state<StudentRow[]>([]);
 
 	function fmtTime(d?: Date | null): string {
-		return d ? moment(d).format('ddd, MMM D · hh:mm A') : '';
+		return d ? moment(d).format('MMM D · hh:mm A') : '';
 	}
 
 	function fmtDateTime(iso?: string | null): string {
@@ -185,6 +185,20 @@
 		return lectures.filter((l) => row.lectures[l.id]?.completedAt).length;
 	}
 
+	function participantFor(lecId: string, email: string): MeetParticipant | null {
+		const parts = sessionDataByLecture[lecId]?.participants ?? [];
+		const lower = email.toLowerCase();
+		return parts.find((p) => (p.email?.toLowerCase() ?? '') === lower) ?? null;
+	}
+
+	function hasSessionRecord(lecId: string): boolean {
+		return sessionDataByLecture[lecId]?.conferenceRecord != null;
+	}
+
+	function meetAttendedCount(row: StudentRow): number {
+		return lectures.filter((l) => participantFor(l.id, row.email)).length;
+	}
+
 	async function load() {
 		loading = true;
 		error = null;
@@ -283,6 +297,13 @@
 
 	function exportCsv() {
 		const fmt = (d?: Date | null) => (d ? moment(d).format('YYYY-MM-DD HH:mm:ss') : '');
+		const fmtMeet = (lecId: string, email: string) => {
+			const part = participantFor(lecId, email);
+			if (part?.joinTime) return moment(part.joinTime).format('YYYY-MM-DD HH:mm:ss');
+			if (part) return t('dashboard.attended');
+			if (hasSessionRecord(lecId)) return t('dashboard.absent');
+			return '';
+		};
 		const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
 		const header = [
 			t('export.studentId'),
@@ -290,10 +311,12 @@
 			t('export.email'),
 			t('export.checkedIn'),
 			t('export.completed'),
+			t('export.meeting'),
 			t('export.totalLectures'),
 			...lectures.flatMap((l) => [
 				t('export.checkInFor', { title: l.title }),
 				t('export.completedFor', { title: l.title }),
+				t('export.meetingFor', { title: l.title }),
 			]),
 		];
 		const lines = students.map((s) =>
@@ -303,10 +326,12 @@
 				s.email,
 				checkedInCount(s),
 				completedCount(s),
+				meetAttendedCount(s),
 				lectures.length,
 				...lectures.flatMap((l) => [
 					fmt(s.lectures[l.id]?.checkedInAt),
 					fmt(s.lectures[l.id]?.completedAt),
+					fmtMeet(l.id, s.email),
 				]),
 			]
 				.map(esc)
@@ -323,7 +348,7 @@
 	}
 </script>
 
-<div class="mx-auto w-xl px-8 py-10">
+<div class="mx-auto w-full max-w-6xl px-8 py-10">
 	<div class="flex items-center justify-between gap-3">
 		<div>
 			<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">
@@ -364,9 +389,12 @@
 					<li class="px-5 py-3">
 						<div class="flex items-center gap-3">
 							<div class="min-w-0 flex-1">
-								<p class="truncate text-[13.5px] font-medium text-ink-900">
-									{lec.title || t('common.untitledLecture')}
-								</p>
+								<div class="flex items-center gap-1.5">
+									<GoogleMeetIcon class="h-3.5 w-3.5 shrink-0" />
+									<p class="truncate text-[13.5px] font-medium text-ink-900">
+										{lec.title || t('common.untitledLecture')}
+									</p>
+								</div>
 								<p class="text-[12px] text-ink-400">
 									{moment(lec.startTime).format('ddd, MMM D · hh:mm A')}
 								</p>
@@ -457,6 +485,7 @@
 			{#each students as student (student.id)}
 				{@const ci = checkedInCount(student)}
 				{@const co = completedCount(student)}
+				{@const mt = meetAttendedCount(student)}
 				<div
 					class="overflow-hidden rounded-lg border border-ink-900/10 bg-white shadow-soft"
 				>
@@ -491,6 +520,12 @@
 								<ListChecks class="h-3.5 w-3.5" />
 								{co}/{lectures.length}
 							</span>
+							<span
+								class="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[11.5px] font-semibold text-sky-700"
+							>
+								<GoogleMeetIcon class="h-3.5 w-3.5" />
+								{mt}/{lectures.length}
+							</span>
 						</div>
 					</button>
 
@@ -499,51 +534,100 @@
 							{#if lectures.length === 0}
 								<p class="px-4 py-3 text-[12.5px] text-ink-400">No lectures yet.</p>
 							{:else}
-								<ul class="divide-y divide-ink-900/5">
-									{#each lectures as lec (lec.id)}
-										{@const act = student.lectures[lec.id]}
-										<li
-											class="flex items-center justify-between gap-3 px-4 py-2.5"
-										>
-											<div class="min-w-0 flex-1">
-												<p
-													class="truncate text-[13px] font-medium text-ink-900"
-												>
-													{lec.title || t('common.untitledLecture')}
-												</p>
-												<p class="text-[12px] text-ink-400">
-													{moment(lec.startTime).format(
-														'ddd, MMM D · hh:mm A',
-													)}
-												</p>
-											</div>
-											<div
-												class="flex shrink-0 items-center gap-3 text-[12px]"
-											>
-												<span
-													class="inline-flex items-center gap-1 font-medium {act?.checkedInAt
-														? 'text-emerald-600'
-														: 'text-ink-300'}"
-												>
-													<ClockCheck class="h-3.5 w-3.5" />
-													{act?.checkedInAt
-														? fmtTime(act.checkedInAt)
-														: t('common.notCheckedIn')}
-												</span>
-												<span
-													class="inline-flex items-center gap-1 font-medium {act?.completedAt
-														? 'text-teal-600'
-														: 'text-ink-300'}"
-												>
-													<ListChecks class="h-3.5 w-3.5" />
-													{act?.completedAt
-														? fmtTime(act.completedAt)
-														: t('common.notCompleted')}
-												</span>
-											</div>
-										</li>
-									{/each}
-								</ul>
+								<div class="overflow-x-auto">
+									<table class="w-full text-[12px]">
+										<thead>
+											<tr class="text-[11px] uppercase tracking-wide text-ink-400">
+												<th class="px-4 py-2 text-left font-semibold">
+													{t('dashboard.lecture')}
+												</th>
+												<th class="whitespace-nowrap px-2 py-2 text-right font-semibold">
+													<span class="inline-flex items-center justify-end gap-1">
+														<ClockCheck class="h-3.5 w-3.5" />
+														{t('classes.checkIn')}
+													</span>
+												</th>
+												<th class="whitespace-nowrap px-2 py-2 text-right font-semibold">
+													<span class="inline-flex items-center justify-end gap-1">
+														<ListChecks class="h-3.5 w-3.5" />
+														{t('classes.completed')}
+													</span>
+												</th>
+												<th class="whitespace-nowrap py-2 pl-2 pr-4 text-right font-semibold">
+													<span class="inline-flex items-center justify-end gap-1">
+														<GoogleMeetIcon class="h-3.5 w-3.5" />
+														{t('materials.googleMeet')}
+													</span>
+												</th>
+											</tr>
+										</thead>
+										<tbody class="divide-y divide-ink-900/5">
+											{#each lectures as lec (lec.id)}
+												{@const act = student.lectures[lec.id]}
+												{@const part = participantFor(lec.id, student.email)}
+												{@const recorded = hasSessionRecord(lec.id)}
+												<tr>
+													<td class="min-w-0 px-4 py-2.5">
+														<div class="flex items-center gap-1.5">
+															<GoogleMeetIcon class="h-3.5 w-3.5 shrink-0" />
+															<p
+																class="truncate text-[13px] font-medium text-ink-900"
+															>
+																{lec.title || t('common.untitledLecture')}
+															</p>
+														</div>
+														<p class="whitespace-nowrap text-[12px] text-ink-400">
+															{moment(lec.startTime).format(
+																'ddd, MMM D · hh:mm A',
+															)}
+														</p>
+													</td>
+													<td class="whitespace-nowrap px-2 py-2.5 text-right">
+														<span
+															class="font-medium {act?.checkedInAt
+																? 'text-emerald-600'
+																: 'text-ink-300'}"
+														>
+															{act?.checkedInAt
+																? fmtTime(act.checkedInAt)
+																: t('common.notCheckedIn')}
+														</span>
+													</td>
+													<td class="whitespace-nowrap px-2 py-2.5 text-right">
+														<span
+															class="font-medium {act?.completedAt
+																? 'text-teal-600'
+																: 'text-ink-300'}"
+														>
+															{act?.completedAt
+																? fmtTime(act.completedAt)
+																: t('common.notCompleted')}
+														</span>
+													</td>
+													<td class="whitespace-nowrap py-2.5 pl-2 pr-4 text-right">
+														<span
+															class="font-medium {part
+																? 'text-emerald-600'
+																: recorded
+																	? 'text-red-600'
+																	: 'text-ink-300'}"
+														>
+															{#if part?.joinTime}
+																{fmtDateTime(part.joinTime)}
+															{:else if part}
+																{t('dashboard.attended')}
+															{:else if recorded}
+																{t('dashboard.absent')}
+															{:else}
+																{t('classes.attendanceNotAvailable')}
+															{/if}
+														</span>
+													</td>
+												</tr>
+											{/each}
+										</tbody>
+									</table>
+								</div>
 							{/if}
 						</div>
 					{/if}

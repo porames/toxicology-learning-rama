@@ -9,7 +9,7 @@
 		serverTimestamp,
 	} from 'firebase/firestore';
 	import type { CourseTemplate, Lecture, TemplateLecture } from '$lib/dashboard/types';
-	import { Button, Input, Modal, SearchableSelect } from '$lib/components/ui';
+	import { Button, Modal, SearchableSelect, SundayPicker } from '$lib/components/ui';
 	import { Library, Plus, Loader2, AlertCircle } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
@@ -40,7 +40,7 @@
 	let templates = $state<CourseTemplate[]>([]);
 	let loading = $state(true);
 	let selectedTemplateId = $state('');
-	let startDate = $state(moment().add(1, 'day').format('YYYY-MM-DD'));
+	let startDate = $state(moment().day(7).format('YYYY-MM-DD'));
 	let previewLectures = $state<TemplateLecture[]>([]);
 	let lectureCount = $state(0);
 	let countLoading = $state(false);
@@ -184,8 +184,8 @@
 	});
 </script>
 
-<Modal open title={t('templates.importLecturesFromTemplate')} onclose={onClose} class="max-w-lg">
-	<div class="space-y-4">
+<Modal open title={t('templates.importLecturesFromTemplate')} onclose={onClose} class="max-w-xl">
+	<div class="space-y-5">
 		{#if loading}
 			<div class="flex items-center justify-center py-8">
 				<Loader2 class="h-5 w-5 animate-spin text-iris-600" />
@@ -210,11 +210,10 @@
 			>
 				{t('templates.createNewClassTemplate')}
 			</button>
-			<Input
-				type="date"
+			<SundayPicker
 				label={t('templates.startDate')}
 				bind:value={startDate}
-				hint={t('templates.startDateHint')}
+				hint={t('templates.startDateSundayHint')}
 			/>
 			{#if countLoading}
 				<p class="text-[12.5px] text-ink-500">{t('templates.loadingLectureCount')}</p>
@@ -235,7 +234,7 @@
 					>
 						{t('templates.lecturesLabel', { count: lectureCount })}
 					</p>
-					<div class="max-h-56 divide-y divide-ink-900/5 overflow-y-auto">
+					<div class="max-h-96 divide-y divide-ink-900/5 overflow-y-auto">
 						{#each previewLectures as l (l.id)}
 							<div class="flex items-center justify-between gap-3 px-3 py-2">
 								<p

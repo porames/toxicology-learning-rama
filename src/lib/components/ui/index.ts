@@ -11,3 +11,4 @@ export { default as Tooltip } from './Tooltip.svelte';
 export { default as ImageContainer } from './ImageContainer.svelte';
 export { default as Table } from './Table.svelte';
 export { default as DateTimeInput } from './DateTimeInput.svelte';
+export { default as SundayPicker } from './SundayPicker.svelte';

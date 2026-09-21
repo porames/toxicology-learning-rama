@@ -143,8 +143,11 @@
 	function isAccessible(lec: Lecture): boolean {
 		const t = now.getTime();
 		const start = new Date(lec.startTime).getTime();
-		if (hasMeet(lec)) return t >= start && t <= new Date(lec.endTime).getTime();
 		return t >= start - 15 * 60 * 1000 && t <= new Date(lec.endTime).getTime();
+	}
+
+	function canOpen(lec: Lecture): boolean {
+		return isAccessible(lec) || checkedInIds.has(lec.id);
 	}
 
 	function hasMeet(lec: Lecture): boolean {
@@ -191,12 +194,12 @@
 							{#each upcomingToday as lec}
 								<button
 									type="button"
-									onclick={() => isAccessible(lec) && onSelectLecture(lec)}
-									disabled={!isAccessible(lec)}
+									onclick={() => canOpen(lec) && onSelectLecture(lec)}
+									disabled={!canOpen(lec)}
 									class={`block w-full py-2 px-2.5 text-left transition-colors ${
 										selectedLectureId === lec.id
 											? 'bg-white/25'
-											: isAccessible(lec)
+											: canOpen(lec)
 												? 'hover:bg-white/15'
 												: 'opacity-50 cursor-not-allowed'
 									}`}
@@ -421,18 +424,18 @@
 {#snippet lectureRow(lec: Lecture, showAlert = false)}
 	<button
 		type="button"
-		onclick={() => isAccessible(lec) && onSelectLecture(lec)}
-		disabled={!isAccessible(lec)}
+		onclick={() => canOpen(lec) && onSelectLecture(lec)}
+		disabled={!canOpen(lec)}
 		class={`block w-full py-2 px-2 md:py-1.5 text-left transition-colors ${
 			selectedLectureId === lec.id
 				? 'bg-iris-600/10'
-				: isAccessible(lec)
+				: canOpen(lec)
 					? 'hover:bg-ink-900/5'
 					: 'opacity-50 cursor-not-allowed'
 		}`}
 	>
 		<div class="flex items-center gap-2">
-			{#if !isAccessible(lec)}
+			{#if !canOpen(lec)}
 				<Lock class="h-3.5 w-3.5 shrink-0 text-ink-400" />
 			{/if}
 			<p class="text-sm font-medium text-ink-900 flex-1">

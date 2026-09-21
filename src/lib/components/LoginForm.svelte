@@ -63,8 +63,8 @@
 </script>
 
 <div class="w-full max-w-[380px]">
-	<h2 class="text-[26px] font-semibold tracking-tight text-ink-900">{t('auth.signIn')}</h2>
-	<p class="mt-2 text-[14.5px] text-ink-500">{t('auth.signInSubtitle')}</p>
+	<h2 class="text-[26px] font-semibold tracking-tight text-ink-900">{t('auth.continueTitle')}</h2>
+	<p class="mt-2 text-[14.5px] text-ink-500">{t('auth.continueSubtitle')}</p>
 
 	<button
 		type="button"

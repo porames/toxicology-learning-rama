@@ -15,7 +15,7 @@
 </script>
 
 <svelte:head>
-	<title>RAMA Toxico | {t('auth.signIn')}</title>
+	<title>RAMA Toxico | {t('auth.continueTitle')}</title>
 </svelte:head>
 
 {#if !authState.profile}

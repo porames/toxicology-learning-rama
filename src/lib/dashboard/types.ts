@@ -24,6 +24,26 @@ export interface Lecture {
 	endTime: Date;
 	materials: Material[];
 	materialsOrder?: string[];
+	sessionData?: LectureSessionData | null;
+}
+
+export interface MeetParticipantInfo {
+	name?: string | null;
+	uid?: string | null;
+	email?: string | null;
+	displayName?: string | null;
+	realName?: string | null;
+	type?: string | null;
+	joinTime?: string | null;
+	leaveTime?: string | null;
+	sessionTimeSec?: number | null;
+}
+
+export interface LectureSessionData {
+	conferenceRecord?: string | null;
+	startTime?: string | null;
+	endTime?: string | null;
+	participants?: MeetParticipantInfo[];
 }
 
 export interface ClassItem {

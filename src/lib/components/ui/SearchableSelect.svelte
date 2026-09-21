@@ -43,11 +43,7 @@
 	let query = $state('');
 	let highlightIndex = $state(0);
 	let root = $state<HTMLDivElement>();
-	let trigger = $state<HTMLButtonElement>();
 	let searchInput = $state<HTMLInputElement>();
-	let panelLeft = $state(0);
-	let panelTop = $state(0);
-	let panelWidth = $state(0);
 
 	const selectedLabel = $derived(options.find((o) => o.value === value)?.label ?? '');
 
@@ -105,25 +101,10 @@
 		}
 	}
 
-	function updatePos() {
-		if (!trigger) return;
-		const r = trigger.getBoundingClientRect();
-		panelLeft = r.left;
-		panelTop = r.bottom + 4;
-		panelWidth = r.width;
-	}
-
 	$effect(() => {
 		if (open) {
 			highlightIndex = 0;
-			updatePos();
 			requestAnimationFrame(() => searchInput?.focus());
-			window.addEventListener('scroll', updatePos, true);
-			window.addEventListener('resize', updatePos);
-			return () => {
-				window.removeEventListener('scroll', updatePos, true);
-				window.removeEventListener('resize', updatePos);
-			};
 		}
 	});
 </script>
@@ -142,7 +123,6 @@
 			id={selectId}
 			{name}
 			{disabled}
-			bind:this={trigger}
 			onclick={toggle}
 			aria-haspopup="listbox"
 			aria-expanded={open}
@@ -165,8 +145,7 @@
 		{#if open}
 			<div
 				role="listbox"
-				class="fixed z-[100] overflow-hidden rounded-lg border border-ink-900/12 bg-white shadow-lg"
-				style={`left:${panelLeft}px;top:${panelTop}px;width:${panelWidth}px`}
+				class="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-lg border border-ink-900/12 bg-white shadow-lg"
 			>
 				<div class="flex items-center gap-2 border-b border-ink-900/10 px-3">
 					<Search class="h-4 w-4 shrink-0 text-ink-400" />

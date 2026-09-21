@@ -123,6 +123,7 @@
 				endTime: doc.data().endTime.toDate(),
 				materials: doc.data().materials ?? [],
 				materialsOrder: doc.data().materialsOrder || [],
+				sessionData: doc.data().sessionData ?? null,
 			}));
 			lectures = lecturesData;
 		} catch (err) {
@@ -148,10 +149,6 @@
 		showCheckInModal = true;
 	}
 
-	function hasMeet(lec: Lecture): boolean {
-		return (lec.materials ?? []).some((m) => m.type === 'meet' && m.value);
-	}
-
 	async function confirmCheckIn() {
 		const lec = pendingCheckInLecture;
 		if (!lec || !classId || !authState.profile || checkingIn) return;
@@ -167,23 +164,49 @@
 		try {
 			const docRef = doc(db, 'users', authState.profile.docId, 'activities', lec.id);
 
-			await setDoc(docRef, {
-				classId,
-				lectureId: lec.id,
-				checkedInAt: serverTimestamp(),
-			});
-			const docSnap = await getDoc(docRef);
-			if (!docSnap.exists()) return;
-			activities = [
-				...activities,
-				{
-					id: lec.id,
+			const existing = await getDoc(docRef);
+			if (existing.exists() && existing.data().checkedInAt) {
+				// Already checked in (e.g. auto-marked from Meet attendance) — sync and open.
+				const data = existing.data();
+				activities = activities.some((a) => a.lectureId === lec.id)
+					? activities.map((a) =>
+							a.lectureId === lec.id
+								? {
+										...a,
+										checkedInAt: data.checkedInAt,
+										completedAt: data.completedAt ?? a.completedAt,
+									}
+								: a,
+						)
+					: [
+							...activities,
+							{
+								id: lec.id,
+								classId,
+								lectureId: lec.id,
+								checkedInAt: data.checkedInAt,
+								completedAt: data.completedAt ?? null,
+							},
+						];
+			} else {
+				await setDoc(docRef, {
 					classId,
 					lectureId: lec.id,
-					checkedInAt: docSnap.data().checkedInAt,
-					completedAt: null,
-				},
-			];
+					checkedInAt: serverTimestamp(),
+				});
+				const docSnap = await getDoc(docRef);
+				if (!docSnap.exists()) return;
+				activities = [
+					...activities,
+					{
+						id: lec.id,
+						classId,
+						lectureId: lec.id,
+						checkedInAt: docSnap.data().checkedInAt,
+						completedAt: null,
+					},
+				];
+			}
 			console.log('activities recorded');
 			console.log(activities);
 		} catch (err) {
@@ -244,14 +267,26 @@
 			durationSec: ms.durationSec ?? null,
 		};
 	});
+	const meetParticipantForSelected = $derived.by(() => {
+		const participants = selectedLecture?.sessionData?.participants ?? [];
+		const profile = authState.profile;
+		if (!selectedLecture || !profile || participants.length === 0) return null;
+		const email = profile.email.toLowerCase();
+		return (
+			participants.find(
+				(p) =>
+					p.uid === profile.docId ||
+					p.uid === profile.uid ||
+					(p.email?.toLowerCase() ?? '') === email,
+			) ?? null
+		);
+	});
 	const canCheckIn = $derived.by(() => {
 		if (!pendingCheckInLecture) return false;
 		const start = new Date(pendingCheckInLecture.startTime).getTime();
+		const end = new Date(pendingCheckInLecture.endTime).getTime();
 		const t = now.getTime();
-		if (hasMeet(pendingCheckInLecture)) {
-			return t >= start && t <= new Date(pendingCheckInLecture.endTime).getTime();
-		}
-		return t >= start - 15 * 60 * 1000 && t <= start + 15 * 60 * 1000;
+		return t >= start - 15 * 60 * 1000 && t <= end;
 	});
 	const requiredQuizValues = $derived(
 		selectedLecture?.materials
@@ -525,6 +560,7 @@
 						{quizAttempts}
 						{quizResult}
 						meetSession={meetSessionForSelected}
+						meetParticipant={meetParticipantForSelected}
 						onBack={() => (selection = null)}
 						onBackFromQuiz={() => (displayQuiz = null)}
 						onStartQuiz={(quizId) => (displayQuiz = quizId)}
@@ -568,14 +604,7 @@
 			>
 				<ClockCheck class="mt-0.5 h-4 w-4 shrink-0 text-iris-500" />
 				<span>
-					{#if hasMeet(pendingCheckInLecture)}
-						{t('classes.checkInDuringLecture')}
-					{:else}
-						{t('classes.checkInWindow', {
-							before: t('classes.minutesBefore'),
-							after: t('classes.minutesAfter'),
-						})}
-					{/if}
+					{t('classes.checkInEarlyUntilEnd')}
 				</span>
 			</div>
 			{#if checkInError}

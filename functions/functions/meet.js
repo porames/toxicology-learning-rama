@@ -286,31 +286,48 @@ export const getMeetParticipants = onRequest(async (req, res) => {
     });
 
     if (classId && lectureId) {
+      let requiresPostTest = false;
+      try {
+        const lecSnap = await db
+          .collection("classes")
+          .doc(classId)
+          .collection("lectures")
+          .doc(lectureId)
+          .get();
+        const materials = lecSnap.exists ? (lecSnap.data().materials ?? []) : [];
+        requiresPostTest = materials.some((m) => m.type === "quiz" && m.requiredPostTest);
+      } catch (err) {
+        console.warn("read lecture materials error:", err);
+      }
       await Promise.all(
         participants
           .filter((p) => p.uid && p.joinTime)
-          .map((p) =>
-            db
+          .map((p) => {
+            const payload = {
+              classId,
+              lectureId,
+              checkedInAt: new Date(p.joinTime),
+              meetSession: {
+                joinTime: new Date(p.joinTime),
+                leaveTime: p.leaveTime ? new Date(p.leaveTime) : null,
+                durationSec: p.sessionTimeSec,
+                displayName: p.displayName ?? "",
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+              },
+            };
+            // Lectures without a required post-test auto-complete on leave.
+            // Post-test lectures only get checked in; completion stays manual.
+            if (!requiresPostTest && p.leaveTime) {
+              payload.completedAt = new Date(p.leaveTime);
+            }
+            return db
               .collection("users")
               .doc(p.uid)
               .collection("activities")
               .doc(lectureId)
-              .set(
-                {
-                  classId,
-                  lectureId,
-                  meetSession: {
-                    joinTime: new Date(p.joinTime),
-                    leaveTime: p.leaveTime ? new Date(p.leaveTime) : null,
-                    durationSec: p.sessionTimeSec,
-                    displayName: p.displayName ?? "",
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-                  },
-                },
-                { merge: true },
-              )
-              .catch((err) => console.warn("write meetSession error:", err)),
-          ),
+              .set(payload, { merge: true })
+              .catch((err) => console.warn("write meetSession error:", err));
+          }),
       );
     }
 

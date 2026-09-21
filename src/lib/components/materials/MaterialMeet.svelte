@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Info } from '@lucide/svelte';
+	import { Info, UserRound } from '@lucide/svelte';
 	import GoogleMeetIcon from '$lib/components/GoogleMeetIcon.svelte';
 	import MaterialBadge from './MaterialBadge.svelte';
 	import { materialTypeLabel } from './utils';
@@ -13,6 +13,7 @@
 		bg,
 		text: textColor,
 		url,
+		host = null,
 	}: {
 		icon: Component;
 		title: string;
@@ -20,15 +21,16 @@
 		bg: string;
 		text: string;
 		url: string;
+		host?: { displayName: string; email: string } | null;
 	} = $props();
 </script>
 
-<div class="space-y-1.5">
+<div class="overflow-hidden rounded-md border border-ink-900/8 bg-white shadow">
 	<a
 		href={url}
 		target="_blank"
 		rel="noopener noreferrer"
-		class="group flex items-center gap-3 rounded-md border border-ink-900/8 bg-white shadow px-3 py-2.5 transition-colors hover:bg-ink-900/5"
+		class="group flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-ink-900/5"
 	>
 		<div
 			class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${bg} ${textColor}`}
@@ -49,8 +51,16 @@
 			{t('materials.joinMeet')}
 		</span>
 	</a>
+	{#if host}
+		<p
+			class="flex items-center gap-1.5 border-t border-ink-900/8 px-3 py-1.5 text-[12px] text-ink-500"
+		>
+			<UserRound class="h-3.5 w-3.5 shrink-0 text-ink-400" />
+			<span class="truncate">{t('materials.hostTeacher')} · {host.displayName || host.email}</span>
+		</p>
+	{/if}
 	<p
-		class="flex items-start gap-1.5 rounded-md bg-iris-500/10 px-2.5 py-1.5 text-[12px] text-iris-700"
+		class="flex items-start gap-1.5 border-t border-ink-900/8 bg-iris-500/10 px-2.5 py-1.5 text-[12px] text-iris-700"
 	>
 		<Info class="mt-0.5 h-3.5 w-3.5 shrink-0" />
 		<span>{t('materials.autoCheckInNote')}</span>

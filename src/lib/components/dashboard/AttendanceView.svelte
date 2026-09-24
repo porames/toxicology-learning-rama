@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+	import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 	import { db } from '$lib/firebase';
 	import {
+		BookOpen,
 		CalendarCheck,
 		CheckCircle2,
 		ChevronDown,
@@ -12,8 +13,10 @@
 		Users,
 		LoaderCircle,
 		RefreshCw,
+		Pencil,
 	} from '@lucide/svelte';
 	import GoogleMeetIcon from '$lib/components/GoogleMeetIcon.svelte';
+	import StudentLectureDetailModal from './StudentLectureDetailModal.svelte';
 	import { Modal } from '$lib/components/ui';
 	import { authState } from '$lib/auth.svelte';
 	import { functionsUrl } from '$lib/functionsUrl';
@@ -37,6 +40,7 @@
 
 	interface StudentRow {
 		id: string;
+		authId: string;
 		ramaId: string;
 		name: string;
 		email: string;
@@ -46,11 +50,11 @@
 	let students = $state<StudentRow[]>([]);
 
 	function fmtTime(d?: Date | null): string {
-		return d ? moment(d).format('MMM D · hh:mm A') : '';
+		return d ? moment(d).format('MMM D · HH:mm') : '';
 	}
 
 	function fmtDateTime(iso?: string | null): string {
-		return iso ? moment(iso).format('MMM D · hh:mm A') : '—';
+		return iso ? moment(iso).format('MMM D · HH:mm') : '—';
 	}
 
 	function fmtDuration(sec?: number | null): string {
@@ -62,6 +66,10 @@
 
 	function meetUrl(lec: Lecture): string | null {
 		return lec.materials.find((m) => m.type === 'meet')?.value ?? null;
+	}
+
+	function hasMeet(lec: Lecture): boolean {
+		return lec.materials.some((m) => m.type === 'meet');
 	}
 
 	interface MeetParticipant {
@@ -91,6 +99,11 @@
 	let refreshing = $state(false);
 	let refreshError = $state<string | null>(null);
 	let sessionDataByLecture = $state<Record<string, MeetResult>>({});
+	let overridingId = $state<string | null>(null);
+	let overrideError = $state<string | null>(null);
+	let detailTarget = $state<{ lecture: Lecture; student: StudentRow } | null>(null);
+
+	const isAdmin = $derived(authState.profile?.role === 'admin');
 
 	const participantByEmail = $derived(
 		new Map<string, MeetParticipant>(
@@ -106,6 +119,8 @@
 			participant: participantByEmail.get(s.email.toLowerCase()) ?? null,
 		})),
 	);
+
+	const meetLectures = $derived(lectures.filter((l) => hasMeet(l)));
 
 	async function loadParticipants(lec: Lecture, force = false): Promise<MeetResult> {
 		const lecRef = doc(db, 'classes', classId, 'lectures', lec.id);
@@ -132,7 +147,7 @@
 		const data = await res.json();
 		if (!res.ok) throw new Error(data.error || 'failed');
 
-		await updateDoc(lecRef, { sessionData: data }).catch((err) => console.warn(err));
+		// sessionData is persisted merge-safe by the function; the client only reads.
 		return data;
 	}
 
@@ -177,6 +192,48 @@
 		}
 	}
 
+	async function toggleMeetAttendance(studentId: string, currentlyAttended: boolean) {
+		if (!viewingParticipants || overridingId) return;
+		const confirmed = confirm(
+			t(
+				currentlyAttended
+					? 'dashboard.overrideConfirmAbsent'
+					: 'dashboard.overrideConfirmAttended',
+			),
+		);
+		if (!confirmed) return;
+		overridingId = studentId;
+		overrideError = null;
+		try {
+			const token = await authState.user?.getIdToken();
+			const res = await fetch(functionsUrl('overrideMeetAttendance'), {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({
+					classId,
+					lectureId: viewingParticipants.lecture.id,
+					studentDocId: studentId,
+					attended: !currentlyAttended,
+				}),
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error || 'failed');
+			const participants = data.participants as MeetResult['participants'];
+			const lecId = viewingParticipants.lecture.id;
+			const updated = { ...viewingParticipants.result, participants };
+			viewingParticipants = { ...viewingParticipants, result: updated };
+			sessionDataByLecture = { ...sessionDataByLecture, [lecId]: updated };
+		} catch (err) {
+			console.error(err);
+			overrideError = t('dashboard.overrideFailed');
+		} finally {
+			overridingId = null;
+		}
+	}
+
 	function checkedInCount(row: StudentRow): number {
 		return lectures.filter((l) => row.lectures[l.id]?.checkedInAt).length;
 	}
@@ -208,24 +265,21 @@
 				error = t('common.classNotFound');
 				return;
 			}
-			console.log(classSnap.data());
 			const enroled: string[] = classSnap.data()?.enroledStudents ?? [];
 
 			const lecSnap = await getDocs(collection(db, 'classes', classId, 'lectures'));
 			const sessionByLecture: Record<string, MeetResult> = {};
-			const loadedLecs = lecSnap.docs
-				.map((d) => {
-					const sdata = d.data()?.sessionData as MeetResult | undefined;
-					if (sdata) sessionByLecture[d.id] = sdata;
-					return {
-						id: d.id,
-						title: d.data()?.title ?? t('common.untitledLecture'),
-						startTime: d.data()?.startTime?.toDate?.() ?? new Date(),
-						endTime: d.data()?.endTime?.toDate?.() ?? new Date(),
-						materials: (d.data()?.materials ?? []) as Lecture['materials'],
-					};
-				})
-				.filter((l) => l.materials.some((m) => m.type === 'meet')) as Lecture[];
+			const loadedLecs = lecSnap.docs.map((d) => {
+				const sdata = d.data()?.sessionData as MeetResult | undefined;
+				if (sdata) sessionByLecture[d.id] = sdata;
+				return {
+					id: d.id,
+					title: d.data()?.title ?? t('common.untitledLecture'),
+					startTime: d.data()?.startTime?.toDate?.() ?? new Date(),
+					endTime: d.data()?.endTime?.toDate?.() ?? new Date(),
+					materials: (d.data()?.materials ?? []) as Lecture['materials'],
+				};
+			}) as Lecture[];
 			sessionDataByLecture = sessionByLecture;
 			lectures = loadedLecs;
 			lectures.sort(
@@ -255,6 +309,7 @@
 				});
 				rows.push({
 					id,
+					authId: (data.authId as string | undefined) ?? '',
 					ramaId: data.rama_id ?? '',
 					name: data.name ?? 'Unknown',
 					email: data.email ?? '',
@@ -293,6 +348,17 @@
 			next.add(id);
 		}
 		expandedLectures = next;
+	}
+
+	function openDetail(lecture: Lecture, student: StudentRow) {
+		detailTarget = { lecture, student };
+	}
+
+	function openDetailOnKey(e: KeyboardEvent, lecture: Lecture, student: StudentRow) {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			openDetail(lecture, student);
+		}
 	}
 
 	function exportCsv() {
@@ -359,25 +425,6 @@
 			{time ? fmtTime(time) : t('common.notCompleted')}
 		</span>
 	{/snippet}
-	{#snippet meetCell(part: MeetParticipant | null, recorded: boolean)}
-		<span
-			class="font-medium {part
-				? 'text-emerald-600'
-				: recorded
-					? 'text-red-600'
-					: 'text-ink-300'}"
-		>
-			{#if part?.joinTime}
-				{fmtDateTime(part.joinTime)}
-			{:else if part}
-				{t('dashboard.attended')}
-			{:else if recorded}
-				{t('dashboard.absent')}
-			{:else}
-				{t('classes.attendanceNotAvailable')}
-			{/if}
-		</span>
-	{/snippet}
 	<div class="flex items-center justify-between gap-3">
 		<div>
 			<h1 class="mt-1 flex items-center gap-2 text-[18px] font-semibold text-ink-900">
@@ -415,6 +462,7 @@
 						{@const err = participantsError[lec.id]}
 						{@const session = sessionDataByLecture[lec.id]}
 						{@const open = expandedLectures.has(lec.id)}
+						{@const meet = hasMeet(lec)}
 						<li class="px-5 py-3">
 							<div class="flex items-center gap-3">
 								<button
@@ -429,7 +477,13 @@
 									{/if}
 									<div class="min-w-0 flex-1">
 										<div class="flex items-center gap-1.5">
-											<GoogleMeetIcon class="h-3.5 w-3.5 shrink-0" />
+											{#if meet}
+												<GoogleMeetIcon class="h-3.5 w-3.5 shrink-0" />
+											{:else}
+												<BookOpen
+													class="h-3.5 w-3.5 shrink-0 text-ink-400"
+												/>
+											{/if}
 											<p
 												class="truncate text-[13.5px] font-medium text-ink-900"
 											>
@@ -437,7 +491,7 @@
 											</p>
 										</div>
 										<p class="text-[12px] text-ink-400">
-											{moment(lec.startTime).format('ddd, MMM D · hh:mm A')}
+											{moment(lec.startTime).format('ddd, MMM D · HH:mm')}
 										</p>
 										{#if session}
 											<p>
@@ -451,30 +505,32 @@
 										{/if}
 									</div>
 								</button>
-								{#if session}
-									<button
-										type="button"
-										onclick={() => openCachedParticipants(lec)}
-										class="flex shrink-0 items-center gap-1.5 rounded-md bg-iris-500/10 px-2.5 py-1.5 text-[12px] font-semibold text-iris-700 transition hover:bg-iris-500/15"
-									>
-										<Users class="h-3.5 w-3.5" />
-										{t('dashboard.viewSession')}
-									</button>
-								{:else}
-									<button
-										type="button"
-										onclick={() => checkParticipants(lec)}
-										disabled={loading}
-										class="flex shrink-0 items-center gap-1.5 rounded-md bg-emerald-500/10 px-2.5 py-1.5 text-[12px] font-semibold text-emerald-700 transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-60"
-									>
-										{#if loading}
-											<LoaderCircle class="h-3.5 w-3.5 animate-spin" />
-											{t('common.loading')}
-										{:else}
+								{#if meet}
+									{#if session}
+										<button
+											type="button"
+											onclick={() => openCachedParticipants(lec)}
+											class="flex shrink-0 items-center gap-1.5 rounded-md bg-iris-500/10 px-2.5 py-1.5 text-[12px] font-semibold text-iris-700 transition hover:bg-iris-500/15"
+										>
 											<Users class="h-3.5 w-3.5" />
-											{t('dashboard.checkParticipants')}
-										{/if}
-									</button>
+											{t('dashboard.viewSession')}
+										</button>
+									{:else}
+										<button
+											type="button"
+											onclick={() => checkParticipants(lec)}
+											disabled={loading}
+											class="flex shrink-0 items-center gap-1.5 rounded-md bg-emerald-500/10 px-2.5 py-1.5 text-[12px] font-semibold text-emerald-700 transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-60"
+										>
+											{#if loading}
+												<LoaderCircle class="h-3.5 w-3.5 animate-spin" />
+												{t('common.loading')}
+											{:else}
+												<Users class="h-3.5 w-3.5" />
+												{t('dashboard.checkParticipants')}
+											{/if}
+										</button>
+									{/if}
 								{/if}
 							</div>
 
@@ -512,27 +568,20 @@
 														{t('classes.completed')}
 													</span>
 												</th>
-												<th
-													class="whitespace-nowrap py-2 pl-2 pr-4 text-right font-semibold"
-												>
-													<span
-														class="inline-flex items-center justify-end gap-1"
-													>
-														<GoogleMeetIcon class="h-3.5 w-3.5" />
-														{t('materials.googleMeet')}
-													</span>
-												</th>
 											</tr>
 										</thead>
 										<tbody class="divide-y divide-ink-900/5">
 											{#each students as student (student.id)}
 												{@const act = student.lectures[lec.id]}
-												{@const part = participantFor(
-													lec.id,
-													student.email,
-												)}
-												{@const recorded = hasSessionRecord(lec.id)}
-												<tr>
+												<tr
+													tabindex={0}
+													role="button"
+													aria-label={t('dashboard.viewDetails')}
+													onclick={() => openDetail(lec, student)}
+													onkeydown={(e) =>
+														openDetailOnKey(e, lec, student)}
+													class="cursor-pointer transition-colors hover:bg-ink-900/[0.02] focus-visible:bg-ink-900/[0.02]"
+												>
 													<td class="min-w-0 max-w-52 px-4 py-2.5">
 														<p
 															class="truncate text-[13px] font-medium text-ink-900"
@@ -558,11 +607,6 @@
 														{@render completedCell(
 															act?.completedAt ?? null,
 														)}
-													</td>
-													<td
-														class="whitespace-nowrap py-2.5 pl-2 pr-4 text-right"
-													>
-														{@render meetCell(part, recorded)}
 													</td>
 												</tr>
 											{/each}
@@ -664,7 +708,7 @@
 									class="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[11.5px] font-semibold text-sky-700"
 								>
 									<GoogleMeetIcon class="h-3.5 w-3.5" />
-									{mt}/{lectures.length}
+									{mt}/{meetLectures.length}
 								</span>
 							</div>
 						</button>
@@ -705,32 +749,31 @@
 															{t('classes.completed')}
 														</span>
 													</th>
-													<th
-														class="whitespace-nowrap py-2 pl-2 pr-4 text-right font-semibold"
-													>
-														<span
-															class="inline-flex items-center justify-end gap-1"
-														>
-															<GoogleMeetIcon class="h-3.5 w-3.5" />
-															{t('materials.googleMeet')}
-														</span>
-													</th>
 												</tr>
 											</thead>
 											<tbody class="divide-y divide-ink-900/5">
 												{#each lectures as lec (lec.id)}
 													{@const act = student.lectures[lec.id]}
-													{@const part = participantFor(
-														lec.id,
-														student.email,
-													)}
-													{@const recorded = hasSessionRecord(lec.id)}
-													<tr>
+													<tr
+														tabindex={0}
+														role="button"
+														aria-label={t('dashboard.viewDetails')}
+														onclick={() => openDetail(lec, student)}
+														onkeydown={(e) =>
+															openDetailOnKey(e, lec, student)}
+														class="cursor-pointer transition-colors hover:bg-ink-900/[0.02] focus-visible:bg-ink-900/[0.02]"
+													>
 														<td class="min-w-0 px-4 py-2.5">
 															<div class="flex items-center gap-1.5">
-																<GoogleMeetIcon
-																	class="h-3.5 w-3.5 shrink-0"
-																/>
+																{#if hasMeet(lec)}
+																	<GoogleMeetIcon
+																		class="h-3.5 w-3.5 shrink-0"
+																	/>
+																{:else}
+																	<BookOpen
+																		class="h-3.5 w-3.5 shrink-0 text-ink-400"
+																	/>
+																{/if}
 																<p
 																	class="truncate text-[13px] font-medium text-ink-900"
 																>
@@ -742,7 +785,7 @@
 																class="whitespace-nowrap text-[12px] text-ink-400"
 															>
 																{moment(lec.startTime).format(
-																	'ddd, MMM D · hh:mm A',
+																	'ddd, MMM D · HH:mm',
 																)}
 															</p>
 														</td>
@@ -759,11 +802,6 @@
 															{@render completedCell(
 																act?.completedAt ?? null,
 															)}
-														</td>
-														<td
-															class="whitespace-nowrap py-2.5 pl-2 pr-4 text-right"
-														>
-															{@render meetCell(part, recorded)}
 														</td>
 													</tr>
 												{/each}
@@ -783,7 +821,10 @@
 		open={viewingParticipants != null}
 		title={t('dashboard.participantsTitle')}
 		class="max-w-4xl"
-		onclose={() => (viewingParticipants = null)}
+		onclose={() => {
+			viewingParticipants = null;
+			overrideError = null;
+		}}
 	>
 		{@const view = viewingParticipants!}
 		{#if !view.result.conferenceRecord}
@@ -817,6 +858,11 @@
 							<th class="whitespace-nowrap py-2 pl-2 pr-3 text-right font-semibold">
 								{t('dashboard.sessionTime')}
 							</th>
+							{#if isAdmin}
+								<th class="w-10 px-2 py-2 text-right font-semibold">
+									<span class="sr-only">{t('common.edit')}</span>
+								</th>
+							{/if}
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-ink-900/5">
@@ -865,6 +911,36 @@
 										? fmtDuration(row.participant.sessionTimeSec)
 										: '—'}
 								</td>
+								{#if isAdmin}
+									<td class="whitespace-nowrap px-2 py-2.5 text-right">
+										<button
+											type="button"
+											title={t(
+												row.participant
+													? 'dashboard.markAbsent'
+													: 'dashboard.markAttended',
+											)}
+											aria-label={t(
+												row.participant
+													? 'dashboard.markAbsent'
+													: 'dashboard.markAttended',
+											)}
+											disabled={overridingId === row.student.id}
+											onclick={() =>
+												toggleMeetAttendance(
+													row.student.id,
+													!!row.participant,
+												)}
+											class="inline-flex items-center justify-center rounded-md p-1.5 text-ink-400 transition hover:bg-ink-900/5 hover:text-ink-700 disabled:cursor-not-allowed disabled:opacity-50"
+										>
+											{#if overridingId === row.student.id}
+												<LoaderCircle class="h-3.5 w-3.5 animate-spin" />
+											{:else}
+												<Pencil class="h-3.5 w-3.5" />
+											{/if}
+										</button>
+									</td>
+								{/if}
 							</tr>
 						{/each}
 					</tbody>
@@ -872,7 +948,9 @@
 			</div>
 		{/if}
 		{#snippet footer()}
-			{#if refreshError}
+			{#if overrideError}
+				<p class="mr-auto text-[12px] text-red-600">{overrideError}</p>
+			{:else if refreshError}
 				<p class="mr-auto text-[12px] text-red-600">{refreshError}</p>
 			{/if}
 			<button
@@ -891,4 +969,14 @@
 			</button>
 		{/snippet}
 	</Modal>
+
+	{#if detailTarget}
+		<StudentLectureDetailModal
+			student={detailTarget.student}
+			lecture={detailTarget.lecture}
+			participant={participantFor(detailTarget.lecture.id, detailTarget.student.email)}
+			sessionRecorded={hasSessionRecord(detailTarget.lecture.id)}
+			onclose={() => (detailTarget = null)}
+		/>
+	{/if}
 </div>

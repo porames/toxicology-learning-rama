@@ -17,7 +17,9 @@
 		serverTimestamp,
 		updateDoc,
 		deleteDoc,
+		deleteField,
 		doc,
+		getDoc,
 	} from 'firebase/firestore';
 	import { ChevronRight } from '@lucide/svelte';
 	import { Button, Input, Modal } from '$lib/components/ui';
@@ -430,6 +432,55 @@
 		});
 		onUpdateLecture({ materials: lectureMaterials, materialsOrder });
 		syncMaterialsBaseline();
+		await syncMeetMarker(selectedLecture.id, selectedLecture.endTime);
+	}
+
+	// Keep the end-of-meeting auto-sync marker in step with the meet material:
+	// schedule on add/replace, refresh on time edits, clear on removal.
+	async function syncMeetMarker(lectureId: string, endTime: Date) {
+		try {
+			const lecRef = doc(db, 'classes', selectedClass.id, 'lectures', lectureId);
+			const meetMat = lectureMaterials.find((m) => m.type === 'meet' && m.value);
+			if (!meetMat) {
+				const snap = await getDoc(lecRef);
+				if (snap.exists() && snap.data()?.sessionSync) {
+					await updateDoc(lecRef, { sessionSync: deleteField() });
+				}
+				return;
+			}
+			const snap = await getDoc(lecRef);
+			if (!snap.exists()) return;
+			const existing = snap.data()?.sessionSync as
+				| {
+						meetingUri?: string;
+						status?: string;
+						runAt?: { toDate?: () => Date };
+						attempts?: number;
+				  }
+				| undefined;
+			if (existing?.meetingUri === meetMat.value && existing?.status === 'done') return;
+			const runAt = new Date(
+				Math.max(new Date(endTime).getTime() + 10 * 60 * 1000, Date.now()),
+			);
+			const sameRun =
+				existing?.meetingUri === meetMat.value &&
+				existing?.status === 'scheduled' &&
+				Math.abs((existing?.runAt?.toDate?.()?.getTime() ?? 0) - runAt.getTime()) <
+					60 * 1000;
+			if (sameRun) return;
+			await updateDoc(lecRef, {
+				sessionSync: {
+					status: 'scheduled',
+					runAt,
+					meetingUri: meetMat.value,
+					ownerUid: authState.user?.uid ?? null,
+					attempts:
+						existing?.meetingUri === meetMat.value ? (existing?.attempts ?? 0) : 0,
+				},
+			});
+		} catch (err) {
+			console.warn('syncMeetMarker error:', err);
+		}
 	}
 
 	async function saveLectureChanges() {
@@ -467,6 +518,7 @@
 					materials: lectureMaterials,
 					materialsOrder,
 				});
+				await syncMeetMarker(ref.id, lec.endTime);
 			} else {
 				await updateDoc(doc(db, 'classes', classId, 'lectures', lectureId), {
 					title: lec.title,
@@ -476,6 +528,7 @@
 					materialsOrder,
 				});
 				onUpdateLecture({ materials: lectureMaterials, materialsOrder });
+				await syncMeetMarker(lectureId, lec.endTime);
 			}
 			syncBaseline();
 			onSaved?.();
@@ -672,6 +725,7 @@
 	{#if showMeetCreator}
 		<MeetCreator
 			classId={selectedClass.id}
+			lectureId={selectedLecture.id}
 			title={selectedLecture.title}
 			startTime={selectedLecture.startTime}
 			endTime={selectedLecture.endTime}

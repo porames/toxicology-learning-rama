@@ -40,7 +40,7 @@
 	function statusLabel(status: 'checkedIn' | 'completed', time?: Date): string {
 		const label = status === 'checkedIn' ? t('classes.checkedIn') : t('classes.completed');
 		if (!time) return label;
-		return `${label} · ${moment(time).format('ddd, MMM D · hh:mm A')}`;
+		return `${label} · ${moment(time).format('ddd, MMM D · HH:mm')}`;
 	}
 
 	interface Props {
@@ -348,7 +348,7 @@
 											{t('classes.opens', {
 												time: assignment.opensAt?.toDate?.()
 													? moment(assignment.opensAt.toDate()).format(
-															'MMM D · hh:mm A',
+															'MMM D · HH:mm',
 														)
 													: '—',
 											})}
@@ -357,7 +357,7 @@
 											{t('classes.due', {
 												time: assignment.dueDate?.toDate?.()
 													? moment(assignment.dueDate.toDate()).format(
-															'MMM D · hh:mm A',
+															'MMM D · HH:mm',
 														)
 													: '—',
 											})}

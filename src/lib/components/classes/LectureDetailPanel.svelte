@@ -121,8 +121,11 @@
 			}),
 	);
 	const allVideosWatched = $derived(videoReqs.every((v) => v.done));
-	const canComplete = $derived(allRequiredPassed && allVideosWatched);
-	const showRequirements = $derived(postTestReqs.length > 0 || videoReqs.length > 0);
+	const meetAttended = $derived(!hasMeetLecture || meetParticipant != null);
+	const canComplete = $derived(allRequiredPassed && allVideosWatched && meetAttended);
+	const showRequirements = $derived(
+		postTestReqs.length > 0 || videoReqs.length > 0 || hasMeetLecture,
+	);
 	const isCompletedLate = $derived(
 		completedTime != null &&
 			selectedLecture != null &&
@@ -131,7 +134,7 @@
 
 	function fmtDateTime(d: Date | null): string {
 		if (!d) return '—';
-		return moment(d).format('ddd, MMM D · hh:mm A');
+		return moment(d).format('ddd, MMM D · HH:mm');
 	}
 
 	function fmtDuration(sec: number | null): string {
@@ -187,7 +190,7 @@
 							class={`font-medium ${checkedInTime ? 'text-emerald-600' : 'text-ink-900/40'}`}
 						>
 							{checkedInTime
-								? moment(checkedInTime).format('MMM D · hh:mm A')
+								? moment(checkedInTime).format('MMM D · HH:mm')
 								: t('classes.hasntCheckedIn')}
 						</dd>
 					</div>
@@ -200,7 +203,7 @@
 							class={`font-medium ${completedIds.has(selectedLecture.id) ? 'text-emerald-600' : 'text-ink-900/40'}`}
 						>
 							{#if completedTime}
-								{moment(completedTime).format('MMM D · hh:mm A')}
+								{moment(completedTime).format('MMM D · HH:mm')}
 								{#if isCompletedLate}
 									<span
 										class="ml-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10.5px] font-semibold text-amber-700"
@@ -227,7 +230,7 @@
 								{#if meetParticipant?.joinTime}
 									{t('dashboard.attended')} · {moment(
 										meetParticipant.joinTime,
-									).format('MMM D · hh:mm A')}
+									).format('MMM D · HH:mm')}
 								{:else if meetParticipant}
 									{t('dashboard.attended')}
 								{:else if sessionRecorded}
@@ -367,6 +370,29 @@
 							</dd>
 						</div>
 					{/each}
+					{#if hasMeetLecture}
+						<div class="flex items-center justify-between gap-2 py-1.5">
+							<dt class="flex min-w-0 items-center gap-1.5 text-ink-500">
+								<GoogleMeetIcon class="h-3.5 w-3.5 shrink-0" />
+								<span class="truncate">{t('classes.attendedMeeting')}</span>
+							</dt>
+							<dd
+								class={`shrink-0 font-medium ${meetParticipant ? 'text-emerald-600' : sessionRecorded ? 'text-red-600' : 'text-ink-900/40'}`}
+							>
+								{#if meetParticipant?.joinTime}
+									{t('dashboard.attended')} · {moment(
+										meetParticipant.joinTime,
+									).format('MMM D · HH:mm')}
+								{:else if meetParticipant}
+									{t('dashboard.attended')}
+								{:else if sessionRecorded}
+									{t('dashboard.absent')}
+								{:else}
+									{t('classes.attendanceNotAvailable')}
+								{/if}
+							</dd>
+						</div>
+					{/if}
 				</dl>
 			{/if}
 			<div class={showRequirements ? 'border-t border-ink-900/5 py-2.5' : 'py-2.5'}>
@@ -389,9 +415,6 @@
 						{t('classes.markAsCompleted')}
 					{/if}
 				</button>
-				{#if selectedLecture && allRequiredPassed && !allVideosWatched}
-					<p class="mt-1.5 text-xs text-red-500">{t('classes.pleaseWatchVideos')}</p>
-				{/if}
 			</div>
 		</div>
 	{/if}

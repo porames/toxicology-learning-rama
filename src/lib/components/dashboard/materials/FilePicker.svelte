@@ -64,7 +64,7 @@
 	function fmtDate(d?: { toDate?: () => Date } | null): string {
 		if (!d) return '';
 		const date = (d as any).toDate ? (d as any).toDate() : d;
-		return moment(date).format('MMM D, YYYY · hh:mm A');
+		return moment(date).format('MMM D, YYYY · HH:mm');
 	}
 </script>
 

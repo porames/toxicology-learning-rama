@@ -670,11 +670,11 @@
 			</p>
 			<p class="text-[13px] text-ink-500">
 				{t('classes.currentDeviceTime')}
-				<span class="font-medium text-ink-700">{moment(now).format('hh:mm:ss A')}</span>
+				<span class="font-medium text-ink-700">{moment(now).format('HH:mm:ss')}</span>
 			</p>
 			<p class="rounded-lg bg-iris-50 px-3 py-2 text-[14px] font-semibold text-iris-700">
 				{t('classes.startsAt', {
-					time: moment(pendingCheckInLecture.startTime).format('ddd, MMM D · hh:mm A'),
+					time: moment(pendingCheckInLecture.startTime).format('ddd, MMM D · HH:mm'),
 				})}
 			</p>
 			<div

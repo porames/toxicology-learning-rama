@@ -56,7 +56,9 @@
 			class="flex items-center gap-1.5 border-t border-ink-900/8 px-3 py-1.5 text-[12px] text-ink-500"
 		>
 			<UserRound class="h-3.5 w-3.5 shrink-0 text-ink-400" />
-			<span class="truncate">{t('materials.hostTeacher')} · {host.displayName || host.email}</span>
+			<span class="truncate"
+				>{t('materials.hostTeacher')} · {host.displayName || host.email}</span
+			>
 		</p>
 	{/if}
 	<p

@@ -128,7 +128,7 @@
 	function fmtDate(d?: { toDate?: () => Date } | Date | null): string {
 		if (!d) return '—';
 		const date = (d as any).toDate ? (d as any).toDate() : d;
-		return moment(date).format('MMM D, YYYY · hh:mm A');
+		return moment(date).format('MMM D, YYYY · HH:mm');
 	}
 
 	async function fileDownloadUrl(studentId: string, att: SubmissionAttachment): Promise<string> {
@@ -374,7 +374,7 @@
 														{t('assignmentDetail.uploadedAt', {
 															time: moment(
 																att.uploadedAt.toDate(),
-															).format('MMM D, YYYY · hh:mm A'),
+															).format('MMM D, YYYY · HH:mm'),
 														})}
 													</p>
 												{/if}

@@ -98,5 +98,5 @@ export function fmtDate(d?: { toDate?: () => Date } | Date | null): string {
 		typeof d === 'object' && 'toDate' in d && typeof d.toDate === 'function'
 			? d.toDate()
 			: (d as Date);
-	return moment(date).format('ddd, MMM D, YYYY · hh:mm A');
+	return moment(date).format('ddd, MMM D, YYYY · HH:mm');
 }

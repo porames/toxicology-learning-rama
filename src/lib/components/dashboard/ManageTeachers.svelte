@@ -60,7 +60,7 @@
 
 	function fmtDateTime(d?: Date | null): string {
 		if (!d || d.getTime() === 0) return '—';
-		return moment(d).format('MMM D, YYYY · hh:mm A');
+		return moment(d).format('MMM D, YYYY · HH:mm');
 	}
 
 	function initials(name: string | null): string {

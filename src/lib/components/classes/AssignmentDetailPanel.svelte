@@ -248,7 +248,7 @@
 	function fmtDate(d?: { toDate?: () => Date } | Date | null): string {
 		if (!d) return '—';
 		const date = (d as any).toDate ? (d as any).toDate() : d;
-		return moment(date).format('ddd, MMM D, YYYY · hh:mm A');
+		return moment(date).format('ddd, MMM D, YYYY · HH:mm');
 	}
 
 	$effect(() => {
@@ -356,7 +356,7 @@
 														{t('assignmentDetail.uploadedAt', {
 															time: moment(
 																att.uploadedAt.toDate(),
-															).format('MMM D, YYYY · hh:mm A'),
+															).format('MMM D, YYYY · HH:mm'),
 														})}
 													</p>
 												{/if}
@@ -458,7 +458,7 @@
 						<div class="text-[12.5px] text-ink-500">
 							{t('assignmentDetail.lastSubmitted', {
 								time: moment(submission.submittedAt.toDate()).format(
-									'MMM D, YYYY · hh:mm A',
+									'MMM D, YYYY · HH:mm',
 								),
 							})}
 						</div>
@@ -467,7 +467,7 @@
 						<div class="text-[12.5px] text-ink-500">
 							{t('assignmentDetail.lastSaved', {
 								time: moment(submission.updatedAt.toDate()).format(
-									'MMM D, YYYY · hh:mm A',
+									'MMM D, YYYY · HH:mm',
 								),
 							})}
 						</div>

@@ -14,6 +14,7 @@
 
 	let {
 		classId,
+		lectureId,
 		title,
 		startTime,
 		endTime,
@@ -21,6 +22,7 @@
 		onCreated,
 	}: {
 		classId?: string;
+		lectureId?: string;
 		title?: string;
 		startTime?: Date;
 		endTime?: Date;
@@ -248,7 +250,7 @@
 					'Content-Type': 'application/json',
 					Authorization: `Bearer ${token}`,
 				},
-				body: JSON.stringify({ classId, title, startTime, endTime }),
+				body: JSON.stringify({ classId, lectureId, title, startTime, endTime }),
 			});
 			const data = await res.json();
 			if (data.error === 'connect_google_meet') {
@@ -291,9 +293,7 @@
 				{title || t('common.untitledLecture')}
 			</p>
 			<p class="text-[12px] text-ink-500">
-				{moment(startTime).format('ddd, MMM D · hh:mm A')} – {moment(endTime).format(
-					'hh:mm A',
-				)}
+				{moment(startTime).format('ddd, MMM D · HH:mm')} – {moment(endTime).format('HH:mm')}
 			</p>
 		</div>
 

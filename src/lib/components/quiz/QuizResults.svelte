@@ -366,7 +366,7 @@
 													>
 														{row.completedAt
 															? moment(row.completedAt).format(
-																	'MMM D, YYYY · hh:mm A',
+																	'MMM D, YYYY · HH:mm',
 																)
 															: '—'}
 													</td>

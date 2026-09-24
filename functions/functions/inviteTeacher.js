@@ -1,5 +1,4 @@
 import { onRequest } from 'firebase-functions/v2/https';
-import { readFileSync } from 'node:fs';
 import { OAuth2Client } from 'google-auth-library';
 import { admin, db } from '../lib/admin.js';
 import { handleCors } from '../lib/cors.js';
@@ -10,15 +9,23 @@ const GMAIL_SEND_URL = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/
 const APP_BASE_URL_DEV = 'http://localhost:5173/poisoncenter/th/elearning';
 const APP_BASE_URL_PROD = 'https://toxicology-learning-rama.vercel.app/poisoncenter/th/elearning';
 
-const meetAccount = JSON.parse(readFileSync('../secret/meetAccount.json', 'utf8'));
-const MEET_KEYS = meetAccount.web ?? meetAccount.installed ?? {};
+let cachedMeetKeys = null;
+function meetKeys() {
+	if (!cachedMeetKeys) {
+		const raw = process.env.MEET_ACCOUNT_JSON;
+		if (!raw) throw new Error('MEET_ACCOUNT_JSON env var is not set');
+		cachedMeetKeys = JSON.parse(raw).web ?? {};
+	}
+	return cachedMeetKeys;
+}
 
 function appBaseUrl() {
 	return process.env.FUNCTIONS_EMULATOR ? APP_BASE_URL_DEV : APP_BASE_URL_PROD;
 }
 
 function loadOAuthClient(refreshToken) {
-	const oauth = new OAuth2Client(MEET_KEYS.client_id, MEET_KEYS.client_secret);
+	const { client_id, client_secret } = meetKeys();
+	const oauth = new OAuth2Client(client_id, client_secret);
 	oauth.setCredentials({ refresh_token: refreshToken });
 	return oauth;
 }

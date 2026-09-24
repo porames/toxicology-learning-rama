@@ -146,7 +146,7 @@
 {:else if quiz}
 	{#if !started}
 		<!-- StartPage -->
-		<div class="mx-auto max-w-4xl w-4xl px-8 py-10" style="height: max-content">
+		<div class="mx-auto max-w-4xl px-8 py-10" style="height: max-content">
 			<div class="rounded-xl border border-ink-900/10 bg-white p-8 shadow-soft">
 				<div class="text-center">
 					<h1 class="text-2xl font-bold text-ink-900">{quiz.title}</h1>
@@ -234,7 +234,7 @@
 		{@const totalQuestions = quiz.questions.length}
 		{@const allAnswered = answeredCount >= totalQuestions}
 
-		<div class="mx-auto max-w-4xl w-4xl px-8 py-10" style="height: max-content">
+		<div class="mx-auto max-w-4xl px-8 py-10 overflow-y-auto">
 			<div class="flex items-center justify-between gap-4">
 				<div>
 					<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">

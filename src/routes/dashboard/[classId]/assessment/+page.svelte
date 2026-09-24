@@ -255,7 +255,7 @@
 	<title>RAMA Toxico | {t('dashboard.assessStudents')}</title>
 </svelte:head>
 
-<div class="mx-auto w-full min-w-0 px-4 py-10">
+<div class="mx-auto w-full min-w-0 max-w-6xl px-8 py-10">
 	<h1 class="flex items-center gap-2 text-lg font-semibold text-ink-900">
 		<ClipboardList class="h-4 w-4 text-iris-500" />
 		{t('dashboard.assessStudents')}

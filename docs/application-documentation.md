@@ -194,7 +194,7 @@ If the lecture has a Meet session, an attendance card shows `sessionName`, `Join
 
 The lecture header shows an organized status list: `Checked in` time (or pending), `Completed` time (or pending), and - for lectures containing a Meet material - an `Attended meeting` row. That row is resolved from the lecture document's cached `sessionData.participants[]` (matched by user id or email): `Attended · hh:mm A` when matched, `Absent` once a conference record exists but the student is not in it, and `Not recorded yet` before any session data is available.
 
-**Mark as Completed** - this button is rendered **only when the lecture has a post-test** (at least one `quiz` material with `requiredPostTest`). It is disabled until `allRequiredPassed` (every required quiz has a passing attempt); otherwise a `pleaseCompletePosttest` hint is shown. Completing writes `setDoc(activities/{id}, { classId, lectureId, completedAt: serverTimestamp() }, { merge: true })` and shows a `greatJob / markedAsCompleted` modal.
+**Mark as Completed** - this button is rendered for every lecture. Above it, a **Completion requirements** card lists each gate: required post-test quizzes (pass/fail, tappable to start) and uploaded videos with watch progress (each must be watched past 80%). The button stays disabled until `canComplete` (all required quizzes passed AND all videos > 80%); otherwise a hint is shown (`pleaseCompletePosttest` / `pleaseWatchVideos`). Completing writes `setDoc(activities/{id}, { classId, lectureId, completedAt: serverTimestamp() }, { merge: true })` and shows a `greatJob / markedAsCompleted` modal. Video progress itself is tracked per video as a 0-1 fraction in `activities/{lectureId}.videos[]` (flushed every 2 min and on video end) and shown on each video card as a progress bar.
 
 ### 4.5 Quizzes (`/quiz/[id]/take` + `QuizTaker.svelte`)
 
@@ -217,7 +217,7 @@ The lecture header shows an organized status list: `Checked in` time (or pending
 There is no single percentage threshold in code; completion is per lecture:
 
 1. **Check in** within the allowed window to unlock materials.
-2. **Pass every required post-test quiz** (unlimited retakes; typically 70% to pass), then click **Mark as Completed**.
+2. **Pass every required post-test quiz** (unlimited retakes; typically 70% to pass) and **watch every uploaded video past 80%**, then click **Mark as Completed** (gated by the requirements card).
 3. **Submit assigned assignments** within `[opensAt, dueDate]` with **all** required attachments.
 4. For Meet lectures, **join via the Meet link** so a Meet session record exists (used for auto check-in evidence alongside manual check-in).
 
@@ -302,7 +302,7 @@ Page: `/dashboard/[classId]/attendance` -> `AttendanceView.svelte` (admin/teache
 - Header counts + `Export CSV` (`attendance_{classId}.csv`: `ramaId, name, email, checkedIn, completed, total` + per-lecture check-in/completed times).
 - Per-lecture Google Meet card: `View Session` (cached `sessionData`) or `Check Participants` (`POST getMeetParticipants { meetingUri, classId, lectureId }`, cached via `updateDoc(lectures/{lid}, { sessionData })`).
 - Per-student expandable rows with `checkedIn x/y` (emerald `ClockCheck`) + `completed x/y` (teal `ListChecks`) and per-lecture timestamps.
-- Participants modal: roster joined to Meet participants by lowercased email -> `Attended / Absent` pills + expandable `displayName, join/leaveTime, sessionTimeSec`. `Refresh` forces reload.
+- Participants modal: roster joined to Meet participants by lowercased email -> `Attended / Absent` pills in a table (`Full name | Status | Display name | Enter | Leave | Duration`). `Refresh` forces reload.
 
 **Backend (`getMeetParticipants`, `meet.js`, staff-only):**
 

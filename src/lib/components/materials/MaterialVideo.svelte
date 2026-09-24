@@ -12,6 +12,7 @@
 		bg,
 		text: textColor,
 		embedUrl,
+		startPosition = 0,
 		onPositionChange,
 	}: {
 		icon: Component;
@@ -20,17 +21,25 @@
 		bg: string;
 		text: string;
 		embedUrl?: string;
+		startPosition?: number;
 		onPositionChange?: (seconds: number) => void;
 	} = $props();
 
 	let iframeEl = $state<HTMLIFrameElement | null>(null);
-	let maxPosition = $state(0);
+	let duration = $state(0);
+	let maxFraction = $state(0);
+	let seekApplied = $state(false);
 
 	const cacheBuster = $state(() => crypto.randomUUID());
 
 	const src = $derived(
 		embedUrl ? `${embedUrl}${embedUrl.includes('?') ? '&' : '?'}_=${cacheBuster}` : '',
 	);
+
+	const progress = $derived(
+		Math.min(1, Math.max(maxFraction, startPosition > 0 ? startPosition : 0)),
+	);
+	const progressPct = $derived(Math.round(progress * 100));
 
 	function loadPlayerJs(): Promise<void> {
 		return new Promise((resolve, reject) => {
@@ -63,20 +72,51 @@
 				player = new Player(iframeEl);
 				player.on('ready', () => {
 					if (disposed) return;
+					if (!seekApplied) {
+						seekApplied = true;
+						try {
+							if (player.supports('method', 'getDuration')) {
+								player.getDuration((d: number) => {
+									if (disposed) return;
+									if (typeof d === 'number' && d > 0) duration = d;
+									if (startPosition > 0 && startPosition < 1 && duration > 0) {
+										try {
+											if (player.supports('method', 'setCurrentTime')) {
+												player.setCurrentTime(startPosition * duration);
+											}
+										} catch {
+											// ignore seek errors
+										}
+									}
+								});
+							} else {
+								console.warn('video tracking disabled: player has no getDuration');
+							}
+						} catch {
+							// ignore duration errors
+						}
+					}
 					if (player.supports('event', 'timeupdate')) {
 						player.on('timeupdate', (data: { seconds?: number }) => {
 							const seconds = typeof data?.seconds === 'number' ? data.seconds : 0;
-							if (seconds > maxPosition) {
-								maxPosition = seconds;
-								onPositionChange?.(seconds);
+							if (duration <= 0) return;
+							const fraction = Math.min(1, seconds / duration);
+							if (fraction > maxFraction) {
+								maxFraction = fraction;
+								onPositionChange?.(fraction);
 							}
 						});
+					} else {
+						console.warn('video tracking disabled: player has no timeupdate event');
 					}
 					if (player.supports('event', 'seeked')) {
 						player.on('seeked', () => {});
 					}
 					if (player.supports('event', 'ended')) {
-						player.on('ended', () => {});
+						player.on('ended', () => {
+							maxFraction = 1;
+							onPositionChange?.(1);
+						});
 					}
 				});
 			} catch (err) {
@@ -121,5 +161,18 @@
 				allowfullscreen
 			/>
 		{/if}
+	</div>
+	<div class="flex items-center gap-2 border-t border-ink-900/8 px-3 py-2">
+		<div class="h-1.5 flex-1 overflow-hidden rounded-full bg-ink-900/10">
+			<div
+				class="h-full rounded-full bg-emerald-500 transition-[width]"
+				style={`width:${progressPct}%`}
+			></div>
+		</div>
+		<p
+			class={`text-[11.5px] font-semibold ${progressPct >= 100 ? 'text-emerald-600' : 'text-ink-500'}`}
+		>
+			{progressPct}%
+		</p>
 	</div>
 </div>

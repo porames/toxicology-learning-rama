@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { LoaderCircle, ClockCheck, CheckCircle2 } from '@lucide/svelte';
 	import { db } from '$lib/firebase';
 	import {
@@ -55,6 +56,8 @@
 		return () => clearInterval(timer);
 	});
 	let videoUrls = $state<Record<string, string>>({});
+	let videoMax = $state<Record<string, number>>({});
+	let videosDirty = $state<Record<string, true>>({});
 	let displayQuiz = $state<string | null>(null);
 	let quizAttempts = $state<Record<string, { passed: boolean; completedAt: Date | null }>>({});
 	let quizResult = $state<{
@@ -96,6 +99,7 @@
 				...doc.data(),
 				checkedInAt: doc.data().checkedInAt ?? null,
 				completedAt: doc.data().completedAt ?? null,
+				videos: doc.data().videos ?? [],
 			})) as Activity[];
 		} catch (err) {
 			console.error(err);
@@ -294,6 +298,78 @@
 			.map((m) => m.value) ?? [],
 	);
 	const allRequiredPassed = $derived(requiredQuizValues.every((v) => quizAttempts[v]?.passed));
+
+	function handleVideoPosition(videoId: string, fraction: number) {
+		if (!videoId) return;
+		const pos = Math.round(Math.min(1, Math.max(0, fraction)) * 10000) / 10000;
+		if (pos <= (videoMax[videoId] ?? 0)) return;
+		videoMax = { ...videoMax, [videoId]: pos };
+		videosDirty = { ...videosDirty, [videoId]: true };
+		// Video ended — flush immediately instead of waiting for the interval.
+		if (pos >= 1) void flushVideoPositions();
+	}
+
+	async function flushVideoPositions() {
+		const lec = selectedLecture;
+		const ids = Object.keys(videosDirty);
+		if (!lec || ids.length === 0) return;
+		const profile = authState.profile;
+		if (!profile || !checkedInIds.has(lec.id)) {
+			videosDirty = {};
+			return;
+		}
+		const videos = Object.entries(videoMax).map(([id, maxPosition]) => ({
+			id,
+			maxPosition,
+		}));
+		try {
+			await setDoc(
+				doc(db, 'users', profile.docId, 'activities', lec.id),
+				{
+					...(classId ? { classId } : {}),
+					lectureId: lec.id,
+					videos,
+				},
+				{ merge: true },
+			);
+			videosDirty = {};
+		} catch (err: any) {
+			// Videos-only updates are allowed post-lecture by rules; other denials are dropped.
+			if (err?.code === 'permission-denied') videosDirty = {};
+			else console.warn('flush video positions error:', err);
+		}
+	}
+
+	$effect(() => {
+		const lecId = selectedLecture?.id;
+		untrack(() => {
+			if (lecId) {
+				const stored = activities.find((a) => a.lectureId === lecId)?.videos ?? [];
+				const seeded: Record<string, number> = {};
+				for (const v of stored) {
+					if (v?.id != null)
+						seeded[v.id] = Math.max(seeded[v.id] ?? 0, v.maxPosition ?? 0);
+				}
+				videoMax = seeded;
+				videosDirty = {};
+			}
+		});
+		return () => {
+			untrack(() => {
+				void flushVideoPositions();
+			});
+		};
+	});
+
+	$effect(() => {
+		const timer = setInterval(
+			() => {
+				void flushVideoPositions();
+			},
+			2 * 60 * 1000,
+		);
+		return () => clearInterval(timer);
+	});
 
 	$effect(() => {
 		const authLoad = authState.loading;
@@ -561,6 +637,8 @@
 						{quizResult}
 						meetSession={meetSessionForSelected}
 						meetParticipant={meetParticipantForSelected}
+						onVideoPositionChange={handleVideoPosition}
+						videoStartPositions={videoMax}
 						onBack={() => (selection = null)}
 						onBackFromQuiz={() => (displayQuiz = null)}
 						onStartQuiz={(quizId) => (displayQuiz = quizId)}

@@ -1,5 +1,4 @@
 import { onRequest } from 'firebase-functions/v2/https';
-import { readFileSync } from 'node:fs';
 import { OAuth2Client } from 'google-auth-library';
 import { admin, db } from '../lib/admin.js';
 import { handleCors } from '../lib/cors.js';
@@ -13,8 +12,15 @@ const SCOPES = [
 	'https://www.googleapis.com/auth/gmail.send',
 ];
 
-const meetAccount = JSON.parse(readFileSync('../secret/meetAccount.json', 'utf8'));
-const MEET_KEYS = meetAccount.web ?? meetAccount.installed ?? {};
+let cachedMeetKeys = null;
+function meetKeys() {
+	if (!cachedMeetKeys) {
+		const raw = process.env.MEET_ACCOUNT_JSON;
+		if (!raw) throw new Error('MEET_ACCOUNT_JSON env var is not set');
+		cachedMeetKeys = JSON.parse(raw).web ?? {};
+	}
+	return cachedMeetKeys;
+}
 
 function functionsBaseUrl() {
 	if (process.env.MEET_FUNCTIONS_BASE_URL) return process.env.MEET_FUNCTIONS_BASE_URL;
@@ -36,7 +42,8 @@ function appBaseUrl() {
 }
 
 function loadOAuthClient() {
-	return new OAuth2Client(MEET_KEYS.client_id, MEET_KEYS.client_secret);
+	const { client_id, client_secret } = meetKeys();
+	return new OAuth2Client(client_id, client_secret);
 }
 
 export const meetOAuthUrl = onRequest(async (req, res) => {

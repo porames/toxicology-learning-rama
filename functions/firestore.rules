@@ -43,6 +43,9 @@ service cloud.firestore {
       function withinClassTime() {
         return request.time <= lectureEndTime();
       }
+      function onlyVideosChanged() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['videos']);
+      }
       allow read: if isOwner();
       allow create: if isOwner()
           && request.resource.data.checkedInAt != null
@@ -51,7 +54,7 @@ service cloud.firestore {
       allow update: if isOwner()
           && request.resource.data.checkedInAt == resource.data.checkedInAt
           && request.resource.data.lectureId == lectureId
-          && withinClassTime();
+          && (withinClassTime() || onlyVideosChanged());
     }
 
     match /classes/{classId} {

@@ -1,5 +1,4 @@
 import { onRequest } from 'firebase-functions/v2/https';
-import { readFileSync } from 'node:fs';
 import { OAuth2Client } from 'google-auth-library';
 import { db } from '../lib/admin.js';
 import { handleCors } from '../lib/cors.js';
@@ -12,11 +11,19 @@ const PAGE_SIZE = 1000;
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 1000;
 
-const meetAccount = JSON.parse(readFileSync('../secret/meetAccount.json', 'utf8'));
-const MEET_KEYS = meetAccount.web ?? meetAccount.installed ?? {};
+let cachedMeetKeys = null;
+function meetKeys() {
+  if (!cachedMeetKeys) {
+    const raw = process.env.MEET_ACCOUNT_JSON;
+    if (!raw) throw new Error('MEET_ACCOUNT_JSON env var is not set');
+    cachedMeetKeys = JSON.parse(raw).web ?? {};
+  }
+  return cachedMeetKeys;
+}
 
 function loadOAuthClient(refreshToken) {
-  const oauth = new OAuth2Client(MEET_KEYS.client_id, MEET_KEYS.client_secret);
+  const { client_id, client_secret } = meetKeys();
+  const oauth = new OAuth2Client(client_id, client_secret);
   oauth.setCredentials({ refresh_token: refreshToken });
   return oauth;
 }

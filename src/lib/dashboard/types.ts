@@ -78,6 +78,7 @@ export interface Activity {
 	checkedInAt: { toDate: () => Date } | null;
 	completedAt: { toDate: () => Date } | null;
 	meetSession?: MeetSession | null;
+	videos?: { id: string; maxPosition: number }[];
 }
 
 export interface Student {

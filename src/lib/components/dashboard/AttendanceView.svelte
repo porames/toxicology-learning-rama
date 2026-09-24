@@ -28,6 +28,7 @@
 	let error = $state<string | null>(null);
 	let lectures = $state<Lecture[]>([]);
 	let expanded = $state<Set<string>>(new Set());
+	let expandedLectures = $state<Set<string>>(new Set());
 
 	interface StudentActivity {
 		checkedInAt: Date | null;
@@ -87,7 +88,6 @@
 	let participantsLoading = $state<string | null>(null);
 	let participantsError = $state<Record<string, string>>({});
 	let viewingParticipants = $state<ParticipantsView | null>(null);
-	let participantTimesOpen = $state<Set<string>>(new Set());
 	let refreshing = $state(false);
 	let refreshError = $state<string | null>(null);
 	let sessionDataByLecture = $state<Record<string, MeetResult>>({});
@@ -285,14 +285,14 @@
 		expanded = next;
 	}
 
-	function toggleParticipantTimes(id: string) {
-		const next = new Set(participantTimesOpen);
+	function toggleExpandLecture(id: string) {
+		const next = new Set(expandedLectures);
 		if (next.has(id)) {
 			next.delete(id);
 		} else {
 			next.add(id);
 		}
-		participantTimesOpen = next;
+		expandedLectures = next;
 	}
 
 	function exportCsv() {
@@ -349,14 +349,40 @@
 </script>
 
 <div class="mx-auto w-full max-w-6xl px-8 py-10">
+	{#snippet checkInCell(time: Date | null)}
+		<span class="font-medium {time ? 'text-emerald-600' : 'text-ink-300'}">
+			{time ? fmtTime(time) : t('common.notCheckedIn')}
+		</span>
+	{/snippet}
+	{#snippet completedCell(time: Date | null)}
+		<span class="font-medium {time ? 'text-teal-600' : 'text-ink-300'}">
+			{time ? fmtTime(time) : t('common.notCompleted')}
+		</span>
+	{/snippet}
+	{#snippet meetCell(part: MeetParticipant | null, recorded: boolean)}
+		<span
+			class="font-medium {part
+				? 'text-emerald-600'
+				: recorded
+					? 'text-red-600'
+					: 'text-ink-300'}"
+		>
+			{#if part?.joinTime}
+				{fmtDateTime(part.joinTime)}
+			{:else if part}
+				{t('dashboard.attended')}
+			{:else if recorded}
+				{t('dashboard.absent')}
+			{:else}
+				{t('classes.attendanceNotAvailable')}
+			{/if}
+		</span>
+	{/snippet}
 	<div class="flex items-center justify-between gap-3">
 		<div>
-			<p class="text-[12px] font-medium uppercase tracking-wider text-ink-300">
-				{t('dashboard.attendance')}
-			</p>
 			<h1 class="mt-1 flex items-center gap-2 text-[18px] font-semibold text-ink-900">
 				<CalendarCheck class="h-4 w-4 text-emerald-500" />
-				{t('students.enrolledStudents')}
+				{t('dashboard.attendance')}
 			</h1>
 			<p class="mt-1 text-[13px] text-ink-500">
 				{loading
@@ -375,74 +401,180 @@
 	</div>
 
 	{#if !loading && lectures.length > 0}
-		<div class="mt-6 overflow-hidden rounded-xl border border-ink-900/10 bg-white shadow-soft">
-			<div class="flex items-center gap-2 border-b border-ink-900/8 px-5 py-3">
-				<GoogleMeetIcon class="h-4 w-4" />
-				<h2 class="text-sm font-semibold text-ink-900">{t('materials.googleMeet')}</h2>
-				<span class="ml-auto text-[12px] text-ink-400">({lectures.length})</span>
+		<section class="mt-6">
+			<div class="mb-2 flex items-baseline justify-between gap-2 px-1">
+				<h2 class="text-[13px] font-semibold text-ink-900">
+					{t('dashboard.groupedByLecture')}
+				</h2>
+				<span class="text-[12px] text-ink-400">({lectures.length})</span>
 			</div>
-			<ul class="divide-y divide-ink-900/5">
-				{#each lectures as lec (lec.id)}
-					{@const loading = participantsLoading === lec.id}
-					{@const err = participantsError[lec.id]}
-					{@const session = sessionDataByLecture[lec.id]}
-					<li class="px-5 py-3">
-						<div class="flex items-center gap-3">
-							<div class="min-w-0 flex-1">
-								<div class="flex items-center gap-1.5">
-									<GoogleMeetIcon class="h-3.5 w-3.5 shrink-0" />
-									<p class="truncate text-[13.5px] font-medium text-ink-900">
-										{lec.title || t('common.untitledLecture')}
-									</p>
-								</div>
-								<p class="text-[12px] text-ink-400">
-									{moment(lec.startTime).format('ddd, MMM D · hh:mm A')}
-								</p>
+			<div class="overflow-hidden rounded-xl border border-ink-900/10 bg-white shadow-soft">
+				<ul class="divide-y divide-ink-900/5">
+					{#each lectures as lec (lec.id)}
+						{@const loading = participantsLoading === lec.id}
+						{@const err = participantsError[lec.id]}
+						{@const session = sessionDataByLecture[lec.id]}
+						{@const open = expandedLectures.has(lec.id)}
+						<li class="px-5 py-3">
+							<div class="flex items-center gap-3">
+								<button
+									type="button"
+									onclick={() => toggleExpandLecture(lec.id)}
+									class="flex min-w-0 flex-1 items-center gap-2 text-left"
+								>
+									{#if open}
+										<ChevronDown class="h-4 w-4 shrink-0 text-ink-400" />
+									{:else}
+										<ChevronRight class="h-4 w-4 shrink-0 text-ink-400" />
+									{/if}
+									<div class="min-w-0 flex-1">
+										<div class="flex items-center gap-1.5">
+											<GoogleMeetIcon class="h-3.5 w-3.5 shrink-0" />
+											<p
+												class="truncate text-[13.5px] font-medium text-ink-900"
+											>
+												{lec.title || t('common.untitledLecture')}
+											</p>
+										</div>
+										<p class="text-[12px] text-ink-400">
+											{moment(lec.startTime).format('ddd, MMM D · hh:mm A')}
+										</p>
+										{#if session}
+											<p>
+												<span
+													class="inline-flex shrink-0 items-center gap-1 rounded-full text-[11px] font-semibold text-emerald-600"
+												>
+													<CheckCircle2 class="h-3 w-3" />
+													{t('dashboard.saved')}
+												</span>
+											</p>
+										{/if}
+									</div>
+								</button>
 								{#if session}
-									<p>
-										<span
-											class="inline-flex shrink-0 items-center gap-1 rounded-full text-[11px] font-semibold text-emerald-600"
-										>
-											<CheckCircle2 class="h-3 w-3" />
-											{t('dashboard.saved')}
-										</span>
-									</p>
+									<button
+										type="button"
+										onclick={() => openCachedParticipants(lec)}
+										class="flex shrink-0 items-center gap-1.5 rounded-md bg-iris-500/10 px-2.5 py-1.5 text-[12px] font-semibold text-iris-700 transition hover:bg-iris-500/15"
+									>
+										<Users class="h-3.5 w-3.5" />
+										{t('dashboard.viewSession')}
+									</button>
+								{:else}
+									<button
+										type="button"
+										onclick={() => checkParticipants(lec)}
+										disabled={loading}
+										class="flex shrink-0 items-center gap-1.5 rounded-md bg-emerald-500/10 px-2.5 py-1.5 text-[12px] font-semibold text-emerald-700 transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-60"
+									>
+										{#if loading}
+											<LoaderCircle class="h-3.5 w-3.5 animate-spin" />
+											{t('common.loading')}
+										{:else}
+											<Users class="h-3.5 w-3.5" />
+											{t('dashboard.checkParticipants')}
+										{/if}
+									</button>
 								{/if}
 							</div>
-							{#if session}
-								<button
-									type="button"
-									onclick={() => openCachedParticipants(lec)}
-									class="flex shrink-0 items-center gap-1.5 rounded-md bg-iris-500/10 px-2.5 py-1.5 text-[12px] font-semibold text-iris-700 transition hover:bg-iris-500/15"
-								>
-									<Users class="h-3.5 w-3.5" />
-									{t('dashboard.viewSession')}
-								</button>
-							{:else}
-								<button
-									type="button"
-									onclick={() => checkParticipants(lec)}
-									disabled={loading}
-									class="flex shrink-0 items-center gap-1.5 rounded-md bg-emerald-500/10 px-2.5 py-1.5 text-[12px] font-semibold text-emerald-700 transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-60"
-								>
-									{#if loading}
-										<LoaderCircle class="h-3.5 w-3.5 animate-spin" />
-										{t('common.loading')}
-									{:else}
-										<Users class="h-3.5 w-3.5" />
-										{t('dashboard.checkParticipants')}
-									{/if}
-								</button>
-							{/if}
-						</div>
 
-						{#if err}
-							<p class="mt-2 text-[12px] text-red-500">{err}</p>
-						{/if}
-					</li>
-				{/each}
-			</ul>
-		</div>
+							{#if err}
+								<p class="mt-2 text-[12px] text-red-500">{err}</p>
+							{/if}
+
+							{#if open}
+								<div class="mt-3 overflow-x-auto border-t border-ink-900/5">
+									<table class="w-full text-[12px]">
+										<thead>
+											<tr
+												class="text-[11px] uppercase tracking-wide text-ink-400"
+											>
+												<th class="px-4 py-2 text-left font-semibold">
+													{t('students.fullName')}
+												</th>
+												<th
+													class="whitespace-nowrap px-2 py-2 text-right font-semibold"
+												>
+													<span
+														class="inline-flex items-center justify-end gap-1"
+													>
+														<ClockCheck class="h-3.5 w-3.5" />
+														{t('classes.checkIn')}
+													</span>
+												</th>
+												<th
+													class="whitespace-nowrap px-2 py-2 text-right font-semibold"
+												>
+													<span
+														class="inline-flex items-center justify-end gap-1"
+													>
+														<ListChecks class="h-3.5 w-3.5" />
+														{t('classes.completed')}
+													</span>
+												</th>
+												<th
+													class="whitespace-nowrap py-2 pl-2 pr-4 text-right font-semibold"
+												>
+													<span
+														class="inline-flex items-center justify-end gap-1"
+													>
+														<GoogleMeetIcon class="h-3.5 w-3.5" />
+														{t('materials.googleMeet')}
+													</span>
+												</th>
+											</tr>
+										</thead>
+										<tbody class="divide-y divide-ink-900/5">
+											{#each students as student (student.id)}
+												{@const act = student.lectures[lec.id]}
+												{@const part = participantFor(
+													lec.id,
+													student.email,
+												)}
+												{@const recorded = hasSessionRecord(lec.id)}
+												<tr>
+													<td class="min-w-0 max-w-52 px-4 py-2.5">
+														<p
+															class="truncate text-[13px] font-medium text-ink-900"
+														>
+															{student.name}
+														</p>
+														<p
+															class="truncate text-[12px] text-ink-500"
+														>
+															{student.email}
+														</p>
+													</td>
+													<td
+														class="whitespace-nowrap px-2 py-2.5 text-right"
+													>
+														{@render checkInCell(
+															act?.checkedInAt ?? null,
+														)}
+													</td>
+													<td
+														class="whitespace-nowrap px-2 py-2.5 text-right"
+													>
+														{@render completedCell(
+															act?.completedAt ?? null,
+														)}
+													</td>
+													<td
+														class="whitespace-nowrap py-2.5 pl-2 pr-4 text-right"
+													>
+														{@render meetCell(part, recorded)}
+													</td>
+												</tr>
+											{/each}
+										</tbody>
+									</table>
+								</div>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			</div>
+		</section>
 	{/if}
 
 	{#if loading}
@@ -481,165 +613,176 @@
 			</p>
 		</div>
 	{:else}
-		<div class="mt-6 space-y-2">
-			{#each students as student (student.id)}
-				{@const ci = checkedInCount(student)}
-				{@const co = completedCount(student)}
-				{@const mt = meetAttendedCount(student)}
-				<div
-					class="overflow-hidden rounded-lg border border-ink-900/10 bg-white shadow-soft"
-				>
-					<button
-						onclick={() => toggleExpand(student.id)}
-						class="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-ink-900/[0.02]"
+		<section class="mt-6">
+			<div class="mb-2 flex items-baseline justify-between gap-2 px-1">
+				<h2 class="text-[13px] font-semibold text-ink-900">
+					{t('dashboard.groupedByStudent')}
+				</h2>
+				<span class="text-[12px] text-ink-400">({students.length})</span>
+			</div>
+			<div class="space-y-2">
+				{#each students as student (student.id)}
+					{@const ci = checkedInCount(student)}
+					{@const co = completedCount(student)}
+					{@const mt = meetAttendedCount(student)}
+					<div
+						class="overflow-hidden rounded-lg border border-ink-900/10 bg-white shadow-soft"
 					>
-						{#if expanded.has(student.id)}
-							<ChevronDown class="h-4 w-4 shrink-0 text-ink-400" />
-						{:else}
-							<ChevronRight class="h-4 w-4 shrink-0 text-ink-400" />
-						{/if}
-						<div class="min-w-0 flex-1">
-							<p class="truncate text-[14px] font-medium text-ink-900">
-								{student.name}
-								<span class="ml-2 font-mono text-[12px] font-normal text-ink-400"
-									>{student.ramaId}</span
-								>
-							</p>
-							<p class="truncate text-[12.5px] text-ink-500">{student.email}</p>
-						</div>
-						<div class="flex shrink-0 items-center gap-2">
-							<span
-								class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11.5px] font-semibold text-emerald-700"
-							>
-								<ClockCheck class="h-3.5 w-3.5" />
-								{ci}/{lectures.length}
-							</span>
-							<span
-								class="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-[11.5px] font-semibold text-teal-700"
-							>
-								<ListChecks class="h-3.5 w-3.5" />
-								{co}/{lectures.length}
-							</span>
-							<span
-								class="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[11.5px] font-semibold text-sky-700"
-							>
-								<GoogleMeetIcon class="h-3.5 w-3.5" />
-								{mt}/{lectures.length}
-							</span>
-						</div>
-					</button>
-
-					{#if expanded.has(student.id)}
-						<div class="border-t border-ink-900/5">
-							{#if lectures.length === 0}
-								<p class="px-4 py-3 text-[12.5px] text-ink-400">No lectures yet.</p>
+						<button
+							onclick={() => toggleExpand(student.id)}
+							class="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-ink-900/[0.02]"
+						>
+							{#if expanded.has(student.id)}
+								<ChevronDown class="h-4 w-4 shrink-0 text-ink-400" />
 							{:else}
-								<div class="overflow-x-auto">
-									<table class="w-full text-[12px]">
-										<thead>
-											<tr class="text-[11px] uppercase tracking-wide text-ink-400">
-												<th class="px-4 py-2 text-left font-semibold">
-													{t('dashboard.lecture')}
-												</th>
-												<th class="whitespace-nowrap px-2 py-2 text-right font-semibold">
-													<span class="inline-flex items-center justify-end gap-1">
-														<ClockCheck class="h-3.5 w-3.5" />
-														{t('classes.checkIn')}
-													</span>
-												</th>
-												<th class="whitespace-nowrap px-2 py-2 text-right font-semibold">
-													<span class="inline-flex items-center justify-end gap-1">
-														<ListChecks class="h-3.5 w-3.5" />
-														{t('classes.completed')}
-													</span>
-												</th>
-												<th class="whitespace-nowrap py-2 pl-2 pr-4 text-right font-semibold">
-													<span class="inline-flex items-center justify-end gap-1">
-														<GoogleMeetIcon class="h-3.5 w-3.5" />
-														{t('materials.googleMeet')}
-													</span>
-												</th>
-											</tr>
-										</thead>
-										<tbody class="divide-y divide-ink-900/5">
-											{#each lectures as lec (lec.id)}
-												{@const act = student.lectures[lec.id]}
-												{@const part = participantFor(lec.id, student.email)}
-												{@const recorded = hasSessionRecord(lec.id)}
-												<tr>
-													<td class="min-w-0 px-4 py-2.5">
-														<div class="flex items-center gap-1.5">
-															<GoogleMeetIcon class="h-3.5 w-3.5 shrink-0" />
-															<p
-																class="truncate text-[13px] font-medium text-ink-900"
-															>
-																{lec.title || t('common.untitledLecture')}
-															</p>
-														</div>
-														<p class="whitespace-nowrap text-[12px] text-ink-400">
-															{moment(lec.startTime).format(
-																'ddd, MMM D · hh:mm A',
-															)}
-														</p>
-													</td>
-													<td class="whitespace-nowrap px-2 py-2.5 text-right">
-														<span
-															class="font-medium {act?.checkedInAt
-																? 'text-emerald-600'
-																: 'text-ink-300'}"
-														>
-															{act?.checkedInAt
-																? fmtTime(act.checkedInAt)
-																: t('common.notCheckedIn')}
-														</span>
-													</td>
-													<td class="whitespace-nowrap px-2 py-2.5 text-right">
-														<span
-															class="font-medium {act?.completedAt
-																? 'text-teal-600'
-																: 'text-ink-300'}"
-														>
-															{act?.completedAt
-																? fmtTime(act.completedAt)
-																: t('common.notCompleted')}
-														</span>
-													</td>
-													<td class="whitespace-nowrap py-2.5 pl-2 pr-4 text-right">
-														<span
-															class="font-medium {part
-																? 'text-emerald-600'
-																: recorded
-																	? 'text-red-600'
-																	: 'text-ink-300'}"
-														>
-															{#if part?.joinTime}
-																{fmtDateTime(part.joinTime)}
-															{:else if part}
-																{t('dashboard.attended')}
-															{:else if recorded}
-																{t('dashboard.absent')}
-															{:else}
-																{t('classes.attendanceNotAvailable')}
-															{/if}
-														</span>
-													</td>
-												</tr>
-											{/each}
-										</tbody>
-									</table>
-								</div>
+								<ChevronRight class="h-4 w-4 shrink-0 text-ink-400" />
 							{/if}
-						</div>
-					{/if}
-				</div>
-			{/each}
-		</div>
+							<div class="min-w-0 flex-1">
+								<p class="truncate text-[14px] font-medium text-ink-900">
+									{student.name}
+									<span
+										class="ml-2 font-mono text-[12px] font-normal text-ink-400"
+										>{student.ramaId}</span
+									>
+								</p>
+								<p class="truncate text-[12.5px] text-ink-500">{student.email}</p>
+							</div>
+							<div class="flex shrink-0 items-center gap-2">
+								<span
+									class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11.5px] font-semibold text-emerald-700"
+								>
+									<ClockCheck class="h-3.5 w-3.5" />
+									{ci}/{lectures.length}
+								</span>
+								<span
+									class="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-[11.5px] font-semibold text-teal-700"
+								>
+									<ListChecks class="h-3.5 w-3.5" />
+									{co}/{lectures.length}
+								</span>
+								<span
+									class="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[11.5px] font-semibold text-sky-700"
+								>
+									<GoogleMeetIcon class="h-3.5 w-3.5" />
+									{mt}/{lectures.length}
+								</span>
+							</div>
+						</button>
+
+						{#if expanded.has(student.id)}
+							<div class="border-t border-ink-900/5">
+								{#if lectures.length === 0}
+									<p class="px-4 py-3 text-[12.5px] text-ink-400">
+										No lectures yet.
+									</p>
+								{:else}
+									<div class="overflow-x-auto">
+										<table class="w-full text-[12px]">
+											<thead>
+												<tr
+													class="text-[11px] uppercase tracking-wide text-ink-400"
+												>
+													<th class="px-4 py-2 text-left font-semibold">
+														{t('dashboard.lecture')}
+													</th>
+													<th
+														class="whitespace-nowrap px-2 py-2 text-right font-semibold"
+													>
+														<span
+															class="inline-flex items-center justify-end gap-1"
+														>
+															<ClockCheck class="h-3.5 w-3.5" />
+															{t('classes.checkIn')}
+														</span>
+													</th>
+													<th
+														class="whitespace-nowrap px-2 py-2 text-right font-semibold"
+													>
+														<span
+															class="inline-flex items-center justify-end gap-1"
+														>
+															<ListChecks class="h-3.5 w-3.5" />
+															{t('classes.completed')}
+														</span>
+													</th>
+													<th
+														class="whitespace-nowrap py-2 pl-2 pr-4 text-right font-semibold"
+													>
+														<span
+															class="inline-flex items-center justify-end gap-1"
+														>
+															<GoogleMeetIcon class="h-3.5 w-3.5" />
+															{t('materials.googleMeet')}
+														</span>
+													</th>
+												</tr>
+											</thead>
+											<tbody class="divide-y divide-ink-900/5">
+												{#each lectures as lec (lec.id)}
+													{@const act = student.lectures[lec.id]}
+													{@const part = participantFor(
+														lec.id,
+														student.email,
+													)}
+													{@const recorded = hasSessionRecord(lec.id)}
+													<tr>
+														<td class="min-w-0 px-4 py-2.5">
+															<div class="flex items-center gap-1.5">
+																<GoogleMeetIcon
+																	class="h-3.5 w-3.5 shrink-0"
+																/>
+																<p
+																	class="truncate text-[13px] font-medium text-ink-900"
+																>
+																	{lec.title ||
+																		t('common.untitledLecture')}
+																</p>
+															</div>
+															<p
+																class="whitespace-nowrap text-[12px] text-ink-400"
+															>
+																{moment(lec.startTime).format(
+																	'ddd, MMM D · hh:mm A',
+																)}
+															</p>
+														</td>
+														<td
+															class="whitespace-nowrap px-2 py-2.5 text-right"
+														>
+															{@render checkInCell(
+																act?.checkedInAt ?? null,
+															)}
+														</td>
+														<td
+															class="whitespace-nowrap px-2 py-2.5 text-right"
+														>
+															{@render completedCell(
+																act?.completedAt ?? null,
+															)}
+														</td>
+														<td
+															class="whitespace-nowrap py-2.5 pl-2 pr-4 text-right"
+														>
+															{@render meetCell(part, recorded)}
+														</td>
+													</tr>
+												{/each}
+											</tbody>
+										</table>
+									</div>
+								{/if}
+							</div>
+						{/if}
+					</div>
+				{/each}
+			</div>
+		</section>
 	{/if}
 
 	<Modal
 		open={viewingParticipants != null}
 		title={t('dashboard.participantsTitle')}
-		class="max-w-3xl"
+		class="max-w-4xl"
 		onclose={() => (viewingParticipants = null)}
 	>
 		{@const view = viewingParticipants!}
@@ -652,77 +795,81 @@
 				{t('students.noStudentsEnrolledYet')}
 			</p>
 		{:else}
-			<ul class="max-h-[60vh] space-y-2 overflow-y-auto">
-				{#each rosterRows as row (row.student.id)}
-					<li class="rounded-lg border border-ink-900/10 bg-ink-900/[0.02] px-3.5 py-3">
-						<div class="flex items-center justify-between gap-3">
-							<div class="min-w-0">
-								<p class="truncate text-[13.5px] font-medium text-ink-900">
-									{row.student.name}
-								</p>
-								<p class="truncate text-[12px] text-ink-500">
-									{row.student.email}
-								</p>
-							</div>
-							{#if row.participant}
-								<span
-									class="inline-flex shrink-0 items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
+			<div class="max-h-[60vh] overflow-auto">
+				<table class="w-full text-[12.5px]">
+					<thead class="sticky top-0 bg-white shadow-[0_1px_0_0_var(--color-ink-900)]/5">
+						<tr class="text-left text-[11px] uppercase tracking-wide text-ink-400">
+							<th class="whitespace-nowrap px-3 py-2 font-semibold">
+								{t('students.fullName')}
+							</th>
+							<th class="whitespace-nowrap px-2 py-2 font-semibold">
+								{t('export.status')}
+							</th>
+							<th class="whitespace-nowrap px-2 py-2 font-semibold">
+								{t('dashboard.displayName')}
+							</th>
+							<th class="whitespace-nowrap px-2 py-2 text-right font-semibold">
+								{t('dashboard.joinTime')}
+							</th>
+							<th class="whitespace-nowrap px-2 py-2 text-right font-semibold">
+								{t('dashboard.leaveTime')}
+							</th>
+							<th class="whitespace-nowrap py-2 pl-2 pr-3 text-right font-semibold">
+								{t('dashboard.sessionTime')}
+							</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-ink-900/5">
+						{#each rosterRows as row (row.student.id)}
+							<tr>
+								<td class="min-w-0 max-w-52 px-3 py-2.5">
+									<p class="truncate text-[13px] font-medium text-ink-900">
+										{row.student.name}
+									</p>
+									<p class="truncate text-[12px] text-ink-500">
+										{row.student.email}
+									</p>
+								</td>
+								<td class="whitespace-nowrap px-2 py-2.5">
+									{#if row.participant}
+										<span
+											class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
+										>
+											{t('dashboard.attended')}
+										</span>
+									{:else}
+										<span
+											class="inline-flex items-center rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600"
+										>
+											{t('dashboard.absent')}
+										</span>
+									{/if}
+								</td>
+								<td class="max-w-40 truncate px-2 py-2.5 font-medium text-ink-700">
+									{row.participant?.displayName || '—'}
+								</td>
+								<td
+									class="whitespace-nowrap px-2 py-2.5 text-right font-medium text-ink-700"
 								>
-									{t('dashboard.attended')}
-								</span>
-							{:else}
-								<span
-									class="inline-flex shrink-0 items-center rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600"
+									{row.participant ? fmtDateTime(row.participant.joinTime) : '—'}
+								</td>
+								<td
+									class="whitespace-nowrap px-2 py-2.5 text-right font-medium text-ink-700"
 								>
-									{t('dashboard.absent')}
-								</span>
-							{/if}
-						</div>
-						{#if row.participant}
-							<button
-								type="button"
-								onclick={() => toggleParticipantTimes(row.student.id)}
-								class="mt-2 flex w-full items-center gap-1.5 border-t border-ink-900/5 pt-2 text-[12px] font-medium text-ink-500 transition hover:text-ink-700"
-							>
-								{#if participantTimesOpen.has(row.student.id)}
-									<ChevronDown class="h-3.5 w-3.5 shrink-0" />
-								{:else}
-									<ChevronRight class="h-3.5 w-3.5 shrink-0" />
-								{/if}
-								{t('dashboard.sessionDetails')}
-							</button>
-							{#if participantTimesOpen.has(row.student.id)}
-								<div class="mt-2.5 grid grid-cols-2 gap-2 text-[12px]">
-									<div class="col-span-2">
-										<p class="text-ink-400">{t('dashboard.displayName')}</p>
-										<p class="mt-0.5 font-medium text-ink-700">
-											{row.participant.displayName || '—'}
-										</p>
-									</div>
-									<div>
-										<p class="text-ink-400">{t('dashboard.joinTime')}</p>
-										<p class="mt-0.5 font-medium text-ink-700">
-											{fmtDateTime(row.participant.joinTime)}
-										</p>
-									</div>
-									<div>
-										<p class="text-ink-400">{t('dashboard.leaveTime')}</p>
-										<p class="mt-0.5 font-medium text-ink-700">
-											{fmtDateTime(row.participant.leaveTime)}
-										</p>
-									</div>
-									<div class="col-span-2">
-										<p class="text-ink-400">{t('dashboard.sessionTime')}</p>
-										<p class="mt-0.5 font-medium text-ink-700">
-											{fmtDuration(row.participant.sessionTimeSec)}
-										</p>
-									</div>
-								</div>
-							{/if}
-						{/if}
-					</li>
-				{/each}
-			</ul>
+									{row.participant ? fmtDateTime(row.participant.leaveTime) : '—'}
+								</td>
+								<td
+									class="whitespace-nowrap py-2.5 pl-2 pr-3 text-right font-medium text-ink-700"
+								>
+									{row.participant
+										? fmtDuration(row.participant.sessionTimeSec)
+										: '—'}
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
 		{/if}
 		{#snippet footer()}
 			{#if refreshError}

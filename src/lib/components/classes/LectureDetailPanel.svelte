@@ -5,6 +5,8 @@
 		LoaderCircle,
 		ClockCheck,
 		ListChecks,
+		FileQuestion,
+		Video,
 	} from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import moment from 'moment';
@@ -51,6 +53,8 @@
 			durationSec: number | null;
 		} | null;
 		meetParticipant?: MeetParticipantInfo | null;
+		onVideoPositionChange?: (videoId: string, fraction: number) => void;
+		videoStartPositions?: Record<string, number>;
 		onBack: () => void;
 		onBackFromQuiz: () => void;
 		onStartQuiz: (quizId: string) => void;
@@ -83,16 +87,46 @@
 		onViewAttempts,
 		meetSession = null,
 		meetParticipant = null,
+		onVideoPositionChange,
+		videoStartPositions,
 	}: Props = $props();
 
-	const hasPostTest = $derived(
-		(selectedLecture?.materials ?? []).some((m) => m.type === 'quiz' && m.requiredPostTest),
-	);
 	const hasMeetLecture = $derived(
 		(selectedLecture?.materials ?? []).some((m) => m.type === 'meet' && m.value),
 	);
-	const sessionRecorded = $derived(
-		selectedLecture?.sessionData?.conferenceRecord != null,
+	const sessionRecorded = $derived(selectedLecture?.sessionData?.conferenceRecord != null);
+	const COMPLETION_WATCH_THRESHOLD = 0.8;
+	const postTestReqs = $derived(
+		(selectedLecture?.materials ?? [])
+			.filter((m) => m.type === 'quiz' && m.requiredPostTest)
+			.map((m) => ({
+				id: m.id,
+				title: m.title || t('materials.quiz'),
+				quizId: m.value,
+				passed: !!quizAttempts[m.value]?.passed,
+				attempted: quizAttempts[m.value] != null,
+			})),
+	);
+	const videoReqs = $derived(
+		(selectedLecture?.materials ?? [])
+			.filter((m) => m.type === 'video' && m.value)
+			.map((m) => {
+				const fraction = videoStartPositions?.[m.value] ?? 0;
+				return {
+					id: m.id,
+					title: m.title || t('materials.video'),
+					pct: Math.round(fraction * 100),
+					done: fraction > COMPLETION_WATCH_THRESHOLD,
+				};
+			}),
+	);
+	const allVideosWatched = $derived(videoReqs.every((v) => v.done));
+	const canComplete = $derived(allRequiredPassed && allVideosWatched);
+	const showRequirements = $derived(postTestReqs.length > 0 || videoReqs.length > 0);
+	const isCompletedLate = $derived(
+		completedTime != null &&
+			selectedLecture != null &&
+			completedTime.getTime() > new Date(selectedLecture.endTime).getTime(),
 	);
 
 	function fmtDateTime(d: Date | null): string {
@@ -153,7 +187,7 @@
 							class={`font-medium ${checkedInTime ? 'text-emerald-600' : 'text-ink-900/40'}`}
 						>
 							{checkedInTime
-								? moment(checkedInTime).format('hh:mm A')
+								? moment(checkedInTime).format('MMM D · hh:mm A')
 								: t('classes.hasntCheckedIn')}
 						</dd>
 					</div>
@@ -166,7 +200,14 @@
 							class={`font-medium ${completedIds.has(selectedLecture.id) ? 'text-emerald-600' : 'text-ink-900/40'}`}
 						>
 							{#if completedTime}
-								{moment(completedTime).format('hh:mm A')}
+								{moment(completedTime).format('MMM D · hh:mm A')}
+								{#if isCompletedLate}
+									<span
+										class="ml-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10.5px] font-semibold text-amber-700"
+									>
+										{t('classes.late')}
+									</span>
+								{/if}
 							{:else if completedIds.has(selectedLecture.id)}
 								{t('classes.completed')}
 							{:else}
@@ -184,9 +225,9 @@
 								class={`font-medium ${meetParticipant ? 'text-emerald-600' : sessionRecorded ? 'text-red-600' : 'text-ink-900/40'}`}
 							>
 								{#if meetParticipant?.joinTime}
-									{t('dashboard.attended')} · {moment(meetParticipant.joinTime).format(
-										'hh:mm A',
-									)}
+									{t('dashboard.attended')} · {moment(
+										meetParticipant.joinTime,
+									).format('MMM D · hh:mm A')}
 								{:else if meetParticipant}
 									{t('dashboard.attended')}
 								{:else if sessionRecorded}
@@ -215,7 +256,7 @@
 					</p>
 				{:else}
 					<ul class="space-y-1.5">
-						{#each selectedLecture.materials as mat}
+						{#each selectedLecture.materials as mat (mat.id)}
 							{@const color = MATERIAL_COLOR[mat.type]}
 							<li>
 								<MaterialRenderer
@@ -224,6 +265,8 @@
 									{videoUrls}
 									onStartQuiz={(quizId) => onStartQuiz(quizId)}
 									{quizAttempts}
+									{onVideoPositionChange}
+									{videoStartPositions}
 								/>
 							</li>
 						{/each}
@@ -270,28 +313,86 @@
 		</div>
 	{/if}
 
-	{#if !displayQuiz && hasPostTest}
-		<button
-			onclick={onComplete}
-			disabled={!selectedLecture ||
-				completingLec ||
-				(!!selectedLecture && completedIds.has(selectedLecture.id)) ||
-				(!!selectedLecture && !allRequiredPassed)}
-			class="mt-5 inline-flex items-center gap-2 rounded-lg bg-gradient-to-b from-teal-500 to-teal-700 px-4 py-2.5 md:py-2 text-sm font-semibold text-white transition hover:from-teal-500 hover:to-teal-800 focus:outline-none focus:ring-2 focus:ring-teal-500/50 disabled:cursor-not-allowed disabled:opacity-50"
-		>
-			{#if completingLec}
-				<LoaderCircle class="h-4 w-4 animate-spin" />
-				{t('classes.marking')}
-			{:else if selectedLecture && completedIds.has(selectedLecture.id)}
-				<ListChecks class="h-4 w-4" />
-				{t('classes.completed')}
-			{:else}
-				<ListChecks class="h-4 w-4" />
-				{t('classes.markAsCompleted')}
+	{#if !displayQuiz}
+		<div class="mt-4 rounded-xl border border-ink-900/10 bg-white px-3 py-1 shadow-soft">
+			{#if showRequirements}
+				<p class="py-1.5 text-[12px] font-semibold text-ink-900">
+					{t('classes.completionRequirements')}
+				</p>
+				<dl class="divide-y divide-ink-900/5 text-[12.5px]">
+					{#each postTestReqs as req (req.id)}
+						{#if req.passed}
+							<div class="flex items-center justify-between gap-2 py-1.5">
+								<dt class="flex min-w-0 items-center gap-1.5 text-ink-500">
+									<FileQuestion size={13} class="shrink-0" />
+									<span class="truncate">{req.title}</span>
+								</dt>
+								<dd class="shrink-0 font-medium text-emerald-600">
+									{t('common.passed')}
+								</dd>
+							</div>
+						{:else}
+							<button
+								type="button"
+								onclick={() => onStartQuiz(req.quizId)}
+								class="flex w-full items-center justify-between gap-2 py-1.5 text-left transition hover:bg-ink-900/[0.02]"
+							>
+								<span class="flex min-w-0 items-center gap-1.5 text-ink-500">
+									<FileQuestion size={13} class="shrink-0" />
+									<span class="truncate">{req.title}</span>
+								</span>
+								{#if req.attempted}
+									<span class="shrink-0 font-medium text-red-600">
+										{t('common.failed')}
+									</span>
+								{:else}
+									<span class="shrink-0 font-medium text-ink-900/40">
+										{t('dashboard.notAttempted')}
+									</span>
+								{/if}
+							</button>
+						{/if}
+					{/each}
+					{#each videoReqs as req (req.id)}
+						<div class="flex items-center justify-between gap-2 py-1.5">
+							<dt class="flex min-w-0 items-center gap-1.5 text-ink-500">
+								<Video size={13} class="shrink-0" />
+								<span class="truncate">{req.title}</span>
+							</dt>
+							<dd
+								class={`shrink-0 font-medium ${req.done ? 'text-emerald-600' : 'text-ink-900/40'}`}
+							>
+								{req.pct}%{#if !req.done}
+									· {t('classes.watchRequired')}{/if}
+							</dd>
+						</div>
+					{/each}
+				</dl>
 			{/if}
-		</button>
-		{#if selectedLecture && !allRequiredPassed}
-			<p class="mt-1.5 text-xs text-red-500">{t('classes.pleaseCompletePosttest')}</p>
-		{/if}
+			<div class={showRequirements ? 'border-t border-ink-900/5 py-2.5' : 'py-2.5'}>
+				<button
+					onclick={onComplete}
+					disabled={!selectedLecture ||
+						completingLec ||
+						(!!selectedLecture && completedIds.has(selectedLecture.id)) ||
+						!canComplete}
+					class="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-b from-teal-500 to-teal-700 px-4 py-2.5 md:py-2 text-sm font-semibold text-white transition hover:from-teal-500 hover:to-teal-800 focus:outline-none focus:ring-2 focus:ring-teal-500/50 disabled:cursor-not-allowed disabled:opacity-50"
+				>
+					{#if completingLec}
+						<LoaderCircle class="h-4 w-4 animate-spin" />
+						{t('classes.marking')}
+					{:else if selectedLecture && completedIds.has(selectedLecture.id)}
+						<ListChecks class="h-4 w-4" />
+						{t('classes.completed')}
+					{:else}
+						<ListChecks class="h-4 w-4" />
+						{t('classes.markAsCompleted')}
+					{/if}
+				</button>
+				{#if selectedLecture && allRequiredPassed && !allVideosWatched}
+					<p class="mt-1.5 text-xs text-red-500">{t('classes.pleaseWatchVideos')}</p>
+				{/if}
+			</div>
+		</div>
 	{/if}
 </div>

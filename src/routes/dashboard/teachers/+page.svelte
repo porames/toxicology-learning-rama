@@ -7,7 +7,7 @@
 	<title>RAMA Toxico | {t('teachers.manageTeachers')}</title>
 </svelte:head>
 
-<div class="mx-auto w-full min-w-0 px-4 py-10">
+<div class="mx-auto w-full min-w-0 max-w-6xl px-8 py-10">
 	<div class="grid grid-row gap-3">
 		<h1 class="text-lg font-semibold">{t('teachers.manageTeachers')}</h1>
 		<ManageTeachers />

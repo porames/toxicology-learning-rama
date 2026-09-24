@@ -19,6 +19,9 @@
 	const assignmentId = $derived(page.params.assignmentId);
 	const isAssignmentsPage = $derived(page.route.id?.includes('/assignments'));
 	const isSubmissionsPage = $derived(page.route.id?.endsWith('/submissions'));
+	const isAttendancePage = $derived(page.route.id?.includes('/attendance'));
+	const isAssessmentPage = $derived(page.route.id?.includes('/assessment'));
+	const isStudentsPage = $derived(page.route.id?.endsWith('/students'));
 	const selectedClass = $derived(classId ? dashboardStore.getClass(classId) : null);
 	const selectedLecture = $derived(
 		classId && lectureId ? dashboardStore.getLecture(classId, lectureId) : null,
@@ -89,6 +92,9 @@
 		...(selectedLecture
 			? [{ label: selectedLecture.title || t('common.untitledLecture'), active: true }]
 			: []),
+		...(isAttendancePage ? [{ label: t('dashboard.attendance'), active: true }] : []),
+		...(isAssessmentPage ? [{ label: t('dashboard.assessStudents'), active: true }] : []),
+		...(isStudentsPage ? [{ label: t('students.enrolledStudents'), active: true }] : []),
 	]);
 
 	async function handleAddClass() {
